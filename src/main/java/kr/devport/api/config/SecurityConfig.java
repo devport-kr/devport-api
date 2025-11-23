@@ -45,6 +45,8 @@ public class SecurityConfig {
                     "/api/benchmarks",
                     "/h2-console/**"
                 ).permitAll()
+                // Swagger/OpenAPI endpoints
+                .requestMatchers("/swagger-ui/**", "/v3/api-docs/**", "/swagger-ui.html").permitAll()
                 // OAuth2 endpoints
                 .requestMatchers("/oauth2/**", "/login/**").permitAll()
                 // All other requests require authentication
