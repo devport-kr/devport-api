@@ -1,0 +1,54 @@
+spring:
+  application:
+    name: devport-api
+
+  # Database Configuration (H2 for development)
+  datasource:
+    url: jdbc:h2:mem:devportdb
+    driver-class-name: org.h2.Driver
+    username: sa
+    password:
+
+  # JPA Configuration
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+        dialect: org.hibernate.dialect.H2Dialect
+
+  # H2 Console
+  h2:
+    console:
+      enabled: true
+      path: /h2-console
+
+  # CORS Configuration
+  web:
+    cors:
+      allowed-origins:
+        - http://localhost:5173  # Vite dev server
+        - https://devport.kr     # Production domain
+      allowed-methods:
+        - GET
+        - POST
+        - PUT
+        - DELETE
+      allowed-headers: "*"
+      allow-credentials: true
+
+# Server Configuration
+server:
+  port: 8080
+  servlet:
+    context-path: /
+
+# Logging Configuration
+logging:
+  level:
+    kr.devport: DEBUG
+    org.springframework.web: INFO
+    org.hibernate.SQL: DEBUG
+    org.hibernate.type.descriptor.sql.BasicBinder: TRACE
