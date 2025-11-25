@@ -26,15 +26,16 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
-            .cors()
-            .and()
-            .csrf().disable()
-            .sessionManagement()
+            .cors(cors -> cors.configure(http))
+            .csrf(csrf -> csrf.disable())
+            .sessionManagement(session -> session
                 .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
-            .and()
-            .formLogin().disable()
-            .httpBasic().disable()
+            )
+            .formLogin(form -> form.disable())
+            .httpBasic(basic -> basic.disable())
             .authorizeHttpRequests(authorize -> authorize
+                // H2 Console (development only)
+                .requestMatchers("/h2-console", "/h2-console/**").permitAll()
                 // Public endpoints
                 .requestMatchers(
                     "/",
@@ -42,8 +43,7 @@ public class SecurityConfig {
                     "/favicon.ico",
                     "/api/articles/**",
                     "/api/llm-rankings",
-                    "/api/benchmarks",
-                    "/h2-console/**"
+                    "/api/benchmarks"
                 ).permitAll()
                 // Swagger/OpenAPI endpoints
                 .requestMatchers("/swagger-ui/**", "/v3/api-docs/**", "/swagger-ui.html").permitAll()
@@ -52,18 +52,19 @@ public class SecurityConfig {
                 // All other requests require authentication
                 .anyRequest().authenticated()
             )
-            .oauth2Login()
-                .userInfoEndpoint()
+            .oauth2Login(oauth2 -> oauth2
+                .userInfoEndpoint(userInfo -> userInfo
                     .userService(customOAuth2UserService)
-                .and()
+                )
                 .successHandler(oAuth2AuthenticationSuccessHandler)
-                .failureHandler(oAuth2AuthenticationFailureHandler);
-
-        // Add JWT authentication filter
-        http.addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
-
-        // H2 console (development only)
-        http.headers().frameOptions().disable();
+                .failureHandler(oAuth2AuthenticationFailureHandler)
+            )
+            // Add JWT authentication filter
+            .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
+            // H2 console (development only)
+            .headers(headers -> headers
+                .frameOptions(frameOptions -> frameOptions.disable())
+            );
 
         return http.build();
     }
