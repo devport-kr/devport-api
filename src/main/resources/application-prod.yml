@@ -1,12 +1,19 @@
 spring:
-  # Production Database Configuration (MySQL example)
+  application:
+    name: devport-api
+
   datasource:
-    url: jdbc:mysql://localhost:3306/devport?useSSL=false&serverTimezone=UTC
-    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:devport}
+    driver-class-name: org.postgresql.Driver
     username: ${DB_USERNAME}
     password: ${DB_PASSWORD}
+    hikari:
+      maximum-pool-size: 20
+      minimum-idle: 5
+      connection-timeout: 30000
+      idle-timeout: 600000
+      max-lifetime: 1800000
 
-  # JPA Configuration for Production
   jpa:
     hibernate:
       ddl-auto: validate
@@ -14,26 +21,71 @@ spring:
     properties:
       hibernate:
         format_sql: false
-        dialect: org.hibernate.dialect.MySQLDialect
+        dialect: org.hibernate.dialect.PostgreSQLDialect
 
-  # H2 Console disabled in production
   h2:
     console:
       enabled: false
 
-# Logging Configuration for Production
+  web:
+    cors:
+      allowed-origins:
+        - https://devport.kr
+        - https://www.devport.kr
+      allowed-methods:
+        - GET
+        - POST
+        - PUT
+        - DELETE
+      allowed-headers: "*"
+      allow-credentials: true
+
+  security:
+    oauth2:
+      client:
+        registration:
+          google:
+            client-id: ${GOOGLE_CLIENT_ID}
+            client-secret: ${GOOGLE_CLIENT_SECRET}
+            scope:
+              - email
+              - profile
+          github:
+            client-id: ${GITHUB_CLIENT_ID}
+            client-secret: ${GITHUB_CLIENT_SECRET}
+            scope:
+              - user:email
+              - read:user
+
+server:
+  port: ${PORT:8080}
+  servlet:
+    context-path: /
+  compression:
+    enabled: true
+    mime-types: application/json,application/xml,text/html,text/xml,text/plain
+  http2:
+    enabled: true
+
 logging:
   level:
     kr.devport: INFO
     org.springframework.web: WARN
     org.hibernate.SQL: WARN
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} - %msg%n"
+  file:
+    name: logs/devport-api.log
+    max-size: 10MB
+    max-history: 30
 
 # Application Configuration for Production
 app:
   # JWT Configuration
   jwt:
     secret: ${JWT_SECRET}
-    expiration-ms: 86400000  # 24 hours
+    access-token-expiration-ms: 3600000      # 1 hour
+    refresh-token-expiration-ms: 2592000000  # 30 days
 
   # OAuth2 Redirect URI (Production)
   oauth2:

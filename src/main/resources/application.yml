@@ -79,7 +79,8 @@ app:
   # JWT Configuration
   jwt:
     secret: ${JWT_SECRET:dGhpc2lzYXZlcnlzZWN1cmVzZWNyZXRrZXlmb3JkZXZwb3J0YXBpanRva2VuZ2VuZXJhdGlvbnRoYXRzaG91bGRiZWNoYW5nZWRpbnByb2R1Y3Rpb24=}
-    expiration-ms: 86400000  # 24 hours
+    access-token-expiration-ms: 3600000      # 1 hour
+    refresh-token-expiration-ms: 2592000000  # 30 days
 
   # OAuth2 Redirect URI
   oauth2:
