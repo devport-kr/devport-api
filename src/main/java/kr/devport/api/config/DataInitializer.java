@@ -23,7 +23,7 @@ import java.time.LocalDateTime;
 import java.util.Arrays;
 import java.util.List;
 
-@Component
+//@Component //개발시
 @RequiredArgsConstructor
 @Slf4j
 public class DataInitializer implements CommandLineRunner {

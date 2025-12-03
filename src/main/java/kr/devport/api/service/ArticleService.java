@@ -9,6 +9,7 @@ import kr.devport.api.dto.response.ArticleResponse;
 import kr.devport.api.dto.response.TrendingTickerResponse;
 import kr.devport.api.repository.ArticleRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -34,6 +35,10 @@ public class ArticleService {
      * @param size Items per page
      * @return Paginated article response
      */
+    @Cacheable(
+        value = "articles",
+        key = "#category != null ? #category.name() + '_' + #page + '_' + #size : 'all_' + #page + '_' + #size"
+    )
     public ArticlePageResponse getArticles(Category category, int page, int size) {
         // Create pageable with sorting by score DESC and createdAtSource DESC
         Pageable pageable = PageRequest.of(page, size,
@@ -68,6 +73,7 @@ public class ArticleService {
      * @param limit Number of repos to return
      * @return List of GitHub article responses
      */
+    @Cacheable(value = "githubTrending", key = "#limit")
     public List<ArticleResponse> getGitHubTrending(int limit) {
         Pageable pageable = PageRequest.of(0, limit);
 
@@ -87,6 +93,7 @@ public class ArticleService {
      * @param limit Number of articles for ticker
      * @return List of trending ticker responses
      */
+    @Cacheable(value = "trendingTicker", key = "#limit")
     public List<TrendingTickerResponse> getTrendingTicker(int limit) {
         Pageable pageable = PageRequest.of(0, limit);
 

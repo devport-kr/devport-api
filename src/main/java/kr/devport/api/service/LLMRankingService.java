@@ -9,6 +9,7 @@ import kr.devport.api.dto.response.LLMRankingResponse;
 import kr.devport.api.repository.BenchmarkRepository;
 import kr.devport.api.repository.LLMBenchmarkScoreRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -32,6 +33,10 @@ public class LLMRankingService {
      * @param limit Number of models to return
      * @return LLM ranking response with benchmark info and model scores
      */
+    @Cacheable(
+        value = "llmRankings",
+        key = "#benchmarkType != null ? #benchmarkType.name() + '_' + #limit : 'AGENTIC_CODING_' + #limit"
+    )
     public LLMRankingResponse getLLMRankings(BenchmarkType benchmarkType, int limit) {
         // Default to AGENTIC_CODING if null
         BenchmarkType type = (benchmarkType != null) ? benchmarkType : BenchmarkType.AGENTIC_CODING;
@@ -57,6 +62,7 @@ public class LLMRankingService {
      *
      * @return List of all benchmarks
      */
+    @Cacheable(value = "benchmarks", key = "'all'")
     public List<BenchmarkResponse> getAllBenchmarks() {
         return benchmarkRepository.findAll().stream()
             .map(this::convertToBenchmarkResponse)

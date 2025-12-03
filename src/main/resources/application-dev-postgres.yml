@@ -1,0 +1,59 @@
+spring:
+  # PostgreSQL Database Configuration (Docker)
+  datasource:
+    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:devportdb}
+    driver-class-name: org.postgresql.Driver
+    username: ${DB_USERNAME:devport_user}
+    password: ${DB_PASSWORD:devport_password}
+    hikari:
+      maximum-pool-size: 3
+      minimum-idle: 1
+      connection-timeout: 30000
+      idle-timeout: 600000
+      max-lifetime: 1800000
+
+  # JPA Configuration for PostgreSQL
+  jpa:
+    hibernate:
+      ddl-auto: create-drop  # Use 'update' or 'validate' after initial setup
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        jdbc:
+          lob:
+            non_contextual_creation: true
+
+  # Disable H2 Console
+  h2:
+    console:
+      enabled: false
+
+  # Redis Configuration (Docker)
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      timeout: 2000ms
+      lettuce:
+        pool:
+          max-active: 10
+          max-idle: 8
+          min-idle: 2
+          max-wait: -1ms
+
+  # Cache Configuration
+  cache:
+    type: redis
+    redis:
+      time-to-live: 300000  # 5 minutes default
+
+# Logging Configuration
+logging:
+  level:
+    kr.devport: DEBUG
+    org.springframework.web: INFO
+    org.hibernate.SQL: DEBUG
+    org.hibernate.type.descriptor.sql.BasicBinder: TRACE
+    org.springframework.jdbc.core: DEBUG
