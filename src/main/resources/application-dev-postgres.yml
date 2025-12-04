@@ -57,3 +57,7 @@ logging:
     org.hibernate.SQL: DEBUG
     org.hibernate.type.descriptor.sql.BasicBinder: TRACE
     org.springframework.jdbc.core: DEBUG
+
+cloudflare:
+  turnstile:
+    secret-key: ${CLOUDFLARE_TURNSTILE_SECRET_KEY:your_secret_key_here}

@@ -105,6 +105,12 @@ app:
     access-token-expiration-ms: 3600000      # 1 hour
     refresh-token-expiration-ms: 2592000000  # 30 days
 
-  # OAuth2 Redirect URI
+  # OAuth2 Redirect URIs
   oauth2:
     redirect-uri: http://localhost:5173/oauth2/redirect
+    failure-redirect-uri: http://localhost:5173/login
+
+# Cloudflare Turnstile Configuration
+cloudflare:
+  turnstile:
+    secret-key: ${CLOUDFLARE_TURNSTILE_SECRET_KEY}

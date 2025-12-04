@@ -56,13 +56,18 @@ src/main/java/kr/devport/api/
 ├── service/                         # Business logic layer
 │   ├── ArticleService.java
 │   ├── LLMRankingService.java
-│   └── AuthService.java             # Authentication service
+│   ├── AuthService.java             # Authentication service
+│   ├── RefreshTokenService.java     # Refresh token management
+│   └── TurnstileService.java        # Cloudflare Turnstile validation
 ├── controller/                      # REST API controllers
 │   ├── ArticleController.java
 │   ├── LLMRankingController.java
 │   └── AuthController.java          # Authentication endpoints
 └── dto/
-    └── response/                    # API response DTOs
+    ├── request/                     # Request DTOs
+    │   ├── RefreshTokenRequest.java
+    │   └── TurnstileValidationRequest.java
+    └── response/                    # Response DTOs
         ├── ArticleResponse.java
         ├── ArticlePageResponse.java
         ├── ArticleMetadataResponse.java
@@ -71,7 +76,9 @@ src/main/java/kr/devport/api/
         ├── LLMRankingResponse.java
         ├── BenchmarkResponse.java
         ├── UserResponse.java
-        └── AuthResponse.java
+        ├── AuthResponse.java
+        ├── TokenResponse.java
+        └── TurnstileValidationResponse.java
 ```
 
 ## API Endpoints
@@ -133,30 +140,42 @@ GET /api/benchmarks
 
 ## Authentication Flow
 
-### OAuth2 Login Flow
+### OAuth2 Login Flow (with Bot Protection)
 
-1. **Frontend initiates login:**
+1. **Frontend bot verification:**
+   - User completes Cloudflare Turnstile captcha on login page
+   - Frontend stores Turnstile token in `turnstile_token` cookie
    - User clicks "Login with GitHub" or "Login with Google"
-   - Redirect to: `http://localhost:8080/oauth2/authorize/{provider}`
+
+2. **Frontend initiates OAuth2:**
+   - Redirect to: `http://localhost:8080/oauth2/authorization/{provider}`
    - Provider options: `github`, `google`
 
-2. **OAuth2 provider authentication:**
+3. **OAuth2 provider authentication:**
    - User authenticates with GitHub/Google
    - Provider redirects back to backend with authorization code
 
-3. **Backend processes authentication:**
+4. **Backend processes authentication:**
    - `CustomOAuth2UserService` loads user info from provider
    - Creates or updates `User` entity in database
-   - `OAuth2AuthenticationSuccessHandler` generates JWT token
+   - `OAuth2AuthenticationSuccessHandler` validates Turnstile token from cookie
+     - Calls `TurnstileService` to verify with Cloudflare API
+     - Blocks login if token is invalid or missing (redirects to error page)
+   - If valid, generates JWT tokens (Access + Refresh)
 
-4. **Frontend receives token:**
-   - User redirected to: `http://localhost:5173/oauth2/redirect?token={jwt_token}`
-   - Frontend stores JWT token in localStorage/sessionStorage
+5. **Frontend receives tokens:**
+   - User redirected to: `http://localhost:5173/oauth2/redirect?accessToken={xxx}&refreshToken={yyy}`
+   - Frontend stores both tokens (localStorage/sessionStorage)
 
-5. **Authenticated API requests:**
-   - Frontend includes token in header: `Authorization: Bearer {jwt_token}`
+6. **Authenticated API requests:**
+   - Frontend includes access token: `Authorization: Bearer {access_token}`
    - `JwtAuthenticationFilter` validates token
    - Request proceeds with authenticated user context
+
+7. **Token refresh (automatic):**
+   - When access token expires (1 hour), frontend calls `/api/auth/refresh`
+   - Backend returns new access token
+   - User stays logged in for 30 days
 
 ### Setting Up OAuth2 Providers
 
@@ -188,11 +207,18 @@ Required variables:
 - `GITHUB_CLIENT_ID` - GitHub OAuth client ID
 - `GITHUB_CLIENT_SECRET` - GitHub OAuth client secret
 - `JWT_SECRET` - Secret key for JWT signing (minimum 256 bits)
+- `CLOUDFLARE_TURNSTILE_SECRET_KEY` - Cloudflare Turnstile secret key for bot protection
 
 Generate JWT secret:
 ```bash
 openssl rand -base64 64
 ```
+
+Get Cloudflare Turnstile keys:
+1. Sign up at https://dash.cloudflare.com/
+2. Go to Turnstile section
+3. Create a new site
+4. Copy the **Site Key** (for frontend) and **Secret Key** (for backend)
 
 ## Database Schema
 
