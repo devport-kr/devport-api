@@ -1,6 +1,5 @@
 package kr.devport.api.security.oauth2;
 
-import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import kr.devport.api.domain.entity.RefreshToken;
@@ -19,7 +18,6 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.util.UriComponentsBuilder;
 
 import java.io.IOException;
-import java.util.Arrays;
 
 @Component
 @RequiredArgsConstructor
@@ -55,11 +53,12 @@ public class OAuth2AuthenticationSuccessHandler extends SimpleUrlAuthenticationS
     protected String determineTargetUrl(HttpServletRequest request,
                                         HttpServletResponse response,
                                         Authentication authentication) {
-        // Step 1: Validate Turnstile token from cookie
-        String turnstileToken = extractTurnstileTokenFromCookie(request);
+        // Step 1: Extract Turnstile token from OAuth2 state parameter
+        String state = request.getParameter("state");
+        String turnstileToken = CustomOAuth2AuthorizationRequestResolver.extractTurnstileTokenFromState(state);
 
         if (turnstileToken == null || turnstileToken.isEmpty()) {
-            log.warn("Turnstile token not found in cookies. Redirecting to login with error.");
+            log.warn("Turnstile token not found in OAuth2 state parameter. Redirecting to login with error.");
             return buildFailureRedirectUrl("Turnstile token is missing");
         }
 
@@ -90,22 +89,6 @@ public class OAuth2AuthenticationSuccessHandler extends SimpleUrlAuthenticationS
             .queryParam("refreshToken", refreshToken.getToken())
             .build()
             .toUriString();
-    }
-
-    /**
-     * Extracts Turnstile token from request cookies
-     */
-    private String extractTurnstileTokenFromCookie(HttpServletRequest request) {
-        Cookie[] cookies = request.getCookies();
-        if (cookies == null) {
-            return null;
-        }
-
-        return Arrays.stream(cookies)
-            .filter(cookie -> "turnstile_token".equals(cookie.getName()))
-            .map(Cookie::getValue)
-            .findFirst()
-            .orElse(null);
     }
 
     /**

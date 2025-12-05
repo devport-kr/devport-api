@@ -1,6 +1,7 @@
 package kr.devport.api.config;
 
 import kr.devport.api.security.JwtAuthenticationFilter;
+import kr.devport.api.security.oauth2.CustomOAuth2AuthorizationRequestResolver;
 import kr.devport.api.security.oauth2.CustomOAuth2UserService;
 import kr.devport.api.security.oauth2.OAuth2AuthenticationFailureHandler;
 import kr.devport.api.security.oauth2.OAuth2AuthenticationSuccessHandler;
@@ -10,6 +11,7 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
+import org.springframework.security.oauth2.client.registration.ClientRegistrationRepository;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
@@ -22,6 +24,7 @@ public class SecurityConfig {
     private final OAuth2AuthenticationSuccessHandler oAuth2AuthenticationSuccessHandler;
     private final OAuth2AuthenticationFailureHandler oAuth2AuthenticationFailureHandler;
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
+    private final ClientRegistrationRepository clientRegistrationRepository;
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
@@ -42,6 +45,7 @@ public class SecurityConfig {
                     "/error",
                     "/favicon.ico",
                     "/api/articles/**",
+                    "/api/git-repos/**",
                     "/api/llm-rankings",
                     "/api/benchmarks",
                     "/api/auth/refresh"  // Refresh token endpoint (public)
@@ -54,6 +58,11 @@ public class SecurityConfig {
                 .anyRequest().authenticated()
             )
             .oauth2Login(oauth2 -> oauth2
+                .authorizationEndpoint(authorization -> authorization
+                    .authorizationRequestResolver(
+                        new CustomOAuth2AuthorizationRequestResolver(clientRegistrationRepository)
+                    )
+                )
                 .userInfoEndpoint(userInfo -> userInfo
                     .userService(customOAuth2UserService)
                 )

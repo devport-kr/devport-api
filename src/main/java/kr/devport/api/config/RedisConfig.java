@@ -1,7 +1,9 @@
 package kr.devport.api.config;
 
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
+import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.databind.jsontype.BasicPolymorphicTypeValidator;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import org.springframework.cache.CacheManager;
@@ -13,6 +15,7 @@ import org.springframework.data.redis.cache.RedisCacheManager;
 import org.springframework.data.redis.connection.RedisConnectionFactory;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.serializer.GenericJackson2JsonRedisSerializer;
+import org.springframework.data.redis.serializer.Jackson2JsonRedisSerializer;
 import org.springframework.data.redis.serializer.RedisSerializationContext;
 import org.springframework.data.redis.serializer.StringRedisSerializer;
 
@@ -72,6 +75,15 @@ public class RedisConfig {
         // Articles by category - 10 minutes
         cacheConfigurations.put("articles", defaultConfig.entryTtl(Duration.ofMinutes(10)));
 
+        // Git repos - 10 minutes
+        cacheConfigurations.put("gitRepos", defaultConfig.entryTtl(Duration.ofMinutes(10)));
+
+        // Trending git repos - 1 hour
+        cacheConfigurations.put("trendingGitRepos", defaultConfig.entryTtl(Duration.ofHours(1)));
+
+        // Git repos by language - 30 minutes
+        cacheConfigurations.put("gitReposByLanguage", defaultConfig.entryTtl(Duration.ofMinutes(30)));
+
         // LLM rankings - 24 hours (rarely changes)
         cacheConfigurations.put("llmRankings", defaultConfig.entryTtl(Duration.ofHours(24)));
 
@@ -86,18 +98,24 @@ public class RedisConfig {
 
     /**
      * JSON serializer for Redis values
-     * Configured to handle Java 8 date/time types and polymorphic types
+     * Configured to handle DTOs without Hibernate proxy issues
      */
     private GenericJackson2JsonRedisSerializer jsonRedisSerializer() {
         ObjectMapper objectMapper = new ObjectMapper();
 
-        // Register Java 8 date/time module
+        // Register Java 8 date/time module for LocalDateTime support
         objectMapper.registerModule(new JavaTimeModule());
 
-        // Enable default typing for polymorphic types
+        // Disable writing dates as timestamps
+        objectMapper.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
+
+        // Ignore unknown properties during deserialization
+        objectMapper.disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES);
+
+        // Enable default typing with stricter validation to avoid Hibernate proxy issues
         objectMapper.activateDefaultTyping(
             BasicPolymorphicTypeValidator.builder()
-                .allowIfBaseType(Object.class)
+                .allowIfSubType(Object.class)
                 .build(),
             ObjectMapper.DefaultTyping.NON_FINAL,
             JsonTypeInfo.As.PROPERTY
