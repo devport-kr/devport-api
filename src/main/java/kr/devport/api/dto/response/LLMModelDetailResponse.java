@@ -48,7 +48,7 @@ public class LLMModelDetailResponse {
     private BigDecimal medianTimeToFirstAnswerToken;  // Time to first answer token (seconds)
     private String license;
 
-    // Benchmark Scores (all 18 categories)
+    // Benchmark Scores (all 15 categories)
     // Agentic Capabilities
     private BigDecimal scoreTerminalBenchHard;
     private BigDecimal scoreTauBenchTelecom;
@@ -68,12 +68,9 @@ public class LLMModelDetailResponse {
     private BigDecimal scoreMath500;
     private BigDecimal scoreAime;
     private BigDecimal scoreAime2025;
-    private BigDecimal scoreCritPt;
-    private BigDecimal scoreMmmuPro;
 
     // Composite Indices
     private BigDecimal scoreAaIntelligenceIndex;
-    private BigDecimal scoreAaOmniscienceIndex;
     private BigDecimal scoreAaCodingIndex;
     private BigDecimal scoreAaMathIndex;
 
@@ -112,10 +109,7 @@ public class LLMModelDetailResponse {
             .scoreMath500(model.getScoreMath500())
             .scoreAime(model.getScoreAime())
             .scoreAime2025(model.getScoreAime2025())
-            .scoreCritPt(model.getScoreCritPt())
-            .scoreMmmuPro(model.getScoreMmmuPro())
             .scoreAaIntelligenceIndex(model.getScoreAaIntelligenceIndex())
-            .scoreAaOmniscienceIndex(model.getScoreAaOmniscienceIndex())
             .scoreAaCodingIndex(model.getScoreAaCodingIndex())
             .scoreAaMathIndex(model.getScoreAaMathIndex())
             .createdAt(model.getCreatedAt())

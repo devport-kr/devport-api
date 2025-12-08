@@ -1,7 +1,7 @@
 package kr.devport.api.domain.enums;
 
 /**
- * LLM Benchmark Types - 18 categories total
+ * LLM Benchmark Types - 15 categories total
  * Source: Artificial Analysis API
  */
 public enum BenchmarkType {
@@ -20,17 +20,14 @@ public enum BenchmarkType {
     LIVECODE_BENCH,         // Coding (Real-world problems)
     SCICODE,                // Scientific Computing & Code
 
-    // Specialized Skills (6)
+    // Specialized Skills (4)
     IFBENCH,                // Instruction Following
     MATH_500,               // Math 500
     AIME,                   // AIME (Legacy version)
     AIME_2025,              // AIME 2025 (Competition Math)
-    CRIT_PT,                // Physics Reasoning
-    MMMU_PRO,               // Visual Reasoning (Multimodal)
 
-    // Composite Indices (4)
+    // Composite Indices (3)
     AA_INTELLIGENCE_INDEX,  // Overall Intelligence Score
-    AA_OMNISCIENCE_INDEX,   // Omniscience Index (breadth)
     AA_CODING_INDEX,        // Coding Index (composite)
     AA_MATH_INDEX           // Math Index (composite)
 }

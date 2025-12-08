@@ -106,7 +106,7 @@ public class LLMModel {
     @Column(length = 50)
     private String license;  // "Open" or "Proprietary"
 
-    // Benchmark Scores (all 14 categories)
+    // Benchmark Scores (all 15 categories)
     // All scores are nullable (model may not be tested on all benchmarks)
     // All scores are 0-100 percentages
 
@@ -145,7 +145,7 @@ public class LLMModel {
     @Column(precision = 5, scale = 2, name = "score_scicode")
     private BigDecimal scoreScicode;  // Coding
 
-    // Specialized Skills (6)
+    // Specialized Skills (4)
     @Min(0) @Max(100)
     @Column(precision = 5, scale = 2, name = "score_ifbench")
     private BigDecimal scoreIfbench;  // Instruction Following
@@ -162,21 +162,10 @@ public class LLMModel {
     @Column(precision = 5, scale = 2, name = "score_aime_2025")
     private BigDecimal scoreAime2025;  // AIME 2025 (Competition Math)
 
-    @Min(0) @Max(100)
-    @Column(precision = 5, scale = 2, name = "score_crit_pt")
-    private BigDecimal scoreCritPt;  // Physics Reasoning
-
-    @Min(0) @Max(100)
-    @Column(precision = 5, scale = 2, name = "score_mmmu_pro")
-    private BigDecimal scoreMmmuPro;  // Visual Reasoning (Multimodal)
-
-    // Composite Indices (4)
+    // Composite Indices (3)
     @Min(0) @Max(100)
     @Column(precision = 5, scale = 2, name = "score_aa_intelligence_index")
     private BigDecimal scoreAaIntelligenceIndex;  // Overall Intelligence Score
-
-    @Column(precision = 5, scale = 2, name = "score_aa_omniscience_index")
-    private BigDecimal scoreAaOmniscienceIndex;  // Omniscience Index (can be negative)
 
     @Min(0) @Max(100)
     @Column(precision = 5, scale = 2, name = "score_aa_coding_index")

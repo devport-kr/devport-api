@@ -190,12 +190,9 @@ public class LLMRankingService {
             case MATH_500 -> model.getScoreMath500();
             case AIME -> model.getScoreAime();
             case AIME_2025 -> model.getScoreAime2025();
-            case CRIT_PT -> model.getScoreCritPt();
-            case MMMU_PRO -> model.getScoreMmmuPro();
 
             // Composite Indices
             case AA_INTELLIGENCE_INDEX -> model.getScoreAaIntelligenceIndex();
-            case AA_OMNISCIENCE_INDEX -> model.getScoreAaOmniscienceIndex();
             case AA_CODING_INDEX -> model.getScoreAaCodingIndex();
             case AA_MATH_INDEX -> model.getScoreAaMathIndex();
         };
