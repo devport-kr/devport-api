@@ -55,6 +55,8 @@ public class SecurityConfig {
                 .requestMatchers("/swagger-ui/**", "/v3/api-docs/**", "/swagger-ui.html").permitAll()
                 // OAuth2 endpoints
                 .requestMatchers("/oauth2/**", "/login/**").permitAll()
+                // Admin endpoints - require ADMIN role
+                .requestMatchers("/api/admin/**").hasRole("ADMIN")
                 // All other requests require authentication
                 .anyRequest().authenticated()
             )
