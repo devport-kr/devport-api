@@ -17,17 +17,17 @@ import lombok.Setter;
 public class ArticleMetadata {
 
     @Column(name = "stars")
-    private Integer stars;  // For GitHub repos
+    private Integer stars;
 
     @Column(name = "comments")
-    private Integer comments;  // For HN, Reddit
+    private Integer comments;
 
     @Column(name = "upvotes")
-    private Integer upvotes;  // For Reddit
+    private Integer upvotes;
 
     @Column(name = "read_time", length = 50)
-    private String readTime;  // e.g., "5분", "12분" (for blog posts)
+    private String readTime;
 
     @Column(name = "language", length = 50)
-    private String language;  // Spoken language: "English" or "Chinese" (for GitHub repos)
+    private String language;
 }

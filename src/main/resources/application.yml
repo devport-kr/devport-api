@@ -2,14 +2,12 @@ spring:
   application:
     name: devport-api
 
-  # Database Configuration (H2 for development)
   datasource:
     url: jdbc:h2:mem:devportdb
     driver-class-name: org.h2.Driver
     username: sa
     password:
 
-  # JPA Configuration
   jpa:
     hibernate:
       ddl-auto: create-drop
@@ -19,7 +17,6 @@ spring:
         format_sql: true
         dialect: org.hibernate.dialect.H2Dialect
 
-  # H2 Console
   h2:
     console:
       enabled: true
@@ -28,7 +25,6 @@ spring:
         web-allow-others: true
         trace: false
 
-  # Redis Configuration
   data:
     redis:
       host: localhost
@@ -41,18 +37,16 @@ spring:
           min-idle: 2
           max-wait: -1ms
 
-  # Cache Configuration
   cache:
     type: redis
     redis:
-      time-to-live: 300000  # 5 minutes default
+      time-to-live: 300000
 
-  # CORS Configuration
   web:
     cors:
       allowed-origins:
-        - http://localhost:5173  # Vite dev server
-        - https://devport.kr     # Production domain
+        - http://localhost:5173
+        - https://devport.kr
       allowed-methods:
         - GET
         - POST
@@ -61,7 +55,6 @@ spring:
       allowed-headers: "*"
       allow-credentials: true
 
-  # OAuth2 Configuration
   security:
     oauth2:
       client:
@@ -83,13 +76,11 @@ spring:
             user-info-uri: https://api.github.com/user
             user-name-attribute: id
 
-# Server Configuration
 server:
   port: 8080
   servlet:
     context-path: /
 
-# Logging Configuration
 logging:
   level:
     kr.devport: DEBUG
@@ -97,20 +88,16 @@ logging:
     org.hibernate.SQL: WARN
     org.hibernate.type.descriptor.sql.BasicBinder: WARN
 
-# Application Configuration
 app:
-  # JWT Configuration
   jwt:
     secret: ${JWT_SECRET:dGhpc2lzYXZlcnlzZWN1cmVzZWNyZXRrZXlmb3JkZXZwb3J0YXBpanRva2VuZ2VuZXJhdGlvbnRoYXRzaG91bGRiZWNoYW5nZWRpbnByb2R1Y3Rpb24=}
-    access-token-expiration-ms: 3600000      # 1 hour
-    refresh-token-expiration-ms: 2592000000  # 30 days
+    access-token-expiration-ms: 3600000
+    refresh-token-expiration-ms: 2592000000
 
-  # OAuth2 Redirect URIs
   oauth2:
     redirect-uri: http://localhost:5173/oauth2/redirect
     failure-redirect-uri: http://localhost:5173/login
 
-# Cloudflare Turnstile Configuration
 cloudflare:
   turnstile:
     secret-key: ${CLOUDFLARE_TURNSTILE_SECRET_KEY}

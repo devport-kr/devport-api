@@ -13,6 +13,6 @@ public class ArticleMetadataRequest {
     private Integer stars;
     private Integer comments;
     private Integer upvotes;
-    private String readTime;  // e.g., "5분", "12분"
+    private String readTime;
     private String language;
 }

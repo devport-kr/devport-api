@@ -8,10 +8,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
-/**
- * Benchmark metadata for frontend display
- * Used for /api/llm/benchmark-categories endpoint
- */
+/** 프론트 노출용 벤치마크 메타데이터 DTO. */
 @Getter
 @Setter
 @NoArgsConstructor
@@ -21,9 +18,9 @@ public class LLMBenchmarkResponse {
 
     private BenchmarkType benchmarkType;
     private String displayName;
-    private String categoryGroup;  // "Agentic", "Reasoning", "Coding", "Specialized", "Composite"
-    private String description;  // Short description
-    private String explanation;  // Detailed explanation for tooltips
+    private String categoryGroup;
+    private String description;
+    private String explanation;
     private Integer sortOrder;
 
     public static LLMBenchmarkResponse fromEntity(LLMBenchmark benchmark) {

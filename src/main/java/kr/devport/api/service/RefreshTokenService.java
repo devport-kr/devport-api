@@ -20,12 +20,8 @@ public class RefreshTokenService {
     private final RefreshTokenRepository refreshTokenRepository;
     private final JwtTokenProvider jwtTokenProvider;
 
-    /**
-     * Create and save a new refresh token for user
-     */
     @Transactional
     public RefreshToken createRefreshToken(User user) {
-        // Delete old refresh tokens for this user
         refreshTokenRepository.deleteByUser(user);
 
         String token = jwtTokenProvider.generateRefreshToken(user.getId());
@@ -41,31 +37,21 @@ public class RefreshTokenService {
         return refreshTokenRepository.save(refreshToken);
     }
 
-    /**
-     * Find refresh token by token string
-     */
     @Transactional(readOnly = true)
     public Optional<RefreshToken> findByToken(String token) {
         return refreshTokenRepository.findByToken(token);
     }
 
-    /**
-     * Verify if refresh token is valid
-     */
     @Transactional(readOnly = true)
     public boolean verifyRefreshToken(RefreshToken refreshToken) {
         if (refreshToken.isValid()) {
             return true;
         }
 
-        // Delete expired or revoked token
         refreshTokenRepository.delete(refreshToken);
         return false;
     }
 
-    /**
-     * Revoke refresh token
-     */
     @Transactional
     public void revokeRefreshToken(String token) {
         refreshTokenRepository.findByToken(token).ifPresent(refreshToken -> {
@@ -74,9 +60,6 @@ public class RefreshTokenService {
         });
     }
 
-    /**
-     * Delete all refresh tokens for a user (logout)
-     */
     @Transactional
     public void deleteByUser(User user) {
         refreshTokenRepository.deleteByUser(user);

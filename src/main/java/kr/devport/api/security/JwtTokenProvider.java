@@ -28,9 +28,6 @@ public class JwtTokenProvider {
     @Value("${app.jwt.refresh-token-expiration-ms}")
     private long refreshTokenExpirationMs;
 
-    /**
-     * Generate access token from user ID (1 hour expiration)
-     */
     public String generateAccessToken(Long userId) {
         Date now = new Date();
         Date expiryDate = new Date(now.getTime() + accessTokenExpirationMs);
@@ -43,9 +40,6 @@ public class JwtTokenProvider {
             .compact();
     }
 
-    /**
-     * Generate refresh token from user ID (30 days expiration)
-     */
     public String generateRefreshToken(Long userId) {
         Date now = new Date();
         Date expiryDate = new Date(now.getTime() + refreshTokenExpirationMs);
@@ -58,16 +52,10 @@ public class JwtTokenProvider {
             .compact();
     }
 
-    /**
-     * Get refresh token expiration time in milliseconds
-     */
     public long getRefreshTokenExpirationMs() {
         return refreshTokenExpirationMs;
     }
 
-    /**
-     * Get user ID from JWT token
-     */
     public Long getUserIdFromToken(String token) {
         Claims claims = Jwts.parser()
             .verifyWith(getSigningKey())
@@ -78,9 +66,6 @@ public class JwtTokenProvider {
         return Long.parseLong(claims.getSubject());
     }
 
-    /**
-     * Validate JWT token
-     */
     public boolean validateToken(String token) {
         try {
             Jwts.parser()
@@ -100,9 +85,6 @@ public class JwtTokenProvider {
         return false;
     }
 
-    /**
-     * Get signing key from secret
-     */
     private SecretKey getSigningKey() {
         byte[] keyBytes = jwtSecret.getBytes(StandardCharsets.UTF_8);
         return Keys.hmacShaKeyFor(keyBytes);

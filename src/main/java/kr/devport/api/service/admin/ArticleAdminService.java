@@ -18,7 +18,7 @@ import java.util.ArrayList;
 @Service
 @RequiredArgsConstructor
 @Transactional
-public class ArticleAdminService {
+public class ArticleAdminService {  
 
     private final ArticleRepository articleRepository;
 

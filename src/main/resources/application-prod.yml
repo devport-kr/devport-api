@@ -79,14 +79,11 @@ logging:
     max-size: 10MB
     max-history: 30
 
-# Application Configuration for Production
 app:
-  # JWT Configuration
   jwt:
     secret: ${JWT_SECRET}
-    access-token-expiration-ms: 3600000      # 1 hour
-    refresh-token-expiration-ms: 2592000000  # 30 days
+    access-token-expiration-ms: 3600000
+    refresh-token-expiration-ms: 2592000000
 
-  # OAuth2 Redirect URI (Production)
   oauth2:
     redirect-uri: https://devport.kr/oauth2/redirect

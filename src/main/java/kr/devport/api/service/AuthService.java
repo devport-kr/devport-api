@@ -19,9 +19,6 @@ public class AuthService {
     private final RefreshTokenService refreshTokenService;
     private final JwtTokenProvider jwtTokenProvider;
 
-    /**
-     * Get current user information
-     */
     public UserResponse getCurrentUser(Long userId) {
         User user = userRepository.findById(userId)
             .orElseThrow(() -> new RuntimeException("User not found with id: " + userId));
@@ -29,9 +26,6 @@ public class AuthService {
         return convertToUserResponse(user);
     }
 
-    /**
-     * Refresh access token using refresh token
-     */
     @Transactional
     public TokenResponse refreshAccessToken(String refreshTokenString) {
         RefreshToken refreshToken = refreshTokenService.findByToken(refreshTokenString)
@@ -48,13 +42,10 @@ public class AuthService {
             .accessToken(newAccessToken)
             .refreshToken(refreshTokenString)
             .tokenType("Bearer")
-            .expiresIn(3600L) // 1 hour in seconds
+            .expiresIn(3600L) // 만료 시간 1시간(초 단위)
             .build();
     }
 
-    /**
-     * Logout user by revoking all refresh tokens
-     */
     @Transactional
     public void logout(Long userId) {
         User user = userRepository.findById(userId)
@@ -63,9 +54,6 @@ public class AuthService {
         refreshTokenService.deleteByUser(user);
     }
 
-    /**
-     * Convert User entity to UserResponse DTO
-     */
     private UserResponse convertToUserResponse(User user) {
         return UserResponse.builder()
             .id(user.getId())

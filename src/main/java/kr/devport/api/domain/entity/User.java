@@ -42,15 +42,15 @@ public class User {
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, name = "auth_provider")
-    private AuthProvider authProvider;  // github or google
+    private AuthProvider authProvider;
 
     @Column(name = "provider_id", unique = true, length = 100)
-    private String providerId;  // OAuth provider's user ID
+    private String providerId;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     @Builder.Default
-    private UserRole role = UserRole.USER;  // USER or ADMIN
+    private UserRole role = UserRole.USER;
 
     @Column(nullable = false, name = "created_at")
     private LocalDateTime createdAt;

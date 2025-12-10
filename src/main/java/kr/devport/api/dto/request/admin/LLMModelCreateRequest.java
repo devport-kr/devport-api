@@ -29,19 +29,16 @@ public class LLMModelCreateRequest {
     private Long modelCreatorId;
     private String description;
 
-    // Pricing
     private BigDecimal priceInput;
     private BigDecimal priceOutput;
     private BigDecimal priceBlended;
 
-    // Performance
     private Long contextWindow;
     private BigDecimal outputSpeedMedian;
     private BigDecimal latencyTtft;
     private BigDecimal medianTimeToFirstAnswerToken;
     private String license;
 
-    // 15 Benchmark scores (0-100 scale)
     private BigDecimal scoreTerminalBenchHard;
     private BigDecimal scoreTauBenchTelecom;
     private BigDecimal scoreAaLcr;

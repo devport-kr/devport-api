@@ -11,10 +11,7 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 
-/**
- * Complete model details with all benchmark scores (18 total)
- * Used for /api/llm/models/{modelId} endpoint
- */
+/** 상세 조회용 LLM 모델 응답 DTO. */
 @Getter
 @Setter
 @NoArgsConstructor
@@ -22,59 +19,48 @@ import java.time.LocalDateTime;
 @Builder
 public class LLMModelDetailResponse {
 
-    // Model identification
     private Long id;
-    private String externalId;  // UUID from API
-    private String slug;  // URL-friendly identifier
+    private String externalId;
+    private String slug;
     private String modelId;
     private String modelName;
     private LocalDate releaseDate;
 
-    // Provider information
-    private String provider;  // Legacy field (can be null)
-    private ModelCreatorResponse modelCreator;  // Detailed creator info from API
+    private String provider;
+    private ModelCreatorResponse modelCreator;
 
     private String description;
 
-    // Pricing (USD per million tokens)
     private BigDecimal priceInput;
     private BigDecimal priceOutput;
     private BigDecimal priceBlended;
 
-    // Performance metrics
     private Long contextWindow;
-    private BigDecimal outputSpeedMedian;  // tokens/sec
-    private BigDecimal latencyTtft;  // Time to first token (seconds)
-    private BigDecimal medianTimeToFirstAnswerToken;  // Time to first answer token (seconds)
+    private BigDecimal outputSpeedMedian;
+    private BigDecimal latencyTtft;
+    private BigDecimal medianTimeToFirstAnswerToken;
     private String license;
 
-    // Benchmark Scores (all 15 categories)
-    // Agentic Capabilities
     private BigDecimal scoreTerminalBenchHard;
     private BigDecimal scoreTauBenchTelecom;
 
-    // Reasoning & Knowledge
     private BigDecimal scoreAaLcr;
     private BigDecimal scoreHumanitysLastExam;
     private BigDecimal scoreMmluPro;
     private BigDecimal scoreGpqaDiamond;
 
-    // Coding
     private BigDecimal scoreLivecodeBench;
     private BigDecimal scoreScicode;
 
-    // Specialized Skills
     private BigDecimal scoreIfbench;
     private BigDecimal scoreMath500;
     private BigDecimal scoreAime;
     private BigDecimal scoreAime2025;
 
-    // Composite Indices
     private BigDecimal scoreAaIntelligenceIndex;
     private BigDecimal scoreAaCodingIndex;
     private BigDecimal scoreAaMathIndex;
 
-    // Metadata
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 

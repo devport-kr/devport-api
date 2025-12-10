@@ -13,18 +13,13 @@ import java.util.List;
 @Repository
 public interface ArticleRepository extends JpaRepository<Article, Long> {
 
-    // Find all articles with pagination
     Page<Article> findAll(Pageable pageable);
 
-    // Find articles by category with pagination
     Page<Article> findByCategory(Category category, Pageable pageable);
 
-    // Find articles by source with pagination
     Page<Article> findBySource(Source source, Pageable pageable);
 
-    // Find GitHub articles sorted by score or stars
     Page<Article> findBySourceOrderByScoreDesc(Source source, Pageable pageable);
 
-    // Find top N articles for trending ticker
     List<Article> findAllByOrderByScoreDescCreatedAtSourceDesc(Pageable pageable);
 }

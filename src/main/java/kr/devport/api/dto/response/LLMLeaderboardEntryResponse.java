@@ -10,10 +10,7 @@ import lombok.Setter;
 
 import java.math.BigDecimal;
 
-/**
- * Leaderboard entry for specific benchmark
- * Used for /api/llm/leaderboard/{benchmarkType} endpoint
- */
+/** 특정 벤치마크 리더보드 응답 DTO. */
 @Getter
 @Setter
 @NoArgsConstructor
@@ -27,11 +24,9 @@ public class LLMLeaderboardEntryResponse {
     private String provider;
     private String license;
 
-    // The score for the specific benchmark being queried
     private BigDecimal score;
     private Integer rank;
 
-    // Additional useful metrics
     private BigDecimal priceBlended;
     private Long contextWindow;
 

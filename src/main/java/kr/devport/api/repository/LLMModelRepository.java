@@ -15,25 +15,18 @@ import java.util.Optional;
 @Repository
 public interface LLMModelRepository extends JpaRepository<LLMModel, Long> {
 
-    // Find model by unique model ID (from API)
     Optional<LLMModel> findByModelId(String modelId);
 
-    // Find model by slug
     Optional<LLMModel> findBySlug(String slug);
 
-    // Find model by external ID (UUID from API)
     Optional<LLMModel> findByExternalId(String externalId);
 
-    // Find all models by provider (legacy, using denormalized field)
     List<LLMModel> findByProvider(String provider);
 
-    // Find all models by model creator slug
     List<LLMModel> findByModelCreator_Slug(String creatorSlug);
 
-    // Find all models by license
     List<LLMModel> findByLicense(String license);
 
-    // Find all models with filters (paginated)
     @Query("""
         SELECT m FROM LLMModel m
         LEFT JOIN m.modelCreator mc
@@ -53,7 +46,6 @@ public interface LLMModelRepository extends JpaRepository<LLMModel, Long> {
         Pageable pageable
     );
 
-    // Find all models with filters (non-paginated for leaderboards)
     @Query("""
         SELECT m FROM LLMModel m
         LEFT JOIN m.modelCreator mc
@@ -71,7 +63,6 @@ public interface LLMModelRepository extends JpaRepository<LLMModel, Long> {
         @Param("minContextWindow") Long minContextWindow
     );
 
-    // Find all models ordered by intelligence index (nulls last)
     @Query("SELECT m FROM LLMModel m ORDER BY m.scoreAaIntelligenceIndex DESC NULLS LAST")
     List<LLMModel> findAllByOrderByScoreAaIntelligenceIndexDesc();
 }

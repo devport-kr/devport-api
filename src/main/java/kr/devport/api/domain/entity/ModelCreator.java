@@ -10,10 +10,7 @@ import lombok.Setter;
 
 import java.time.LocalDateTime;
 
-/**
- * Represents an LLM model creator/provider (e.g., OpenAI, Anthropic, Alibaba).
- * This entity stores provider information from the Artificial Analysis API.
- */
+/**LLM model creator/provider (e.g., OpenAI, Anthropic, Alibaba)*/
 @Entity
 @Table(name = "model_creators")
 @Getter
@@ -27,25 +24,13 @@ public class ModelCreator {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    /**
-     * External ID from Artificial Analysis API (UUID format).
-     * Example: "d874d370-74d3-4fa0-ba00-5272f92f946b"
-     */
     @Column(unique = true, length = 100, name = "external_id")
     private String externalId;
 
-    /**
-     * URL-friendly slug identifier.
-     * Example: "alibaba", "openai", "anthropic"
-     */
     @NotBlank
     @Column(nullable = false, unique = true, length = 100)
     private String slug;
 
-    /**
-     * Display name of the model creator.
-     * Example: "Alibaba", "OpenAI", "Anthropic"
-     */
     @NotBlank
     @Column(nullable = false, length = 200)
     private String name;

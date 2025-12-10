@@ -17,10 +17,7 @@ import lombok.Setter;
 
 import java.time.LocalDateTime;
 
-/**
- * GitRepo entity for storing GitHub trending repositories
- * Separated from Article entity to handle repository-specific metadata
- */
+/** GitHub 트렌딩 repository 및 메타데이터 */
 @Entity
 @Table(name = "git_repos")
 @Getter
@@ -34,9 +31,8 @@ public class GitRepo {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    // Repository details
     @Column(nullable = false, length = 500, name = "full_name")
-    private String fullName;  // e.g., "facebook/react"
+    private String fullName;
 
     @Column(nullable = false, length = 1000, unique = true)
     private String url;
@@ -44,9 +40,8 @@ public class GitRepo {
     @Column(columnDefinition = "TEXT")
     private String description;
 
-    // Repository metadata
     @Column(length = 100)
-    private String language;  // Programming language
+    private String language;
 
     @Column
     private Integer stars;
@@ -57,7 +52,6 @@ public class GitRepo {
     @Column(name = "stars_this_week")
     private Integer starsThisWeek;
 
-    // Korean summary (LLM generated)
     @Column(length = 500, name = "summary_ko_title")
     private String summaryKoTitle;
 
@@ -66,14 +60,12 @@ public class GitRepo {
 
     @Enumerated(EnumType.STRING)
     @Column(length = 50)
-    private Category category;  // Technology category
+    private Category category;
 
-    // Trending metrics
     @Column(nullable = false)
     @Builder.Default
     private Integer score = 0;
 
-    // Timestamps
     @Column(nullable = false, name = "created_at")
     private LocalDateTime createdAt;
 

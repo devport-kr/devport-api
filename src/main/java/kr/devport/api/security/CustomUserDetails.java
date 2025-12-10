@@ -22,9 +22,6 @@ public class CustomUserDetails implements UserDetails, OAuth2User {
     private Collection<? extends GrantedAuthority> authorities;
     private Map<String, Object> attributes;
 
-    /**
-     * Create CustomUserDetails from User entity
-     */
     public static CustomUserDetails create(User user) {
         Collection<GrantedAuthority> authorities = Collections.singletonList(
             new SimpleGrantedAuthority("ROLE_" + user.getRole().name())
@@ -39,9 +36,6 @@ public class CustomUserDetails implements UserDetails, OAuth2User {
         );
     }
 
-    /**
-     * Create CustomUserDetails from User entity and OAuth2 attributes
-     */
     public static CustomUserDetails create(User user, Map<String, Object> attributes) {
         CustomUserDetails userDetails = create(user);
         return new CustomUserDetails(
@@ -55,7 +49,7 @@ public class CustomUserDetails implements UserDetails, OAuth2User {
 
     @Override
     public String getPassword() {
-        return null; // OAuth2 users don't have passwords
+        return null; // OAuth2 사용자는 별도 비밀번호가 없다.
     }
 
     @Override

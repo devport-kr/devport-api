@@ -6,9 +6,7 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
-/**
- * DTO for ModelCreator information in API responses.
- */
+/** 모델 제공자 정보를 담는 응답 DTO. */
 @Getter
 @NoArgsConstructor
 @AllArgsConstructor
@@ -16,13 +14,10 @@ import lombok.NoArgsConstructor;
 public class ModelCreatorResponse {
 
     private Long id;
-    private String externalId;  // UUID from API
-    private String slug;        // e.g., "openai", "anthropic", "alibaba"
-    private String name;        // e.g., "OpenAI", "Anthropic", "Alibaba"
+    private String externalId;
+    private String slug;
+    private String name;
 
-    /**
-     * Convert ModelCreator entity to DTO.
-     */
     public static ModelCreatorResponse from(ModelCreator modelCreator) {
         if (modelCreator == null) {
             return null;

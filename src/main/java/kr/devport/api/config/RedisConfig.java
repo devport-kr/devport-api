@@ -23,27 +23,18 @@ import java.time.Duration;
 import java.util.HashMap;
 import java.util.Map;
 
-/**
- * Redis configuration for caching
- * Configures cache managers with different TTLs for different cache types
- */
 @Configuration
 @EnableCaching
 public class RedisConfig {
 
-    /**
-     * Configure Redis template for custom operations
-     */
     @Bean
     public RedisTemplate<String, Object> redisTemplate(RedisConnectionFactory connectionFactory) {
         RedisTemplate<String, Object> template = new RedisTemplate<>();
         template.setConnectionFactory(connectionFactory);
 
-        // Use String serializer for keys
         template.setKeySerializer(new StringRedisSerializer());
         template.setHashKeySerializer(new StringRedisSerializer());
 
-        // Use JSON serializer for values
         template.setValueSerializer(jsonRedisSerializer());
         template.setHashValueSerializer(jsonRedisSerializer());
 
@@ -51,43 +42,23 @@ public class RedisConfig {
         return template;
     }
 
-    /**
-     * Configure cache manager with different TTLs for different caches
-     */
     @Bean
     public CacheManager cacheManager(RedisConnectionFactory connectionFactory) {
-        // Default cache configuration (5 minutes)
         RedisCacheConfiguration defaultConfig = RedisCacheConfiguration.defaultCacheConfig()
             .entryTtl(Duration.ofMinutes(5))
             .serializeKeysWith(RedisSerializationContext.SerializationPair.fromSerializer(new StringRedisSerializer()))
             .serializeValuesWith(RedisSerializationContext.SerializationPair.fromSerializer(jsonRedisSerializer()))
             .disableCachingNullValues();
 
-        // Custom configurations for different cache types
         Map<String, RedisCacheConfiguration> cacheConfigurations = new HashMap<>();
 
-        // Trending ticker - 5 minutes (frequently updated)
         cacheConfigurations.put("trendingTicker", defaultConfig.entryTtl(Duration.ofMinutes(5)));
-
-        // GitHub trending - 1 hour (updated less frequently)
         cacheConfigurations.put("githubTrending", defaultConfig.entryTtl(Duration.ofHours(1)));
-
-        // Articles by category - 10 minutes
         cacheConfigurations.put("articles", defaultConfig.entryTtl(Duration.ofMinutes(10)));
-
-        // Git repos - 10 minutes
         cacheConfigurations.put("gitRepos", defaultConfig.entryTtl(Duration.ofMinutes(10)));
-
-        // Trending git repos - 1 hour
         cacheConfigurations.put("trendingGitRepos", defaultConfig.entryTtl(Duration.ofHours(1)));
-
-        // Git repos by language - 30 minutes
         cacheConfigurations.put("gitReposByLanguage", defaultConfig.entryTtl(Duration.ofMinutes(30)));
-
-        // LLM rankings - 24 hours (rarely changes)
         cacheConfigurations.put("llmRankings", defaultConfig.entryTtl(Duration.ofHours(24)));
-
-        // All benchmarks - 24 hours (static data)
         cacheConfigurations.put("benchmarks", defaultConfig.entryTtl(Duration.ofHours(24)));
 
         return RedisCacheManager.builder(connectionFactory)
@@ -96,23 +67,14 @@ public class RedisConfig {
             .build();
     }
 
-    /**
-     * JSON serializer for Redis values
-     * Configured to handle DTOs without Hibernate proxy issues
-     */
     private GenericJackson2JsonRedisSerializer jsonRedisSerializer() {
         ObjectMapper objectMapper = new ObjectMapper();
 
-        // Register Java 8 date/time module for LocalDateTime support
         objectMapper.registerModule(new JavaTimeModule());
-
-        // Disable writing dates as timestamps
         objectMapper.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
-
-        // Ignore unknown properties during deserialization
         objectMapper.disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES);
 
-        // Enable default typing with stricter validation to avoid Hibernate proxy issues
+        // Hibernate 프록시 직렬화 오류를 막기 위해 타입 정보를 포함
         objectMapper.activateDefaultTyping(
             BasicPolymorphicTypeValidator.builder()
                 .allowIfSubType(Object.class)

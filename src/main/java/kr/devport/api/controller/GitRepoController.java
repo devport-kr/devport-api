@@ -21,11 +21,6 @@ public class GitRepoController {
 
     private final GitRepoService gitRepoService;
 
-    /**
-     * Get git repos with pagination and filtering
-     *
-     * GET /api/git-repos?category=FRONTEND&page=0&size=10
-     */
     @Operation(
         summary = "Get git repos",
         description = "Get paginated list of GitHub repositories with optional category filtering"
@@ -45,11 +40,6 @@ public class GitRepoController {
         return ResponseEntity.ok(response);
     }
 
-    /**
-     * Get trending git repos
-     *
-     * GET /api/git-repos/trending?page=0&size=10
-     */
     @Operation(
         summary = "Get trending git repos",
         description = "Get paginated list of trending GitHub repositories sorted by starsThisWeek"
@@ -66,11 +56,6 @@ public class GitRepoController {
         return ResponseEntity.ok(response);
     }
 
-    /**
-     * Get git repos by programming language
-     *
-     * GET /api/git-repos/language/JavaScript?limit=10
-     */
     @Operation(
         summary = "Get git repos by language",
         description = "Get repositories filtered by programming language"

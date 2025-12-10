@@ -27,21 +27,11 @@ public class ArticleService {
 
     private final ArticleRepository articleRepository;
 
-    /**
-     * Get articles with pagination and optional category filtering
-     * Caches the response DTOs (not entities) to avoid lazy-loading issues
-     *
-     * @param category Category filter (null for ALL)
-     * @param page Page number
-     * @param size Items per page
-     * @return Paginated article response
-     */
     @Cacheable(
         value = "articles",
         key = "#category != null ? #category.name() + '_' + #page + '_' + #size : 'all_' + #page + '_' + #size"
     )
     public ArticlePageResponse getArticles(Category category, int page, int size) {
-        // Create pageable with sorting by score DESC and createdAtSource DESC
         Pageable pageable = PageRequest.of(page, size,
             Sort.by(Sort.Direction.DESC, "score")
                 .and(Sort.by(Sort.Direction.DESC, "createdAtSource"))
@@ -50,15 +40,12 @@ public class ArticleService {
         Page<Article> articlePage;
 
         if (category == null) {
-            // Get all articles
             articlePage = articleRepository.findAll(pageable);
         } else {
-            // Get articles by category
             articlePage = articleRepository.findByCategory(category, pageable);
         }
 
-        // Convert entities to DTOs BEFORE caching
-        // This ensures we cache fully-initialized DTOs, not lazy entities
+        // 캐시에 DTO를 저장해 지연 로딩 문제를 피한다.
         return ArticlePageResponse.builder()
             .content(articlePage.getContent().stream()
                 .map(this::convertToArticleResponse)
@@ -71,29 +58,17 @@ public class ArticleService {
     }
 
 
-    /**
-     * Get trending ticker articles
-     * Caches the response DTOs (not entities) to avoid lazy-loading issues
-     *
-     * @param limit Number of articles for ticker
-     * @return List of trending ticker responses
-     */
     @Cacheable(value = "trendingTicker", key = "#limit")
     public List<TrendingTickerResponse> getTrendingTicker(int limit) {
         Pageable pageable = PageRequest.of(0, limit);
 
         List<Article> articles = articleRepository.findAllByOrderByScoreDescCreatedAtSourceDesc(pageable);
 
-        // Convert entities to DTOs BEFORE caching
         return articles.stream()
             .map(this::convertToTrendingTickerResponse)
             .collect(Collectors.toList());
     }
 
-    /**
-     * Convert Article entity to ArticleResponse DTO
-     * Creates new collections to avoid Hibernate lazy-loading issues
-     */
     private ArticleResponse convertToArticleResponse(Article article) {
         return ArticleResponse.builder()
             .id(article.getId())
@@ -111,9 +86,6 @@ public class ArticleService {
             .build();
     }
 
-    /**
-     * Convert Article entity to TrendingTickerResponse DTO
-     */
     private TrendingTickerResponse convertToTrendingTickerResponse(Article article) {
         return TrendingTickerResponse.builder()
             .id(article.getId())
@@ -123,9 +95,6 @@ public class ArticleService {
             .build();
     }
 
-    /**
-     * Convert ArticleMetadata to ArticleMetadataResponse DTO
-     */
     private ArticleMetadataResponse convertToMetadataResponse(Article article) {
         if (article.getMetadata() == null) {
             return null;

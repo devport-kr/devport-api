@@ -37,27 +37,21 @@ public class SecurityConfig {
             .formLogin(form -> form.disable())
             .httpBasic(basic -> basic.disable())
             .authorizeHttpRequests(authorize -> authorize
-                // H2 Console (development only)
                 .requestMatchers("/h2-console", "/h2-console/**").permitAll()
-                // Public endpoints
                 .requestMatchers(
                     "/",
                     "/error",
                     "/favicon.ico",
                     "/api/articles/**",
                     "/api/git-repos/**",
-                    "/api/llm/**",  // All LLM endpoints (new structure)
-                    "/api/llm-rankings",  // @Deprecated - kept for backward compatibility
-                    "/api/benchmarks",  // @Deprecated - kept for backward compatibility
-                    "/api/auth/refresh"  // Refresh token endpoint (public)
+                    "/api/llm/**",
+                    "/api/llm-rankings",
+                    "/api/benchmarks",
+                    "/api/auth/refresh"
                 ).permitAll()
-                // Swagger/OpenAPI endpoints
                 .requestMatchers("/swagger-ui/**", "/v3/api-docs/**", "/swagger-ui.html").permitAll()
-                // OAuth2 endpoints
                 .requestMatchers("/oauth2/**", "/login/**").permitAll()
-                // Admin endpoints - require ADMIN role
                 .requestMatchers("/api/admin/**").hasRole("ADMIN")
-                // All other requests require authentication
                 .anyRequest().authenticated()
             )
             .oauth2Login(oauth2 -> oauth2
@@ -72,9 +66,7 @@ public class SecurityConfig {
                 .successHandler(oAuth2AuthenticationSuccessHandler)
                 .failureHandler(oAuth2AuthenticationFailureHandler)
             )
-            // Add JWT authentication filter
             .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
-            // H2 console (development only)
             .headers(headers -> headers
                 .frameOptions(frameOptions -> frameOptions.disable())
             );

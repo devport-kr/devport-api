@@ -53,7 +53,6 @@ public class OAuth2AuthenticationSuccessHandler extends SimpleUrlAuthenticationS
     protected String determineTargetUrl(HttpServletRequest request,
                                         HttpServletResponse response,
                                         Authentication authentication) {
-        // Step 1: Extract Turnstile token from OAuth2 state parameter
         String state = request.getParameter("state");
         String turnstileToken = CustomOAuth2AuthorizationRequestResolver.extractTurnstileTokenFromState(state);
 
@@ -62,7 +61,6 @@ public class OAuth2AuthenticationSuccessHandler extends SimpleUrlAuthenticationS
             return buildFailureRedirectUrl("Turnstile token is missing");
         }
 
-        // Step 2: Validate token with Cloudflare
         String clientIp = getClientIp(request);
         boolean isValid = turnstileService.validateToken(turnstileToken, clientIp);
 
@@ -73,13 +71,10 @@ public class OAuth2AuthenticationSuccessHandler extends SimpleUrlAuthenticationS
 
         log.info("Turnstile token validated successfully. Proceeding with OAuth2 login.");
 
-        // Step 3: Generate JWT tokens
         CustomUserDetails userDetails = (CustomUserDetails) authentication.getPrincipal();
 
-        // Generate access token (1 hour)
         String accessToken = jwtTokenProvider.generateAccessToken(userDetails.getId());
 
-        // Generate and save refresh token (30 days)
         User user = userRepository.findById(userDetails.getId())
             .orElseThrow(() -> new RuntimeException("User not found"));
         RefreshToken refreshToken = refreshTokenService.createRefreshToken(user);
@@ -91,9 +86,6 @@ public class OAuth2AuthenticationSuccessHandler extends SimpleUrlAuthenticationS
             .toUriString();
     }
 
-    /**
-     * Gets the client's real IP address (handles proxy headers)
-     */
     private String getClientIp(HttpServletRequest request) {
         String ip = request.getHeader("X-Forwarded-For");
         if (ip == null || ip.isEmpty() || "unknown".equalsIgnoreCase(ip)) {
@@ -111,16 +103,13 @@ public class OAuth2AuthenticationSuccessHandler extends SimpleUrlAuthenticationS
         if (ip == null || ip.isEmpty() || "unknown".equalsIgnoreCase(ip)) {
             ip = request.getRemoteAddr();
         }
-        // If multiple IPs, take the first one
+        // 여러 IP가 전달되면 첫 번째 값을 사용한다.
         if (ip != null && ip.contains(",")) {
             ip = ip.split(",")[0].trim();
         }
         return ip;
     }
 
-    /**
-     * Builds failure redirect URL with error message
-     */
     private String buildFailureRedirectUrl(String errorMessage) {
         return UriComponentsBuilder.fromUriString(failureRedirectUri)
             .queryParam("error", errorMessage)

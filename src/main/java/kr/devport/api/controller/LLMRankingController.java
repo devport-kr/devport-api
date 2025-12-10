@@ -28,10 +28,6 @@ public class LLMRankingController {
 
     private final LLMRankingService llmRankingService;
 
-    /**
-     * Get all LLM models with optional filters (paginated)
-     * Default sort: Intelligence Index DESC
-     */
     @Operation(
         summary = "Get all LLM models",
         description = "Retrieve all LLM models with optional filters for provider, license, price, and context window. Paginated results sorted by Intelligence Index."
@@ -68,9 +64,6 @@ public class LLMRankingController {
         return ResponseEntity.ok(models);
     }
 
-    /**
-     * Get a specific LLM model by model ID
-     */
     @Operation(
         summary = "Get LLM model details",
         description = "Retrieve detailed information about a specific LLM model including all benchmark scores"
@@ -95,10 +88,7 @@ public class LLMRankingController {
         return ResponseEntity.ok(model);
     }
 
-    /**
-     * Get leaderboard for a specific benchmark
-     * Calculates ranks dynamically with optional filters
-     */
+
     @Operation(
         summary = "Get benchmark leaderboard",
         description = "Retrieve leaderboard rankings for a specific benchmark type with optional filters. Ranks are calculated dynamically."
@@ -136,9 +126,6 @@ public class LLMRankingController {
         return ResponseEntity.ok(leaderboard);
     }
 
-    /**
-     * Get all benchmarks
-     */
     @Operation(
         summary = "Get all benchmarks",
         description = "Retrieve metadata about all 18 benchmarks including descriptions and groupings"
@@ -156,9 +143,6 @@ public class LLMRankingController {
         return ResponseEntity.ok(benchmarks);
     }
 
-    /**
-     * Get benchmarks by category group
-     */
     @Operation(
         summary = "Get benchmarks by group",
         description = "Retrieve benchmarks filtered by group (Agentic, Reasoning, Coding, Specialized, Composite)"

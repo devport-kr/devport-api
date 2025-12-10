@@ -22,7 +22,6 @@ public class OpenApiConfig {
 
     @Bean
     public OpenAPI devPortOpenAPI() {
-        // Security scheme for JWT Bearer token
         final String securitySchemeName = "bearerAuth";
 
         return new OpenAPI()

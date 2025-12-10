@@ -24,21 +24,11 @@ public class GitRepoService {
 
     private final GitRepoRepository gitRepoRepository;
 
-    /**
-     * Get git repos with pagination and optional category filtering
-     * Caches the response DTOs to avoid lazy-loading issues
-     *
-     * @param category Category filter (null for ALL)
-     * @param page Page number
-     * @param size Items per page
-     * @return Paginated git repo response
-     */
     @Cacheable(
         value = "gitRepos",
         key = "#category != null ? #category.name() + '_' + #page + '_' + #size : 'all_' + #page + '_' + #size"
     )
     public GitRepoPageResponse getGitRepos(Category category, int page, int size) {
-        // Create pageable with sorting by score DESC and createdAt DESC
         Pageable pageable = PageRequest.of(page, size,
             Sort.by(Sort.Direction.DESC, "score")
                 .and(Sort.by(Sort.Direction.DESC, "createdAt"))
@@ -47,14 +37,12 @@ public class GitRepoService {
         Page<GitRepo> gitRepoPage;
 
         if (category == null) {
-            // Get all git repos
             gitRepoPage = gitRepoRepository.findAll(pageable);
         } else {
-            // Get git repos by category
             gitRepoPage = gitRepoRepository.findByCategory(category, pageable);
         }
 
-        // Convert entities to DTOs BEFORE caching
+        // 캐시에 DTO를 넣어 지연 로딩 문제를 피한다.
         return GitRepoPageResponse.builder()
             .content(gitRepoPage.getContent().stream()
                 .map(this::convertToGitRepoResponse)
@@ -66,21 +54,12 @@ public class GitRepoService {
             .build();
     }
 
-    /**
-     * Get trending git repos ordered by stars gained this week
-     * Caches the response DTOs
-     *
-     * @param page Page number
-     * @param size Items per page
-     * @return Paginated git repo response
-     */
     @Cacheable(value = "trendingGitRepos", key = "#page + '_' + #size")
     public GitRepoPageResponse getTrendingGitRepos(int page, int size) {
         Pageable pageable = PageRequest.of(page, size);
 
         Page<GitRepo> gitRepoPage = gitRepoRepository.findAllByOrderByStarsThisWeekDesc(pageable);
 
-        // Convert entities to DTOs BEFORE caching
         return GitRepoPageResponse.builder()
             .content(gitRepoPage.getContent().stream()
                 .map(this::convertToGitRepoResponse)
@@ -92,29 +71,17 @@ public class GitRepoService {
             .build();
     }
 
-    /**
-     * Get git repos by programming language
-     * Caches the response DTOs
-     *
-     * @param language Programming language (e.g., "JavaScript", "Python")
-     * @param limit Number of repos to return
-     * @return List of git repo responses
-     */
     @Cacheable(value = "gitReposByLanguage", key = "#language + '_' + #limit")
     public List<GitRepoResponse> getGitReposByLanguage(String language, int limit) {
         Pageable pageable = PageRequest.of(0, limit);
 
         Page<GitRepo> gitRepos = gitRepoRepository.findByLanguageOrderByScoreDesc(language, pageable);
 
-        // Convert entities to DTOs BEFORE caching
         return gitRepos.getContent().stream()
             .map(this::convertToGitRepoResponse)
             .collect(Collectors.toList());
     }
 
-    /**
-     * Convert GitRepo entity to GitRepoResponse DTO
-     */
     private GitRepoResponse convertToGitRepoResponse(GitRepo gitRepo) {
         return GitRepoResponse.builder()
             .id(gitRepo.getId())

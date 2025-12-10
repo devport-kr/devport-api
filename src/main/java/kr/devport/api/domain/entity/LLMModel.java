@@ -28,154 +28,125 @@ public class LLMModel {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    // API identifiers
-    /**
-     * External ID from Artificial Analysis API (UUID format).
-     * Example: "4559e9f0-8aad-4681-89fb-68cb915e0f16"
-     */
     @Column(unique = true, length = 100, name = "external_id")
     private String externalId;
 
-    /**
-     * URL-friendly slug identifier from API.
-     * Example: "qwen3-14b-instruct-reasoning"
-     */
     @Column(unique = true, length = 200)
     private String slug;
 
-    // Model identification
     @NotBlank
     @Column(nullable = false, unique = true, length = 100, name = "model_id")
-    private String modelId;  // e.g., "gpt-4-turbo", "claude-opus-4-5"
+    private String modelId;
 
     @NotBlank
     @Column(nullable = false, length = 200, name = "model_name")
-    private String modelName;  // e.g., "GPT-4 Turbo", "Claude Opus 4.5"
+    private String modelName;
 
-    /**
-     * Model release date from API.
-     */
     @Column(name = "release_date")
     private LocalDate releaseDate;
 
-    // Provider information (denormalized for easier queries)
     @Column(length = 100)
-    private String provider;  // e.g., "OpenAI", "Anthropic", "Google" (can be null if using modelCreator)
+    private String provider;
 
-    /**
-     * Relationship to ModelCreator entity.
-     * Contains detailed provider information from API.
-     */
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "model_creator_id")
     private ModelCreator modelCreator;
 
     @Column(columnDefinition = "TEXT")
-    private String description;  // Model description from API
+    private String description;
 
-    // Pricing (USD per million tokens)
     @DecimalMin("0.00")
     @Column(precision = 10, scale = 2, name = "price_input")
-    private BigDecimal priceInput;  // Input token price
+    private BigDecimal priceInput;
 
     @DecimalMin("0.00")
     @Column(precision = 10, scale = 2, name = "price_output")
-    private BigDecimal priceOutput;  // Output token price
+    private BigDecimal priceOutput;
 
     @DecimalMin("0.00")
     @Column(precision = 10, scale = 2, name = "price_blended")
-    private BigDecimal priceBlended;  // Blended price (3:1 ratio)
+    private BigDecimal priceBlended;
 
-    // Performance metrics
     @Min(1)
     @Column(name = "context_window")
-    private Long contextWindow;  // Max tokens (e.g., 1000000 for 1M)
+    private Long contextWindow;
 
     @DecimalMin("0.01")
     @Column(precision = 10, scale = 2, name = "output_speed_median")
-    private BigDecimal outputSpeedMedian;  // Tokens per second (median)
+    private BigDecimal outputSpeedMedian;
 
     @DecimalMin("0.0001")
     @Column(precision = 10, scale = 4, name = "latency_ttft")
-    private BigDecimal latencyTtft;  // Time to first token (seconds)
+    private BigDecimal latencyTtft;
 
     @DecimalMin("0.0001")
     @Column(precision = 10, scale = 4, name = "median_time_to_first_answer_token")
-    private BigDecimal medianTimeToFirstAnswerToken;  // Time to first answer token (seconds)
+    private BigDecimal medianTimeToFirstAnswerToken;
 
     @Column(length = 50)
-    private String license;  // "Open" or "Proprietary"
+    private String license;
 
-    // Benchmark Scores (all 15 categories)
-    // All scores are nullable (model may not be tested on all benchmarks)
-    // All scores are 0-100 percentages
-
-    // Agentic Capabilities (2)
+    // 벤치마크 점수 0~100 범위, 미측정 항목들은 null 로 저장.
     @Min(0) @Max(100)
     @Column(precision = 5, scale = 2, name = "score_terminal_bench_hard")
-    private BigDecimal scoreTerminalBenchHard;  // Agentic Coding & Terminal Use
+    private BigDecimal scoreTerminalBenchHard;
 
     @Min(0) @Max(100)
     @Column(precision = 5, scale = 2, name = "score_tau_bench_telecom")
-    private BigDecimal scoreTauBenchTelecom;  // Agentic Tool Use
+    private BigDecimal scoreTauBenchTelecom;
 
-    // Reasoning & Knowledge (4)
     @Min(0) @Max(100)
     @Column(precision = 5, scale = 2, name = "score_aa_lcr")
-    private BigDecimal scoreAaLcr;  // Long Context Reasoning
+    private BigDecimal scoreAaLcr;
 
     @Min(0) @Max(100)
     @Column(precision = 5, scale = 2, name = "score_humanitys_last_exam")
-    private BigDecimal scoreHumanitysLastExam;  // Reasoning & Knowledge
+    private BigDecimal scoreHumanitysLastExam;
 
     @Min(0) @Max(100)
     @Column(precision = 5, scale = 2, name = "score_mmlu_pro")
-    private BigDecimal scoreMmluPro;  // Reasoning & Knowledge
+    private BigDecimal scoreMmluPro;
 
     @Min(0) @Max(100)
     @Column(precision = 5, scale = 2, name = "score_gpqa_diamond")
-    private BigDecimal scoreGpqaDiamond;  // Scientific Reasoning
+    private BigDecimal scoreGpqaDiamond;
 
-    // Coding (2)
     @Min(0) @Max(100)
     @Column(precision = 5, scale = 2, name = "score_livecode_bench")
-    private BigDecimal scoreLivecodeBench;  // Coding
+    private BigDecimal scoreLivecodeBench;
 
     @Min(0) @Max(100)
     @Column(precision = 5, scale = 2, name = "score_scicode")
-    private BigDecimal scoreScicode;  // Coding
+    private BigDecimal scoreScicode;
 
-    // Specialized Skills (4)
     @Min(0) @Max(100)
     @Column(precision = 5, scale = 2, name = "score_ifbench")
-    private BigDecimal scoreIfbench;  // Instruction Following
+    private BigDecimal scoreIfbench;
 
     @Min(0) @Max(100)
     @Column(precision = 5, scale = 2, name = "score_math_500")
-    private BigDecimal scoreMath500;  // Math 500
+    private BigDecimal scoreMath500;
 
     @Min(0) @Max(100)
     @Column(precision = 5, scale = 2, name = "score_aime")
-    private BigDecimal scoreAime;  // AIME (Legacy version)
+    private BigDecimal scoreAime;
 
     @Min(0) @Max(100)
     @Column(precision = 5, scale = 2, name = "score_aime_2025")
-    private BigDecimal scoreAime2025;  // AIME 2025 (Competition Math)
+    private BigDecimal scoreAime2025;
 
-    // Composite Indices (3)
     @Min(0) @Max(100)
     @Column(precision = 5, scale = 2, name = "score_aa_intelligence_index")
-    private BigDecimal scoreAaIntelligenceIndex;  // Overall Intelligence Score
+    private BigDecimal scoreAaIntelligenceIndex;
 
     @Min(0) @Max(100)
     @Column(precision = 5, scale = 2, name = "score_aa_coding_index")
-    private BigDecimal scoreAaCodingIndex;  // Coding Index (composite)
+    private BigDecimal scoreAaCodingIndex;
 
     @Min(0) @Max(100)
     @Column(precision = 5, scale = 2, name = "score_aa_math_index")
-    private BigDecimal scoreAaMathIndex;  // Math Index (composite)
+    private BigDecimal scoreAaMathIndex;
 
-    // Metadata
     @Column(nullable = false, name = "created_at")
     private LocalDateTime createdAt;
 

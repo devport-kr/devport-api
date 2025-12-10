@@ -33,12 +33,11 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
     public OAuth2User loadUser(OAuth2UserRequest userRequest) throws OAuth2AuthenticationException {
         OAuth2User oAuth2User = super.loadUser(userRequest);
 
-        // For GitHub, fetch email from /user/emails if not present
+        // GitHub의 경우 기본 응답에 이메일이 없으면 별도 API로 조회한다.
         String registrationId = userRequest.getClientRegistration().getRegistrationId();
         if ("github".equals(registrationId) && oAuth2User.getAttribute("email") == null) {
             String email = fetchGitHubEmail(userRequest.getAccessToken().getTokenValue());
             if (email != null) {
-                // Add email to attributes
                 Map<String, Object> modifiedAttributes = new java.util.HashMap<>(oAuth2User.getAttributes());
                 modifiedAttributes.put("email", email);
                 oAuth2User = new org.springframework.security.oauth2.core.user.DefaultOAuth2User(
@@ -68,17 +67,15 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
 
             List<Map<String, Object>> emails = response.getBody();
             if (emails != null && !emails.isEmpty()) {
-                // Find primary email
                 for (Map<String, Object> emailData : emails) {
                     if (Boolean.TRUE.equals(emailData.get("primary"))) {
                         return (String) emailData.get("email");
                     }
                 }
-                // Fallback to first email if no primary
                 return (String) emails.get(0).get("email");
             }
         } catch (Exception e) {
-            // Log error but don't fail authentication
+            // 조회 실패 시에도 인증 흐름은 중단하지 않는다.
             e.printStackTrace();
         }
         return null;

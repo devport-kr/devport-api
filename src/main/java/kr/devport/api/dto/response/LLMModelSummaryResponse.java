@@ -10,10 +10,7 @@ import lombok.Setter;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 
-/**
- * Summary model information for list views
- * Used for /api/llm/models endpoint (paginated list)
- */
+/** LLM 모델 목록 응답에 사용하는 요약 DTO. */
 @Getter
 @Setter
 @NoArgsConstructor
@@ -22,23 +19,20 @@ import java.time.LocalDate;
 public class LLMModelSummaryResponse {
 
     private Long id;
-    private String slug;  // URL-friendly identifier
+    private String slug;
     private String modelId;
     private String modelName;
     private LocalDate releaseDate;
 
-    // Provider information
-    private String provider;  // Legacy field (can be null)
-    private ModelCreatorResponse modelCreator;  // Detailed creator info
+    private String provider;
+    private ModelCreatorResponse modelCreator;
 
-    // Key metrics
-    private BigDecimal scoreAaIntelligenceIndex;  // Primary ranking metric
-    private BigDecimal priceBlended;  // USD per 1M tokens
-    private Long contextWindow;  // Max tokens
-    private BigDecimal outputSpeedMedian;  // Tokens per second
-    private String license;  // "Open" or "Proprietary"
+    private BigDecimal scoreAaIntelligenceIndex;
+    private BigDecimal priceBlended;
+    private Long contextWindow;
+    private BigDecimal outputSpeedMedian;
+    private String license;
 
-    // Optional: Computed rank (set by service layer)
     private Integer rank;
 
     public static LLMModelSummaryResponse fromEntity(LLMModel model) {

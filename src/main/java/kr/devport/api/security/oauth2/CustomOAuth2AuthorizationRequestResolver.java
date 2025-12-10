@@ -11,10 +11,7 @@ import org.springframework.security.oauth2.core.endpoint.OAuth2AuthorizationRequ
 import java.util.Arrays;
 import java.util.Base64;
 
-/**
- * Custom OAuth2 authorization request resolver that appends Turnstile token to the state parameter
- * This allows us to pass the Turnstile token through the OAuth2 flow and validate it after callback
- */
+/** OAuth2 state 파라미터에 Turnstile 토큰을 실어 보내는 커스텀 resolver. */
 @Slf4j
 public class CustomOAuth2AuthorizationRequestResolver implements OAuth2AuthorizationRequestResolver {
 
@@ -38,9 +35,6 @@ public class CustomOAuth2AuthorizationRequestResolver implements OAuth2Authoriza
         return customizeAuthorizationRequest(authorizationRequest, request);
     }
 
-    /**
-     * Customizes the authorization request by appending Turnstile token to state parameter
-     */
     private OAuth2AuthorizationRequest customizeAuthorizationRequest(
             OAuth2AuthorizationRequest authorizationRequest,
             HttpServletRequest request) {
@@ -49,37 +43,29 @@ public class CustomOAuth2AuthorizationRequestResolver implements OAuth2Authoriza
             return null;
         }
 
-        // Try to extract Turnstile token from query parameter first, then cookie
         String turnstileToken = request.getParameter("turnstile_token");
 
         if (turnstileToken == null || turnstileToken.isEmpty()) {
-            // Fallback to cookie
             turnstileToken = extractTurnstileTokenFromCookie(request);
         }
 
         if (turnstileToken == null || turnstileToken.isEmpty()) {
             log.warn("Turnstile token not found in query parameter or cookies during OAuth2 authorization request");
-            // Continue without Turnstile token - will be validated later
             return authorizationRequest;
         }
 
-        // Append Turnstile token to state parameter
-        // Format: originalState|base64(turnstileToken)
+        // state 형식: originalState|base64(turnstileToken)
         String originalState = authorizationRequest.getState();
         String encodedTurnstileToken = Base64.getEncoder().encodeToString(turnstileToken.getBytes());
         String newState = originalState + STATE_DELIMITER + encodedTurnstileToken;
 
         log.debug("Appending Turnstile token to OAuth2 state parameter");
 
-        // Build new authorization request with modified state
         return OAuth2AuthorizationRequest.from(authorizationRequest)
                 .state(newState)
                 .build();
     }
 
-    /**
-     * Extracts Turnstile token from request cookies
-     */
     private String extractTurnstileTokenFromCookie(HttpServletRequest request) {
         Cookie[] cookies = request.getCookies();
         if (cookies == null) {
@@ -93,10 +79,7 @@ public class CustomOAuth2AuthorizationRequestResolver implements OAuth2Authoriza
                 .orElse(null);
     }
 
-    /**
-     * Utility method to extract Turnstile token from state parameter
-     * Called by OAuth2AuthenticationSuccessHandler after callback
-     */
+    /** state 파라미터에 인코딩된 Turnstile 토큰을 복원한다. */
     public static String extractTurnstileTokenFromState(String state) {
         if (state == null || !state.contains(STATE_DELIMITER)) {
             return null;
@@ -108,7 +91,6 @@ public class CustomOAuth2AuthorizationRequestResolver implements OAuth2Authoriza
                 return null;
             }
 
-            // Decode base64 Turnstile token
             String encodedToken = parts[1];
             byte[] decodedBytes = Base64.getDecoder().decode(encodedToken);
             return new String(decodedBytes);

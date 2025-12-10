@@ -1,5 +1,4 @@
 spring:
-  # PostgreSQL Database Configuration (Docker)
   datasource:
     url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:devportdb}
     driver-class-name: org.postgresql.Driver
@@ -12,10 +11,9 @@ spring:
       idle-timeout: 600000
       max-lifetime: 1800000
 
-  # JPA Configuration for PostgreSQL
   jpa:
     hibernate:
-      ddl-auto: update  # Use 'update' or 'validate' after initial setup
+      ddl-auto: update
     show-sql: true
     properties:
       hibernate:
@@ -25,12 +23,10 @@ spring:
           lob:
             non_contextual_creation: true
 
-  # Disable H2 Console
   h2:
     console:
       enabled: false
 
-  # Redis Configuration (Docker)
   data:
     redis:
       host: ${REDIS_HOST:localhost}
@@ -43,13 +39,11 @@ spring:
           min-idle: 2
           max-wait: -1ms
 
-  # Cache Configuration
   cache:
     type: redis
     redis:
-      time-to-live: 300000  # 5 minutes default
+      time-to-live: 300000
 
-# Logging Configuration
 logging:
   level:
     kr.devport: DEBUG

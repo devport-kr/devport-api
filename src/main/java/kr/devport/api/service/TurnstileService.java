@@ -11,10 +11,7 @@ import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
 import org.springframework.web.client.RestTemplate;
 
-/**
- * Service for validating Cloudflare Turnstile tokens
- * Integrates with Cloudflare's siteverify API
- */
+/** Cloudflare Turnstile 토큰을 검증 서비스. */
 @Service
 @RequiredArgsConstructor
 @Slf4j
@@ -27,13 +24,6 @@ public class TurnstileService {
 
     private final RestTemplate restTemplate = new RestTemplate();
 
-    /**
-     * Validates a Turnstile token with Cloudflare
-     *
-     * @param token The turnstile response token from the frontend
-     * @param remoteIp The user's IP address (optional but recommended)
-     * @return true if token is valid, false otherwise
-     */
     public boolean validateToken(String token, String remoteIp) {
         if (token == null || token.trim().isEmpty()) {
             log.warn("Turnstile token validation failed: Token is null or empty");
@@ -41,7 +31,6 @@ public class TurnstileService {
         }
 
         try {
-            // Prepare request body (application/x-www-form-urlencoded)
             MultiValueMap<String, String> requestBody = new LinkedMultiValueMap<>();
             requestBody.add("secret", secretKey);
             requestBody.add("response", token);
@@ -49,13 +38,11 @@ public class TurnstileService {
                 requestBody.add("remoteip", remoteIp);
             }
 
-            // Set headers
             HttpHeaders headers = new HttpHeaders();
             headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
 
             HttpEntity<MultiValueMap<String, String>> request = new HttpEntity<>(requestBody, headers);
 
-            // Make request to Cloudflare
             ResponseEntity<TurnstileValidationResponse> response = restTemplate.exchange(
                 TURNSTILE_VERIFY_URL,
                 HttpMethod.POST,
@@ -70,7 +57,6 @@ public class TurnstileService {
                 return false;
             }
 
-            // Log validation result
             if (validationResponse.isSuccess()) {
                 log.info("Turnstile token validated successfully for hostname: {}", validationResponse.getHostname());
             } else {
@@ -85,12 +71,6 @@ public class TurnstileService {
         }
     }
 
-    /**
-     * Validates a Turnstile token without IP address
-     *
-     * @param token The turnstile response token from the frontend
-     * @return true if token is valid, false otherwise
-     */
     public boolean validateToken(String token) {
         return validateToken(token, null);
     }

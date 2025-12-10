@@ -10,9 +10,7 @@ import java.util.List;
 @Repository
 public interface LLMBenchmarkRepository extends JpaRepository<LLMBenchmark, BenchmarkType> {
 
-    // Find all benchmarks ordered by sort order
     List<LLMBenchmark> findAllByOrderBySortOrderAsc();
 
-    // Find all benchmarks by category group
     List<LLMBenchmark> findByCategoryGroupOrderBySortOrderAsc(String categoryGroup);
 }
