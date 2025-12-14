@@ -80,4 +80,17 @@ graalvmNative { //nativeCompile에서만 적용,
 
 tasks.named('bootBuildImage') {
 	imageName = "devport-api:${project.version}"
+
+	// Build JVM image if property is set, otherwise build native (default with GraalVM plugin)
+	if (project.hasProperty('buildJvm')) {
+		environment = ['BP_NATIVE_IMAGE': 'false']
+	}
+
+	caches {
+		cache {
+			bind {
+				source = file("${System.getProperty('user.home')}/buildpack-cache")
+			}
+		}
+	}
 }

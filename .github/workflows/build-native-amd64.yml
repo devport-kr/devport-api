@@ -1,4 +1,4 @@
-name: Build and Push Native Image (arm64)
+name: Build and Push Native Image (amd64)
 
 on:
   push:
@@ -10,11 +10,11 @@ on:
 
 env:
   REGISTRY: ghcr.io
-  IMAGE_NAME: devport-api-native-arm64
+  IMAGE_NAME: ${{ github.repository }}
 
 jobs:
   build-native-image:
-    runs-on: ubuntu-24.04-arm
+    runs-on: ubuntu-24.04
     permissions:
       contents: read
       packages: write
@@ -34,6 +34,14 @@ jobs:
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
 
+      - name: Cache buildpack layers
+        uses: actions/cache@v4
+        with:
+          path: ~/buildpack-cache
+          key: ${{ runner.os }}-amd64-buildpack-${{ hashFiles('**/build.gradle', '**/gradle.properties') }}
+          restore-keys: |
+            ${{ runner.os }}-amd64-buildpack-
+
       - name: Log in to GitHub Container Registry
         uses: docker/login-action@v3
         with:
@@ -46,6 +54,8 @@ jobs:
         uses: docker/metadata-action@v5
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          flavor: |
+            suffix=-native-amd64,onlatest=true
           tags: |
             type=ref,event=branch
             type=ref,event=pr
