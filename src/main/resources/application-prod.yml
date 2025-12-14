@@ -33,6 +33,7 @@ spring:
         - https://devport.kr
         - https://www.devport.kr
       allowed-methods:
+        -
         - GET
         - POST
         - PUT
