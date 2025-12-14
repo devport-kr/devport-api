@@ -63,24 +63,3 @@ dependencies {
 tasks.named('test') {
 	useJUnitPlatform()
 }
-
-
-tasks.named('bootBuildImage') {
-	imageName = "devport-api:${project.version}"
-
-	// buildJvm property가 있을 경우 일반 JVM
-	if (project.hasProperty('buildJvm')) {
-		builder = 'paketobuildpacks/builder-jammy-base:latest'
-		environment = [
-			'BP_JVM_VERSION': '25',
-			'BP_NATIVE_IMAGE': 'false'
-		]
-		buildpacks = [
-			'gcr.io/paketo-buildpacks/ca-certificates',
-			'gcr.io/paketo-buildpacks/bellsoft-liberica',
-			'gcr.io/paketo-buildpacks/syft',
-			'gcr.io/paketo-buildpacks/executable-jar',
-			'gcr.io/paketo-buildpacks/spring-boot'
-		]
-	}
-}
