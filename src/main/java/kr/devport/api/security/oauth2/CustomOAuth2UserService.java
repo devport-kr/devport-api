@@ -103,6 +103,11 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
         if (userOptional.isPresent()) {
             user = updateExistingUser(userOptional.get(), oAuth2UserInfo);
         } else {
+            // 같은 이메일로 이미 등록된 계정이 있는지 확인
+            Optional<User> existingEmailUser = userRepository.findByEmail(oAuth2UserInfo.getEmail());
+            if (existingEmailUser.isPresent()) {
+                throw new OAuth2AuthenticationException("같은 정보의 계정이 이미 존재합니다");
+            }
             user = registerNewUser(authProvider, oAuth2UserInfo);
         }
 

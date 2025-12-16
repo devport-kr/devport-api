@@ -11,6 +11,8 @@ public class OAuth2UserInfoFactory {
             return new GoogleOAuth2UserInfo(attributes);
         } else if (registrationId.equalsIgnoreCase(AuthProvider.github.name())) {
             return new GitHubOAuth2UserInfo(attributes);
+        } else if (registrationId.equalsIgnoreCase(AuthProvider.naver.name())) {
+            return new NaverOAuth2UserInfo(attributes);
         } else {
             throw new IllegalArgumentException("Login with " + registrationId + " is not supported");
         }

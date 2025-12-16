@@ -17,7 +17,7 @@ public class CustomOAuth2AuthorizationRequestResolver implements OAuth2Authoriza
 
     private final OAuth2AuthorizationRequestResolver defaultResolver;
     private static final String TURNSTILE_COOKIE_NAME = "turnstile_token";
-    private static final String STATE_DELIMITER = "|";
+    private static final String STATE_DELIMITER = "~";
 
     public CustomOAuth2AuthorizationRequestResolver(ClientRegistrationRepository repo) {
         this.defaultResolver = new DefaultOAuth2AuthorizationRequestResolver(repo, "/oauth2/authorization");
@@ -54,9 +54,10 @@ public class CustomOAuth2AuthorizationRequestResolver implements OAuth2Authoriza
             return authorizationRequest;
         }
 
-        // state 형식: originalState|base64(turnstileToken)
+        // state 형식: originalState~base64Url(turnstileToken)
+        // URL-safe Base64 encoding과 tilde 구분자를 사용하여 URL에서 문제가 되는 문자 방지
         String originalState = authorizationRequest.getState();
-        String encodedTurnstileToken = Base64.getEncoder().encodeToString(turnstileToken.getBytes());
+        String encodedTurnstileToken = Base64.getUrlEncoder().withoutPadding().encodeToString(turnstileToken.getBytes());
         String newState = originalState + STATE_DELIMITER + encodedTurnstileToken;
 
         log.debug("Appending Turnstile token to OAuth2 state parameter");
@@ -92,7 +93,7 @@ public class CustomOAuth2AuthorizationRequestResolver implements OAuth2Authoriza
             }
 
             String encodedToken = parts[1];
-            byte[] decodedBytes = Base64.getDecoder().decode(encodedToken);
+            byte[] decodedBytes = Base64.getUrlDecoder().decode(encodedToken);
             return new String(decodedBytes);
 
         } catch (Exception e) {
