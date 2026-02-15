@@ -10,18 +10,18 @@ See: `.planning/PROJECT.md` (updated 2026-02-14)
 ## Current Position
 
 Phase: 5 (new-phase1 - IN PROGRESS)
-Plan: 3 of 6 in current phase
-Status: Plan 05-01 complete (wiki snapshot foundation), Plan 05-03 complete (API read endpoints), Plan 05-04 complete (wiki chat API)
-Last activity: 2026-02-15 - Completed plan 05-04: wiki chat API with grounded retrieval, session memory, and uncertainty handling.
+Plan: 4 of 6 in current phase
+Status: Plan 05-01 complete (wiki snapshot foundation), Plan 05-03 complete (API read endpoints), Plan 05-04 complete (wiki chat API), Plan 05-05 complete (frontend wiki UX)
+Last activity: 2026-02-15 - Completed plan 05-05: frontend wiki UX with 3-column layout, progressive section rendering, and chat integration.
 
-Progress: [██████████] 100% (milestone phases 1-4) + Phase 5: [█████░] 50%
+Progress: [██████████] 100% (milestone phases 1-4) + Phase 5: [████░░] 67%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 9 (6 from phases 1-4, 3 from phase 5)
+- Total plans completed: 10 (6 from phases 1-4, 4 from phase 5)
 - Average duration: 4.6 min
-- Total execution time: 0.68 hours
+- Total execution time: 0.76 hours
 
 **By Phase:**
 
@@ -31,11 +31,11 @@ Progress: [██████████] 100% (milestone phases 1-4) + Phase 5
 | 2 | 6 | 27 min | 4.5 min |
 | 3 | 0 | - | - |
 | 4 | 0 | - | - |
-| 5 | 3 | 14 min | 4.7 min |
+| 5 | 4 | 19 min | 4.8 min |
 
 **Recent Trend:**
-- Last 8 plans: 02-02 (4 min), 02-05 (2 min), 02-03 (3 min), 02-06 (3 min), 02-04 (11 min), 05-01 (4 min), 05-03 (4 min), 05-04 (6 min)
-- Trend: Phase 5 (Code Wiki) in progress - 3 of 6 plans complete
+- Last 8 plans: 02-05 (2 min), 02-03 (3 min), 02-06 (3 min), 02-04 (11 min), 05-01 (4 min), 05-03 (4 min), 05-04 (6 min), 05-05 (5 min)
+- Trend: Phase 5 (Code Wiki) in progress - 4 of 6 plans complete
 
 ## Accumulated Context
 
@@ -69,6 +69,11 @@ Recent decisions affecting current work:
 - 05-04: Session memory kept in-memory with ConcurrentHashMap instead of Redis for simplicity
 - 05-04: Uncertainty detection uses simple heuristics (question marks + uncertainty phrases)
 - 05-04: Citations are optional via includeCitations flag to keep default responses compact
+- 05-05: 3-column layout: left anchor rail only, center explanations, right activity/releases/chat modules
+- 05-05: Section hiding policy: hide incomplete sections with no placeholders (hiddenSections array)
+- 05-05: Architecture diagram rendering: only when generatedDiagramDsl present, otherwise completely hidden
+- 05-05: Chat citations: user-triggered toggle, not default always-on
+- 05-05: Right rail module order: activity → releases → chat (bottom)
 
 ### Roadmap Evolution
 
@@ -85,6 +90,6 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-02-15
-Stopped at: Completed 05-04-PLAN.md (wiki chat API)
+Stopped at: Completed 05-05-PLAN.md (frontend wiki UX)
 Resume file: None
-Next: Execute 05-02-PLAN.md (crawler wiki generation), 05-05-PLAN.md (frontend), 05-06-PLAN.md (quality gates)
+Next: Execute 05-02-PLAN.md (crawler wiki generation), 05-06-PLAN.md (quality gates)
