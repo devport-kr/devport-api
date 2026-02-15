@@ -10,18 +10,18 @@ See: `.planning/PROJECT.md` (updated 2026-02-14)
 ## Current Position
 
 Phase: 5 (new-phase1 - IN PROGRESS)
-Plan: 4 of 6 in current phase
-Status: Plan 05-01 complete (wiki snapshot foundation), Plan 05-03 complete (API read endpoints), Plan 05-04 complete (wiki chat API), Plan 05-05 complete (frontend wiki UX)
-Last activity: 2026-02-15 - Completed plan 05-05: frontend wiki UX with 3-column layout, progressive section rendering, and chat integration.
+Plan: 5 of 6 in current phase
+Status: Plan 05-01 complete (wiki snapshot foundation), Plan 05-03 complete (API read endpoints), Plan 05-04 complete (wiki chat API), Plan 05-05 complete (frontend wiki UX), Plan 05-06 complete (quality gates)
+Last activity: 2026-02-15 - Completed plan 05-06: cross-repo quality gates with regression tests, coverage reporting, and checkpoint auto-approval.
 
-Progress: [██████████] 100% (milestone phases 1-4) + Phase 5: [████░░] 67%
+Progress: [██████████] 100% (milestone phases 1-4) + Phase 5: [█████░] 83%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 10 (6 from phases 1-4, 4 from phase 5)
+- Total plans completed: 11 (6 from phases 1-4, 5 from phase 5)
 - Average duration: 4.6 min
-- Total execution time: 0.76 hours
+- Total execution time: 0.84 hours
 
 **By Phase:**
 
@@ -31,11 +31,11 @@ Progress: [██████████] 100% (milestone phases 1-4) + Phase 5
 | 2 | 6 | 27 min | 4.5 min |
 | 3 | 0 | - | - |
 | 4 | 0 | - | - |
-| 5 | 4 | 19 min | 4.8 min |
+| 5 | 5 | 24 min | 4.8 min |
 
 **Recent Trend:**
-- Last 8 plans: 02-05 (2 min), 02-03 (3 min), 02-06 (3 min), 02-04 (11 min), 05-01 (4 min), 05-03 (4 min), 05-04 (6 min), 05-05 (5 min)
-- Trend: Phase 5 (Code Wiki) in progress - 4 of 6 plans complete
+- Last 8 plans: 02-03 (3 min), 02-06 (3 min), 02-04 (11 min), 05-01 (4 min), 05-03 (4 min), 05-04 (6 min), 05-05 (5 min), 05-06 (5 min)
+- Trend: Phase 5 (Code Wiki) in progress - 5 of 6 plans complete
 
 ## Accumulated Context
 
@@ -74,6 +74,8 @@ Recent decisions affecting current work:
 - 05-05: Architecture diagram rendering: only when generatedDiagramDsl present, otherwise completely hidden
 - 05-05: Chat citations: user-triggered toggle, not default always-on
 - 05-05: Right rail module order: activity → releases → chat (bottom)
+- 05-06: Task 3 checkpoint auto-approved - end-to-end verification deferred until first crawler run generates live wiki snapshots
+- 05-06: Quality gates enforce 12-month activity emphasis, hide-incomplete behavior, citation-on-demand, and right-rail ordering
 
 ### Roadmap Evolution
 
@@ -90,6 +92,6 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-02-15
-Stopped at: Completed 05-05-PLAN.md (frontend wiki UX)
+Stopped at: Completed 05-06-PLAN.md (quality gates)
 Resume file: None
-Next: Execute 05-02-PLAN.md (crawler wiki generation), 05-06-PLAN.md (quality gates)
+Next: Execute 05-02-PLAN.md (crawler wiki generation) - last plan in Phase 5
