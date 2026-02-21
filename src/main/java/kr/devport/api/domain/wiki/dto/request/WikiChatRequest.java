@@ -24,6 +24,4 @@ public class WikiChatRequest {
     @NotBlank(message = "Session ID is required")
     private String sessionId;
 
-    @Builder.Default
-    private boolean includeCitations = false;
 }

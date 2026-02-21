@@ -11,6 +11,8 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.ResponseEntity;
 
+import java.util.Arrays;
+
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.*;
@@ -25,6 +27,15 @@ class WikiChatControllerTest {
     private WikiChatController wikiChatController;
 
     @Test
+    @DisplayName("chat response no longer contains citation payload")
+    void chat_withoutCitationField() {
+        boolean hasCitationField = Arrays.stream(WikiChatResponse.class.getDeclaredFields())
+                .anyMatch(field -> field.getName().equals("citations"));
+
+        assertThat(hasCitationField).isFalse();
+    }
+
+    @Test
     @DisplayName("chat endpoint returns precise answer with session tracking")
     void chat_returnsPreciseAnswerWithSessionTracking() {
         // Given
@@ -37,7 +48,6 @@ class WikiChatControllerTest {
         WikiChatRequest request = WikiChatRequest.builder()
                 .question("How does auth work?")
                 .sessionId("session-123")
-                .includeCitations(false)
                 .build();
 
         // When

@@ -5,11 +5,9 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-import java.util.List;
-
 /**
  * Wiki chat response DTO.
- * Default responses are citation-light; citations included only when requested.
+ * Compact payload for right-rail chat module consumption.
  */
 @Data
 @Builder
@@ -22,20 +20,4 @@ public class WikiChatResponse {
     private boolean isClarification;
     
     private String sessionId;
-    
-    @Builder.Default
-    private List<Citation> citations = List.of();
-
-    /**
-     * Citation for answer grounding (optional).
-     */
-    @Data
-    @Builder
-    @NoArgsConstructor
-    @AllArgsConstructor
-    public static class Citation {
-        private String section;
-        private String excerpt;
-        private String relevance;
-    }
 }

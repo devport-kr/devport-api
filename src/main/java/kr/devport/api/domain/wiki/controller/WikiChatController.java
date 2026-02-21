@@ -8,11 +8,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.List;
-
 /**
  * Wiki chat controller.
- * Default responses are citation-light; citations returned only when requested.
  * Compact payload for right-rail chat module consumption.
  */
 @RestController
@@ -26,11 +23,11 @@ public class WikiChatController {
      * POST /api/wiki/projects/{projectExternalId}/chat
      *
      * Chat endpoint with precise answers, clarifying prompts on uncertainty,
-     * and optional citations on demand.
+     * and session-scoped continuity.
      *
      * @param projectExternalId Project external ID
      * @param request Chat request with question and session ID
-     * @return Chat response with answer and optional citations
+     * @return Chat response with answer and session metadata
      */
     @PostMapping
     public ResponseEntity<WikiChatResponse> chat(
@@ -47,18 +44,13 @@ public class WikiChatController {
         // Detect if answer is a clarification question
         boolean isClarification = answer.contains("?");
 
-        // Build response without citations by default
-        WikiChatResponse.WikiChatResponseBuilder responseBuilder = WikiChatResponse.builder()
+        WikiChatResponse response = WikiChatResponse.builder()
                 .answer(answer)
                 .isClarification(isClarification)
-                .sessionId(request.getSessionId());
+                .sessionId(request.getSessionId())
+                .build();
 
-        // Include citations only when requested
-        if (request.isIncludeCitations()) {
-            responseBuilder.citations(extractCitations(answer));
-        }
-
-        return ResponseEntity.ok(responseBuilder.build());
+        return ResponseEntity.ok(response);
     }
 
     /**
@@ -79,13 +71,4 @@ public class WikiChatController {
         return ResponseEntity.noContent().build();
     }
 
-    /**
-     * Extract citations from answer content (placeholder for future implementation).
-     * In this phase, citations are minimal.
-     */
-    private List<WikiChatResponse.Citation> extractCitations(String answer) {
-        // Future enhancement: parse structured citations from answer
-        // For now, return empty list
-        return List.of();
-    }
 }
