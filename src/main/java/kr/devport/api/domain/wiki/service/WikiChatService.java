@@ -51,9 +51,9 @@ public class WikiChatService {
         // Generate response
         ChatCompletion completion = openAIClient.chat().completions().create(
                 ChatCompletionCreateParams.builder()
-                        .model(ChatModel.GPT_4O_MINI)
+                        .model(ChatModel.GPT_5_MINI)
                         .messages(messages)
-                        .temperature(0.3) // Lower temperature for higher precision
+                        .temperature(0.1)
                         .build()
         );
 
@@ -128,7 +128,7 @@ public class WikiChatService {
                 
                 Guidelines:
                 - Be concise and technical
-                - Cite specific parts of the codebase when relevant
+                - Reference concrete files and functions from the repository context when relevant
                 - If uncertain, ask for clarification instead of making assumptions
                 - Focus on repository-specific details, not general ecosystem knowledge
                 """.formatted(context);

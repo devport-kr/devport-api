@@ -12,6 +12,8 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.*;
 
+import java.lang.reflect.Method;
+
 @ExtendWith(MockitoExtension.class)
 class WikiChatServiceTest {
 
@@ -26,6 +28,28 @@ class WikiChatServiceTest {
 
     @InjectMocks
     private WikiChatService wikiChatService;
+
+    @Test
+    @DisplayName("chat service remains session-safe after citation contract removal")
+    void chat_service_sessionSafety() throws Exception {
+        // Given
+        String sessionId = "session-123";
+        when(sessionStore.hasActiveSession(sessionId)).thenReturn(true);
+
+        // When
+        boolean hasActive = wikiChatService.hasActiveSession(sessionId);
+        wikiChatService.clearSession(sessionId);
+
+        Method buildSystemPrompt = WikiChatService.class.getDeclaredMethod("buildSystemPrompt", String.class);
+        buildSystemPrompt.setAccessible(true);
+        String prompt = (String) buildSystemPrompt.invoke(wikiChatService, "context");
+
+        // Then
+        assertThat(hasActive).isTrue();
+        assertThat(prompt).doesNotContain("Cite specific parts");
+        verify(sessionStore).hasActiveSession(sessionId);
+        verify(sessionStore).clearSession(sessionId);
+    }
 
     @Test
     @DisplayName("clearSession delegates to session store")
