@@ -3,6 +3,7 @@ package kr.devport.api.domain.wiki.service;
 import com.openai.client.OpenAIClient;
 import kr.devport.api.domain.wiki.entity.ProjectWikiSnapshot;
 import kr.devport.api.domain.wiki.repository.ProjectWikiSnapshotRepository;
+import kr.devport.api.domain.wiki.repository.WikiSectionChunkRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -27,6 +28,9 @@ class WikiRetrievalServiceTest {
     private ProjectWikiSnapshotRepository wikiSnapshotRepository;
 
     @Mock
+    private WikiSectionChunkRepository chunkRepository;
+
+    @Mock
     private OpenAIClient openAIClient;
 
     @InjectMocks
@@ -39,25 +43,29 @@ class WikiRetrievalServiceTest {
         testSnapshot = ProjectWikiSnapshot.builder()
                 .projectExternalId("github:12345")
                 .generatedAt(OffsetDateTime.now())
-                .whatSection(Map.of(
-                        "summary", "Test project for testing",
-                        "deepDiveMarkdown", "This is a deep dive into test project"
+                .sections(List.of(
+                        Map.of(
+                                "sectionId", "architecture",
+                                "heading", "Architecture",
+                                "anchor", "architecture",
+                                "summary", "Architecture overview",
+                                "deepDiveMarkdown", "Detailed architecture explanation"
+                        ),
+                        Map.of(
+                                "sectionId", "how",
+                                "heading", "How",
+                                "anchor", "how",
+                                "summary", "How it works summary",
+                                "deepDiveMarkdown", "Detailed how it works content"
+                        ),
+                        Map.of(
+                                "sectionId", "what",
+                                "heading", "What",
+                                "anchor", "what",
+                                "summary", "Test project for testing",
+                                "deepDiveMarkdown", "This is a deep dive into test project"
+                        )
                 ))
-                .howSection(Map.of(
-                        "summary", "How it works summary",
-                        "deepDiveMarkdown", "Detailed how it works content"
-                ))
-                .architectureSection(Map.of(
-                        "summary", "Architecture overview",
-                        "deepDiveMarkdown", "Detailed architecture explanation"
-                ))
-                .activitySection(Map.of(
-                        "summary", "Recent activity"
-                ))
-                .releasesSection(Map.of(
-                        "summary", "Latest releases"
-                ))
-                .chatSection(Map.of())
                 .isDataReady(true)
                 .hiddenSections(List.of())
                 .readinessMetadata(Map.of())
@@ -102,8 +110,8 @@ class WikiRetrievalServiceTest {
     }
 
     @Test
-    @DisplayName("retrieveContext handles sections with only summaries")
-    void retrieveContext_handlesSectionsWithOnlySummaries() {
+    @DisplayName("retrieveContext handles snapshot with minimal sections")
+    void retrieveContext_handlesMinimalSections() {
         // Given
         String projectExternalId = "github:12345";
         String userQuestion = "What is this project?";
@@ -111,12 +119,15 @@ class WikiRetrievalServiceTest {
         ProjectWikiSnapshot minimalSnapshot = ProjectWikiSnapshot.builder()
                 .projectExternalId(projectExternalId)
                 .generatedAt(OffsetDateTime.now())
-                .whatSection(Map.of("summary", "Minimal summary"))
-                .howSection(Map.of())
-                .architectureSection(Map.of())
-                .activitySection(Map.of())
-                .releasesSection(Map.of())
-                .chatSection(Map.of())
+                .sections(List.of(
+                        Map.of(
+                                "sectionId", "what",
+                                "heading", "What",
+                                "anchor", "what",
+                                "summary", "Minimal summary",
+                                "deepDiveMarkdown", "Minimal deep dive"
+                        )
+                ))
                 .isDataReady(true)
                 .hiddenSections(List.of())
                 .readinessMetadata(Map.of())

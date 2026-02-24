@@ -9,12 +9,13 @@ import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 
 import java.time.OffsetDateTime;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
 /**
- * Project wiki snapshot entity with Core-6 sections and readiness metadata.
- * Mirrors the crawler WikiSnapshot contract for persistence and API consumption.
+ * Project wiki snapshot entity with dynamic section payload and readiness metadata.
  */
 @Entity
 @Table(name = "project_wiki_snapshots")
@@ -32,41 +33,24 @@ public class ProjectWikiSnapshot {
     @Column(name = "generated_at", nullable = false)
     private OffsetDateTime generatedAt;
 
-    // Core-6 sections stored as JSON
     @JdbcTypeCode(SqlTypes.JSON)
-    @Column(name = "what_section", nullable = false, columnDefinition = "jsonb")
-    private Map<String, Object> whatSection;
+    @Column(name = "sections", columnDefinition = "jsonb")
+    private List<Map<String, Object>> sections;
 
     @JdbcTypeCode(SqlTypes.JSON)
-    @Column(name = "how_section", nullable = false, columnDefinition = "jsonb")
-    private Map<String, Object> howSection;
-
-    @JdbcTypeCode(SqlTypes.JSON)
-    @Column(name = "architecture_section", nullable = false, columnDefinition = "jsonb")
-    private Map<String, Object> architectureSection;
-
-    @JdbcTypeCode(SqlTypes.JSON)
-    @Column(name = "activity_section", nullable = false, columnDefinition = "jsonb")
-    private Map<String, Object> activitySection;
-
-    @JdbcTypeCode(SqlTypes.JSON)
-    @Column(name = "releases_section", nullable = false, columnDefinition = "jsonb")
-    private Map<String, Object> releasesSection;
-
-    @JdbcTypeCode(SqlTypes.JSON)
-    @Column(name = "chat_section", nullable = false, columnDefinition = "jsonb")
-    private Map<String, Object> chatSection;
+    @Column(name = "current_counters", columnDefinition = "jsonb")
+    private Map<String, Object> currentCounters;
 
     // Readiness gates
     @Column(name = "is_data_ready", nullable = false)
     private boolean isDataReady;
 
     @JdbcTypeCode(SqlTypes.JSON)
-    @Column(name = "hidden_sections", nullable = false, columnDefinition = "jsonb")
+    @Column(name = "hidden_sections", columnDefinition = "jsonb")
     private List<String> hiddenSections;
 
     @JdbcTypeCode(SqlTypes.JSON)
-    @Column(name = "readiness_metadata", nullable = false, columnDefinition = "jsonb")
+    @Column(name = "readiness_metadata", columnDefinition = "jsonb")
     private Map<String, Object> readinessMetadata;
 
     @Column(name = "created_at", nullable = false, updatable = false)
@@ -90,26 +74,51 @@ public class ProjectWikiSnapshot {
     public ProjectWikiSnapshot(
             String projectExternalId,
             OffsetDateTime generatedAt,
-            Map<String, Object> whatSection,
-            Map<String, Object> howSection,
-            Map<String, Object> architectureSection,
-            Map<String, Object> activitySection,
-            Map<String, Object> releasesSection,
-            Map<String, Object> chatSection,
+            List<Map<String, Object>> sections,
+            Map<String, Object> currentCounters,
             boolean isDataReady,
             List<String> hiddenSections,
             Map<String, Object> readinessMetadata
     ) {
         this.projectExternalId = projectExternalId;
         this.generatedAt = generatedAt;
-        this.whatSection = whatSection;
-        this.howSection = howSection;
-        this.architectureSection = architectureSection;
-        this.activitySection = activitySection;
-        this.releasesSection = releasesSection;
-        this.chatSection = chatSection;
+        this.sections = sections;
+        this.currentCounters = currentCounters;
         this.isDataReady = isDataReady;
         this.hiddenSections = hiddenSections;
         this.readinessMetadata = readinessMetadata;
+    }
+
+    public List<Map<String, Object>> getResolvedSections() {
+        return sections != null ? sections : List.of();
+    }
+
+    public List<String> getHiddenSectionsOrEmpty() {
+        return hiddenSections == null ? List.of() : hiddenSections;
+    }
+
+    public Map<String, Object> getResolvedCurrentCounters() {
+        return currentCounters != null ? currentCounters : Map.of();
+    }
+
+    public void applyFreshnessSignal(
+            OffsetDateTime generatedAt,
+            Map<String, Object> currentCounters,
+            Map<String, Object> readinessMetadata,
+            List<String> hiddenSections
+    ) {
+        this.generatedAt = generatedAt == null ? OffsetDateTime.now() : generatedAt;
+        this.sections = List.of();
+        this.currentCounters = copyMap(currentCounters);
+        this.hiddenSections = hiddenSections == null ? List.of() : new ArrayList<>(hiddenSections);
+        this.readinessMetadata = copyMap(readinessMetadata);
+        this.isDataReady = Boolean.TRUE.equals(this.readinessMetadata.get("passesTopStarGate"));
+    }
+
+    private Map<String, Object> copyMap(Map<String, Object> source) {
+        if (source == null) {
+            return Map.of();
+        }
+        return new LinkedHashMap<>(source);
     }
 }

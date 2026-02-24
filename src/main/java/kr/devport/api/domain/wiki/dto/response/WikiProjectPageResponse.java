@@ -6,15 +6,14 @@ import lombok.Getter;
 
 import java.time.OffsetDateTime;
 import java.util.List;
+import java.util.Map;
 
 /**
- * Response DTO for project wiki page with Core-6 sections in summary-first progressive structure.
- * Architecture section explicitly includes generated diagram metadata when available.
- * Incomplete sections are omitted by visibility service.
+ * Response DTO for project wiki page with dynamic sections and anchor navigation.
  */
 @Getter
 @Builder
-@Schema(description = "Project wiki page with Core-6 sections and right-rail content ordering")
+@Schema(description = "Project wiki page with dynamic sections, anchors, and current counters")
 public class WikiProjectPageResponse {
 
     @Schema(description = "Project external ID", example = "github:12345")
@@ -26,33 +25,38 @@ public class WikiProjectPageResponse {
     @Schema(description = "Snapshot generation timestamp")
     private OffsetDateTime generatedAt;
 
-    // Core-6 sections (only visible sections included)
-    @Schema(description = "What this project is - purpose, domain, users")
-    private WikiSection what;
+    @Schema(description = "Visible dynamic wiki sections")
+    private List<WikiSection> sections;
 
-    @Schema(description = "How it works - key concepts, workflows, usage")
-    private WikiSection how;
+    @Schema(description = "Anchor navigation entries derived from visible sections")
+    private List<AnchorItem> anchors;
 
-    @Schema(description = "Architecture and codebase - structure, components, design, generated diagrams")
-    private ArchitectureSection architecture;
+    @Schema(description = "Hidden section IDs due to incomplete/uncertain content")
+    private List<String> hiddenSections;
 
-    @Schema(description = "Repository activity - 12-month event history")
-    private WikiSection activity;
-
-    @Schema(description = "Releases and tags - timeline with narrative")
-    private WikiSection releases;
+    @Schema(description = "Current repository counters only")
+    private CurrentCounters currentCounters;
 
     // Right-rail ordering payload
     @Schema(description = "Right-rail modules in priority order: activity, releases, chat")
     private RightRailOrdering rightRail;
 
     /**
-     * Standard wiki section with progressive disclosure (summary + deep dive).
+     * Dynamic wiki section with progressive disclosure.
      */
     @Getter
     @Builder
-    @Schema(description = "Wiki section with progressive disclosure")
+    @Schema(description = "Dynamic wiki section")
     public static class WikiSection {
+
+        @Schema(description = "Stable section identifier", example = "architecture")
+        private String sectionId;
+
+        @Schema(description = "Section heading", example = "Architecture")
+        private String heading;
+
+        @Schema(description = "Section anchor slug", example = "architecture")
+        private String anchor;
 
         @Schema(description = "Short summary paragraph (1-3 sentences)")
         private String summary;
@@ -62,31 +66,29 @@ public class WikiProjectPageResponse {
 
         @Schema(description = "Whether this section should be expanded by default")
         private boolean defaultExpanded;
-    }
-
-    /**
-     * Architecture section extends WikiSection with generated diagram support.
-     * Diagram blocks are explicitly included when available and omitted when absent.
-     */
-    @Getter
-    @Builder
-    @Schema(description = "Architecture section with optional generated diagrams")
-    public static class ArchitectureSection {
-
-        @Schema(description = "Architecture summary (1-3 sentences)")
-        private String summary;
-
-        @Schema(description = "Deep technical architecture explanation in markdown")
-        private String deepDiveMarkdown;
-
-        @Schema(description = "Whether this section should be expanded by default")
-        private boolean defaultExpanded;
-
-        @Schema(description = "Generated diagram DSL (Mermaid) if available, null otherwise")
+        @Schema(description = "Generated diagram DSL (Mermaid) when available")
         private String generatedDiagramDsl;
 
-        @Schema(description = "Diagram metadata and render hints if diagram is available")
+        @Schema(description = "Diagram metadata when diagram is available")
         private DiagramMetadata diagramMetadata;
+
+        @Schema(description = "Optional section metadata")
+        private Map<String, Object> metadata;
+    }
+
+    @Getter
+    @Builder
+    @Schema(description = "Anchor item for left-rail navigation")
+    public static class AnchorItem {
+
+        @Schema(description = "Section identifier", example = "architecture")
+        private String sectionId;
+
+        @Schema(description = "Section heading", example = "Architecture")
+        private String heading;
+
+        @Schema(description = "Section anchor slug", example = "architecture")
+        private String anchor;
     }
 
     /**
@@ -107,6 +109,27 @@ public class WikiProjectPageResponse {
         private String renderHints;
     }
 
+    @Getter
+    @Builder
+    @Schema(description = "Current repository counters")
+    public static class CurrentCounters {
+
+        @Schema(description = "Current star count", example = "12345")
+        private Integer stars;
+
+        @Schema(description = "Current fork count", example = "678")
+        private Integer forks;
+
+        @Schema(description = "Current watcher count", example = "321")
+        private Integer watchers;
+
+        @Schema(description = "Current open issue count", example = "54")
+        private Integer openIssues;
+
+        @Schema(description = "Timestamp when counters were refreshed")
+        private OffsetDateTime updatedAt;
+    }
+
     /**
      * Right-rail content ordering to prioritize activity/releases above chat.
      */
@@ -124,7 +147,7 @@ public class WikiProjectPageResponse {
         @Schema(description = "Chat module priority (3 = below activity and releases)")
         private int chatPriority;
 
-        @Schema(description = "Visible section IDs for anchor navigation stability")
-        private List<String> visibleSections;
+        @Schema(description = "Visible section IDs from dynamic section set")
+        private List<String> visibleSectionIds;
     }
 }

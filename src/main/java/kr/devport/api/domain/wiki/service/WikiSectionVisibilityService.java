@@ -7,35 +7,60 @@ import org.springframework.stereotype.Service;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 /**
- * Enforces hide-incomplete section policy at response composition time.
- * Removes missing/uncertain sections from response output instead of returning empty placeholders.
- * Preserves anchored navigation stability by only exposing visible section IDs.
+ * Enforces hide-incomplete policy on dynamic wiki section payloads.
  */
 @Service
 @RequiredArgsConstructor
 public class WikiSectionVisibilityService {
 
     /**
-     * Returns list of section IDs that are visible (not in hiddenSections).
-     * Used for anchor navigation and UI rendering decisions.
-     *
-     * @param snapshot Wiki snapshot with readiness metadata
-     * @return List of visible section IDs (e.g., ["what", "how", "architecture"])
+     * Returns dynamic sections that are visible and renderable.
+     */
+    public List<Map<String, Object>> getVisibleSectionData(ProjectWikiSnapshot snapshot) {
+        return getVisibleSectionData(snapshot.getResolvedSections(), snapshot.getHiddenSectionsOrEmpty());
+    }
+
+    /**
+     * Returns dynamic sections that are visible and renderable using explicit payload values.
+     */
+    public List<Map<String, Object>> getVisibleSectionData(
+            List<Map<String, Object>> sectionPayload,
+            List<String> hiddenSections
+    ) {
+        List<Map<String, Object>> visibleSections = new ArrayList<>();
+        if (sectionPayload == null || sectionPayload.isEmpty()) {
+            return visibleSections;
+        }
+        List<String> hidden = hiddenSections == null ? List.of() : hiddenSections;
+        for (Map<String, Object> sectionData : sectionPayload) {
+            String sectionId = extractSectionId(sectionData);
+            if (!isSectionReady(sectionData, sectionId, hidden)) {
+                continue;
+            }
+            visibleSections.add(sectionData);
+        }
+        return visibleSections;
+    }
+
+    /**
+     * Returns only visible section identifiers for anchor composition.
      */
     public List<String> getVisibleSections(ProjectWikiSnapshot snapshot) {
-        List<String> allSections = List.of("what", "how", "architecture", "activity", "releases");
-        List<String> hiddenSections = snapshot.getHiddenSections();
-        
-        List<String> visibleSections = new ArrayList<>();
-        for (String section : allSections) {
-            if (!hiddenSections.contains(section)) {
-                visibleSections.add(section);
-            }
-        }
-        
-        return visibleSections;
+        return getVisibleSectionData(snapshot.getResolvedSections(), snapshot.getHiddenSectionsOrEmpty()).stream()
+                .map(this::extractSectionId)
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * Returns only visible section identifiers for anchor composition from explicit payload values.
+     */
+    public List<String> getVisibleSections(List<Map<String, Object>> sectionPayload, List<String> hiddenSections) {
+        return getVisibleSectionData(sectionPayload, hiddenSections).stream()
+                .map(this::extractSectionId)
+                .collect(Collectors.toList());
     }
 
     /**
@@ -46,7 +71,27 @@ public class WikiSectionVisibilityService {
      * @return true if section should be included in response
      */
     public boolean isSectionVisible(ProjectWikiSnapshot snapshot, String sectionName) {
-        return !snapshot.getHiddenSections().contains(sectionName);
+        return isSectionVisible(snapshot.getResolvedSections(), snapshot.getHiddenSectionsOrEmpty(), sectionName);
+    }
+
+    /**
+     * Checks if a specific section should be visible in response using explicit payload values.
+     */
+    public boolean isSectionVisible(
+            List<Map<String, Object>> sectionPayload,
+            List<String> hiddenSections,
+            String sectionName
+    ) {
+        if (sectionPayload == null || sectionPayload.isEmpty()) {
+            return false;
+        }
+        if (hiddenSections != null && hiddenSections.contains(sectionName)) {
+            return false;
+        }
+
+        return sectionPayload.stream()
+                .filter(section -> sectionName.equals(extractSectionId(section)))
+                .anyMatch(section -> isSectionReady(section, sectionName, hiddenSections == null ? List.of() : hiddenSections));
     }
 
     /**
@@ -59,15 +104,52 @@ public class WikiSectionVisibilityService {
      * @return true if section is ready to render
      */
     public boolean isSectionReady(Map<String, Object> sectionData, String sectionName, ProjectWikiSnapshot snapshot) {
-        if (snapshot.getHiddenSections().contains(sectionName)) {
+        return isSectionReady(sectionData, sectionName, snapshot.getHiddenSectionsOrEmpty());
+    }
+
+    public boolean isSectionReady(Map<String, Object> sectionData, String sectionName, List<String> hiddenSections) {
+        if (hiddenSections.contains(sectionName)) {
             return false;
         }
-        
+
         if (sectionData == null || sectionData.isEmpty()) {
             return false;
         }
-        
-        Object summary = sectionData.get("summary");
-        return summary != null && !summary.toString().isBlank();
+
+        String summary = asText(sectionData.get("summary"));
+        String deepDive = asText(sectionData.getOrDefault("deepDiveMarkdown", sectionData.get("deepDive")));
+        if (summary.isBlank() || deepDive.isBlank()) {
+            return false;
+        }
+
+        if (Boolean.TRUE.equals(sectionData.get("uncertain"))) {
+            return false;
+        }
+
+        Object metadata = sectionData.get("metadata");
+        if (metadata instanceof Map<?, ?> metadataMap) {
+            Object uncertain = metadataMap.get("uncertain");
+            if (Boolean.TRUE.equals(uncertain)) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    private String extractSectionId(Map<String, Object> sectionData) {
+        if (sectionData == null) {
+            return "";
+        }
+
+        Object sectionId = sectionData.get("sectionId");
+        if (sectionId == null) {
+            return "";
+        }
+        return String.valueOf(sectionId);
+    }
+
+    private String asText(Object value) {
+        return value == null ? "" : String.valueOf(value);
     }
 }

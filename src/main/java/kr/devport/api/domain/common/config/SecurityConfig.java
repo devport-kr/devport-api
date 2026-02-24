@@ -85,12 +85,43 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.PUT, "/api/projects/*/comments/*").authenticated()
                 .requestMatchers(HttpMethod.DELETE, "/api/projects/*/comments/*").authenticated()
                 .requestMatchers(HttpMethod.POST, "/api/projects/*/comments/*/vote").authenticated()
+                .requestMatchers(HttpMethod.POST, "/api/wiki/projects/*/chat").authenticated()
+                .requestMatchers(HttpMethod.DELETE, "/api/wiki/projects/*/chat/sessions/*").authenticated()
+                .requestMatchers(HttpMethod.GET,
+                    "/api/wiki/admin/projects/*/drafts",
+                    "/api/wiki/admin/projects/*/drafts/*"
+                ).hasAnyRole("ADMIN", "EDITOR")
+                .requestMatchers(HttpMethod.POST,
+                    "/api/wiki/admin/projects/*/drafts",
+                    "/api/wiki/admin/projects/*/drafts/*/regenerate",
+                    "/api/wiki/admin/projects/*/publish",
+                    "/api/wiki/admin/projects/*/rollback"
+                ).hasRole("ADMIN")
+                .requestMatchers(HttpMethod.PUT,
+                    "/api/wiki/admin/projects/*/drafts/*"
+                ).hasRole("ADMIN")
+                .requestMatchers("/api/wiki/admin/**").hasRole("ADMIN")
                 .requestMatchers(HttpMethod.GET, "/api/wiki/**").permitAll()
                 .requestMatchers("/swagger-ui/**", "/v3/api-docs/**", "/swagger-ui.html").permitAll()
                 .requestMatchers("/oauth2/**", "/login/**").permitAll()
                 .requestMatchers("/api/me/**").authenticated()
                 .requestMatchers("/api/admin/**").hasRole("ADMIN")
                 .anyRequest().authenticated()
+            )
+            .exceptionHandling(exception -> exception
+                .authenticationEntryPoint((request, response, authException) -> {
+                    if (request.getRequestURI().startsWith("/api/")) {
+                        response.setStatus(401);
+                        response.setContentType("application/json;charset=UTF-8");
+                        String message = request.getRequestURI().contains("/api/wiki/projects/")
+                                && request.getRequestURI().contains("/chat")
+                                ? "챗봇과 대화할려면 로그인하세요"
+                                : "로그인이 필요합니다";
+                        response.getWriter().write("{\"message\":\"" + message + "\"}");
+                        return;
+                    }
+                    response.sendRedirect("/login");
+                })
             )
             .oauth2Login(oauth2 -> oauth2
                 .authorizationEndpoint(authorization -> authorization

@@ -8,6 +8,9 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.util.List;
+import java.util.Map;
+
 /**
  * Webhook payload for crawler job completion events.
  * Received from external crawler system to signal data changes requiring cache invalidation.
@@ -37,6 +40,13 @@ public class CrawlerJobCompletedRequest {
      */
     @JsonProperty("completed_at")
     private String completedAt;
+
+    /**
+     * Freshness-only payloads emitted by crawler wiki stage.
+     * Narrative wiki content must not be provided by crawler.
+     */
+    @JsonProperty("freshness_signals")
+    private List<Map<String, Object>> freshnessSignals;
     
     /**
      * HMAC signature for authentication.
@@ -51,5 +61,9 @@ public class CrawlerJobCompletedRequest {
      */
     public CacheScope getEffectiveScope() {
         return scope != null ? scope : CacheScope.UNKNOWN;
+    }
+
+    public List<Map<String, Object>> getFreshnessSignalsOrEmpty() {
+        return freshnessSignals == null ? List.of() : freshnessSignals;
     }
 }

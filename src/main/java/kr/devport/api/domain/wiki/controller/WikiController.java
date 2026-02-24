@@ -18,7 +18,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 /**
  * Public wiki browse and project detail endpoints.
- * Returns Core-6 content in summary-first progressive structure.
+ * Returns dynamic section payloads in summary-first progressive structure.
  * Enforces data-ready-only listing and hide-incomplete section behavior.
  */
 @Tag(name = "Wiki", description = "Public wiki endpoints for domain browsing and project pages")
@@ -50,8 +50,8 @@ public class WikiController {
 
     @Operation(
             summary = "Get project wiki page",
-            description = "Returns full project wiki with Core-6 sections (what, how, architecture, activity, releases). " +
-                    "Incomplete sections are omitted. Architecture section includes generated diagrams when available."
+            description = "Returns project wiki with dynamic sections and generated anchors. " +
+                    "Incomplete/uncertain sections are omitted and metrics are exposed as current counters only."
     )
     @ApiResponses(value = {
             @ApiResponse(
