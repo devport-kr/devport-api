@@ -9,7 +9,6 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import kr.devport.api.domain.port.dto.response.ProjectDetailResponse;
 import kr.devport.api.domain.port.dto.response.ProjectEventResponse;
 import kr.devport.api.domain.port.dto.response.ProjectOverviewResponse;
-import kr.devport.api.domain.port.dto.response.StarHistoryResponse;
 import kr.devport.api.domain.port.enums.EventType;
 import kr.devport.api.domain.port.service.ProjectService;
 import lombok.RequiredArgsConstructor;
@@ -24,8 +23,6 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-import java.time.LocalDate;
-import java.util.List;
 
 @Tag(name = "Projects", description = "Project endpoints")
 @RestController
@@ -73,29 +70,6 @@ public class ProjectController {
     ) {
         Pageable pageable = PageRequest.of(page, size, Sort.by("releasedAt").descending());
         return ResponseEntity.ok(projectService.getProjectEvents(id, type, pageable));
-    }
-
-    @Operation(
-        summary = "Get star history",
-        description = "Retrieve star count history for chart visualization"
-    )
-    @ApiResponses(value = {
-        @ApiResponse(
-            responseCode = "200",
-            description = "Star history retrieved successfully",
-            content = @Content(schema = @Schema(implementation = StarHistoryResponse.class))
-        ),
-        @ApiResponse(responseCode = "404", description = "Project not found", content = @Content)
-    })
-    @GetMapping("/{id}/star-history")
-    public ResponseEntity<List<StarHistoryResponse>> getStarHistory(
-        @PathVariable String id,
-        @RequestParam(required = false) LocalDate from,
-        @RequestParam(required = false) LocalDate to
-    ) {
-        if (from == null) from = LocalDate.now().minusYears(5);
-        if (to == null) to = LocalDate.now();
-        return ResponseEntity.ok(projectService.getStarHistory(id, from, to));
     }
 
     @Operation(

@@ -31,9 +31,6 @@ public class WikiProjectPageResponse {
     @Schema(description = "Anchor navigation entries derived from visible sections")
     private List<AnchorItem> anchors;
 
-    @Schema(description = "Hidden section IDs due to incomplete/uncertain content")
-    private List<String> hiddenSections;
-
     @Schema(description = "Current repository counters only")
     private CurrentCounters currentCounters;
 

@@ -3,26 +3,19 @@ package kr.devport.api.domain.port.service;
 import kr.devport.api.domain.port.dto.response.ProjectDetailResponse;
 import kr.devport.api.domain.port.dto.response.ProjectEventResponse;
 import kr.devport.api.domain.port.dto.response.ProjectOverviewResponse;
-import kr.devport.api.domain.port.dto.response.StarHistoryResponse;
 import kr.devport.api.domain.port.entity.Project;
 import kr.devport.api.domain.port.entity.ProjectEvent;
 import kr.devport.api.domain.port.entity.ProjectOverview;
-import kr.devport.api.domain.port.entity.ProjectStarHistory;
 import kr.devport.api.domain.port.enums.EventType;
 import kr.devport.api.domain.port.repository.ProjectEventRepository;
 import kr.devport.api.domain.port.repository.ProjectOverviewRepository;
 import kr.devport.api.domain.port.repository.ProjectRepository;
-import kr.devport.api.domain.port.repository.ProjectStarHistoryRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
-import java.time.LocalDate;
-import java.util.List;
-import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -31,7 +24,6 @@ public class ProjectService {
 
     private final ProjectRepository projectRepository;
     private final ProjectEventRepository projectEventRepository;
-    private final ProjectStarHistoryRepository starHistoryRepository;
     private final ProjectOverviewRepository overviewRepository;
 
     @Transactional(readOnly = true)
@@ -68,19 +60,6 @@ public class ProjectService {
         }
 
         return events.map(this::toEventResponse);
-    }
-
-    @Transactional(readOnly = true)
-    public List<StarHistoryResponse> getStarHistory(String projectExternalId, LocalDate from, LocalDate to) {
-        List<ProjectStarHistory> history = starHistoryRepository
-            .findByProject_ExternalIdAndDateBetweenOrderByDateAsc(projectExternalId, from, to);
-
-        return history.stream()
-            .map(h -> StarHistoryResponse.builder()
-                .date(h.getDate())
-                .stars(h.getStars())
-                .build())
-            .collect(Collectors.toList());
     }
 
     @Transactional(readOnly = true)

@@ -2,7 +2,6 @@ package kr.devport.api.domain.common.webhook;
 
 import jakarta.validation.Valid;
 import kr.devport.api.domain.common.webhook.dto.CrawlerJobCompletedRequest;
-import kr.devport.api.domain.wiki.service.WikiFreshnessSignalService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
@@ -22,7 +21,6 @@ import java.util.Map;
 public class CrawlerWebhookController {
     
     private final CrawlerWebhookService crawlerWebhookService;
-    private final WikiFreshnessSignalService wikiFreshnessSignalService;
     
     /**
      * Receives crawler job-completed webhook.
@@ -53,7 +51,6 @@ public class CrawlerWebhookController {
         
         // Process webhook (idempotent)
         crawlerWebhookService.handleJobCompleted(request);
-        wikiFreshnessSignalService.handleCrawlerCompletion(request);
         
         // Return 202 Accepted for retry-safe semantics
         return ResponseEntity.status(HttpStatus.ACCEPTED)

@@ -2,7 +2,6 @@ package kr.devport.api.domain.common.webhook;
 
 import kr.devport.api.domain.common.cache.CacheScope;
 import kr.devport.api.domain.common.webhook.dto.CrawlerJobCompletedRequest;
-import kr.devport.api.domain.wiki.service.WikiFreshnessSignalService;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -26,15 +25,12 @@ class CrawlerWebhookControllerTest {
     @Mock
     private CrawlerWebhookService crawlerWebhookService;
 
-    @Mock
-    private WikiFreshnessSignalService wikiFreshnessSignalService;
-
     @InjectMocks
     private CrawlerWebhookController crawlerWebhookController;
 
     @Test
-    @DisplayName("job-completed webhook delegates to cache invalidation and freshness handler")
-    void handleJobCompleted_delegatesToFreshnessHandler() {
+    @DisplayName("job-completed webhook delegates to cache invalidation service")
+    void handleJobCompleted_delegatesToCacheInvalidation() {
         CrawlerJobCompletedRequest request = CrawlerJobCompletedRequest.builder()
                 .jobId("job-1")
                 .scope(CacheScope.GIT_REPO)
@@ -49,7 +45,6 @@ class CrawlerWebhookControllerTest {
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.ACCEPTED);
         verify(crawlerWebhookService).handleJobCompleted(request);
-        verify(wikiFreshnessSignalService).handleCrawlerCompletion(request);
     }
 
     @Test
@@ -67,6 +62,5 @@ class CrawlerWebhookControllerTest {
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
         verify(crawlerWebhookService, never()).handleJobCompleted(request);
-        verify(wikiFreshnessSignalService, never()).handleCrawlerCompletion(request);
     }
 }

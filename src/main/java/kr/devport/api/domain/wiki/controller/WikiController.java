@@ -6,7 +6,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import kr.devport.api.domain.wiki.dto.response.WikiDomainBrowseResponse;
+import kr.devport.api.domain.wiki.dto.response.WikiProjectListResponse;
 import kr.devport.api.domain.wiki.dto.response.WikiProjectPageResponse;
 import kr.devport.api.domain.wiki.service.WikiService;
 import lombok.RequiredArgsConstructor;
@@ -30,21 +30,19 @@ public class WikiController {
     private final WikiService wikiService;
 
     @Operation(
-            summary = "Browse wiki projects by domain",
-            description = "Returns top-starred data-ready projects for a given domain (port slug). " +
-                    "Only projects with complete wiki snapshots are included."
+            summary = "List all wiki-ready projects",
+            description = "Returns all projects that have wiki content, sorted by stars descending."
     )
     @ApiResponses(value = {
             @ApiResponse(
                     responseCode = "200",
-                    description = "Domain browse listing retrieved successfully",
-                    content = @Content(schema = @Schema(implementation = WikiDomainBrowseResponse.class))
-            ),
-            @ApiResponse(responseCode = "404", description = "Domain not found", content = @Content)
+                    description = "Project list retrieved successfully",
+                    content = @Content(schema = @Schema(implementation = WikiProjectListResponse.class))
+            )
     })
-    @GetMapping("/domains/{domain}")
-    public ResponseEntity<WikiDomainBrowseResponse> browseByDomain(@PathVariable String domain) {
-        WikiDomainBrowseResponse response = wikiService.getProjectsByDomain(domain);
+    @GetMapping("/projects")
+    public ResponseEntity<WikiProjectListResponse> listProjects() {
+        WikiProjectListResponse response = wikiService.getProjects();
         return ResponseEntity.ok(response);
     }
 

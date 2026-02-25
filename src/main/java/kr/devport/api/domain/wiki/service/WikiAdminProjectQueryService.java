@@ -29,8 +29,6 @@ public class WikiAdminProjectQueryService {
                 .fullName(project.getFullName())
                 .stars(project.getStars() == null ? 0 : project.getStars())
                 .language(project.getLanguage() == null || project.getLanguage().isBlank() ? "Unknown" : project.getLanguage())
-                .portName(project.getPort().getName())
-                .portSlug(project.getPort().getSlug())
                 .build();
     }
 }

@@ -1,14 +1,11 @@
 package kr.devport.api.domain.wiki.service;
 
-import kr.devport.api.domain.port.entity.Port;
 import kr.devport.api.domain.port.entity.Project;
-import kr.devport.api.domain.port.repository.PortRepository;
 import kr.devport.api.domain.port.repository.ProjectRepository;
+import kr.devport.api.domain.wiki.dto.response.WikiProjectListResponse;
 import kr.devport.api.domain.wiki.dto.response.WikiProjectPageResponse;
-import kr.devport.api.domain.wiki.entity.ProjectWikiSnapshot;
-import kr.devport.api.domain.wiki.entity.WikiPublishedVersion;
-import kr.devport.api.domain.wiki.repository.ProjectWikiSnapshotRepository;
-import kr.devport.api.domain.wiki.repository.WikiPublishedVersionRepository;
+import kr.devport.api.domain.wiki.entity.WikiSectionChunk;
+import kr.devport.api.domain.wiki.repository.WikiSectionChunkRepository;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -17,14 +14,12 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.domain.Sort;
 
-import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -34,106 +29,61 @@ class WikiServiceTest {
     private ProjectRepository projectRepository;
 
     @Mock
-    private PortRepository portRepository;
-
-    @Mock
-    private ProjectWikiSnapshotRepository wikiSnapshotRepository;
-
-    @Mock
-    private WikiPublishedVersionRepository wikiPublishedVersionRepository;
-
-    @Mock
-    private WikiSectionVisibilityService visibilityService;
+    private WikiSectionChunkRepository wikiSectionChunkRepository;
 
     @InjectMocks
     private WikiService wikiService;
 
     @Test
-    @DisplayName("project wiki response prioritizes latest published version for public reads")
-    void getProjectWiki_usesLatestPublishedVersion() {
+    @DisplayName("getProjectWiki builds sections from summary and body chunks")
+    void getProjectWiki_buildsSectionsFromChunks() {
         Project project = Project.builder()
                 .id(11L)
                 .externalId("github:repo")
                 .fullName("owner/repo")
+                .stars(100)
+                .forks(10)
                 .build();
 
-        WikiPublishedVersion latest = WikiPublishedVersion.builder()
-                .projectId(11L)
-                .versionNumber(3)
-                .publishedAt(OffsetDateTime.now())
-                .hiddenSections(List.of("chat"))
-                .currentCounters(Map.of("stars", 10, "forks", 3, "watchers", 2, "openIssues", 1))
-                .sections(List.of(
-                        Map.of(
-                                "sectionId", "what",
-                                "heading", "What",
-                                "anchor", "what",
-                                "summary", "published summary",
-                                "deepDiveMarkdown", "published deep"
-                        )
-                ))
+        WikiSectionChunk summaryChunk = WikiSectionChunk.builder()
+                .projectExternalId("github:repo")
+                .sectionId("sec-1")
+                .subsectionId(null)
+                .chunkType("summary")
+                .content("section one summary")
+                .metadata(Map.of("titleKo", "섹션 하나"))
+                .commitSha("abc")
+                .build();
+
+        WikiSectionChunk bodyChunk = WikiSectionChunk.builder()
+                .projectExternalId("github:repo")
+                .sectionId("sec-1")
+                .subsectionId("sub-1-1")
+                .chunkType("body")
+                .content("body content one")
+                .metadata(Map.of("titleKo", "섹션 하나 — 세부"))
+                .commitSha("abc")
                 .build();
 
         when(projectRepository.findByExternalId("github:repo")).thenReturn(Optional.of(project));
-        when(wikiPublishedVersionRepository.findTopByProjectIdOrderByVersionNumberDesc(11L))
-                .thenReturn(Optional.of(latest));
-        when(visibilityService.getVisibleSectionData(eq(latest.getSectionsOrEmpty()), eq(latest.getHiddenSectionsOrEmpty())))
-                .thenReturn(latest.getSectionsOrEmpty());
+        when(wikiSectionChunkRepository.findByProjectExternalId("github:repo"))
+                .thenReturn(List.of(summaryChunk, bodyChunk));
 
         WikiProjectPageResponse response = wikiService.getProjectWiki("github:repo");
 
         assertThat(response.getSections()).hasSize(1);
+        assertThat(response.getSections().get(0).getSectionId()).isEqualTo("sec-1");
+        assertThat(response.getSections().get(0).getHeading()).isEqualTo("섹션 하나");
+        assertThat(response.getSections().get(0).getSummary()).isEqualTo("section one summary");
+        assertThat(response.getSections().get(0).getDeepDiveMarkdown()).isEqualTo("body content one");
         assertThat(response.getAnchors()).hasSize(1);
-        assertThat(response.getAnchors().get(0).getSectionId()).isEqualTo("what");
-        assertThat(response.getSections().get(0).getSummary()).isEqualTo("published summary");
         assertThat(response.getCurrentCounters()).isNotNull();
-        assertThat(response.getCurrentCounters().getStars()).isEqualTo(10);
-        assertThat(response.getHiddenSections()).containsExactly("chat");
+        assertThat(response.getCurrentCounters().getStars()).isEqualTo(100);
     }
 
     @Test
-    @DisplayName("project wiki response falls back to legacy snapshot when no published version exists")
-    void getProjectWiki_fallsBackToSnapshotForLegacyData() {
-        Project project = Project.builder()
-                .id(22L)
-                .externalId("github:legacy")
-                .fullName("owner/legacy")
-                .build();
-
-        ProjectWikiSnapshot snapshot = ProjectWikiSnapshot.builder()
-                .projectExternalId("github:legacy")
-                .generatedAt(OffsetDateTime.now())
-                .hiddenSections(List.of("chat"))
-                .sections(List.of(
-                        Map.of(
-                                "sectionId", "what",
-                                "heading", "What",
-                                "anchor", "what",
-                                "summary", "legacy summary",
-                                "deepDiveMarkdown", "legacy deep"
-                        )
-                ))
-                .isDataReady(true)
-                .build();
-
-        when(projectRepository.findByExternalId("github:legacy")).thenReturn(Optional.of(project));
-        when(wikiPublishedVersionRepository.findTopByProjectIdOrderByVersionNumberDesc(22L))
-                .thenReturn(Optional.empty());
-        when(wikiSnapshotRepository.findByProjectExternalIdAndIsDataReady("github:legacy", true))
-                .thenReturn(Optional.of(snapshot));
-        when(visibilityService.getVisibleSectionData(eq(snapshot.getResolvedSections()), eq(snapshot.getHiddenSectionsOrEmpty())))
-                .thenReturn(snapshot.getResolvedSections());
-
-        WikiProjectPageResponse response = wikiService.getProjectWiki("github:legacy");
-
-        assertThat(response.getSections()).hasSize(1);
-        assertThat(response.getSections().get(0).getSummary()).isEqualTo("legacy summary");
-    }
-
-    @Test
-    @DisplayName("domain browse summary uses latest published what section when available")
-    void getProjectsByDomain_usesPublishedSummary() {
-        Port port = Port.builder().slug("web").build();
+    @DisplayName("getProjects uses first summary chunk for browse summary")
+    void getProjects_usesSummaryChunk() {
         Project project = Project.builder()
                 .id(1L)
                 .externalId("github:repo")
@@ -143,35 +93,28 @@ class WikiServiceTest {
                 .language("Java")
                 .build();
 
-        WikiPublishedVersion publishedVersion = WikiPublishedVersion.builder()
-                .projectId(1L)
-                .versionNumber(2)
-                .publishedAt(OffsetDateTime.now())
-                .sections(List.of(
-                        Map.of(
-                                "sectionId", "what",
-                                "heading", "What",
-                                "anchor", "what",
-                                "summary", "wiki summary",
-                                "deepDiveMarkdown", "wiki deep"
-                        )
-                ))
+        WikiSectionChunk summaryChunk = WikiSectionChunk.builder()
+                .projectExternalId("github:repo")
+                .sectionId("sec-1")
+                .subsectionId(null)
+                .chunkType("summary")
+                .content("browse summary text")
+                .commitSha("abc")
                 .build();
 
-        when(portRepository.findBySlug("web")).thenReturn(Optional.of(port));
-        when(projectRepository.findByPort_Slug("web", Sort.by(Sort.Direction.DESC, "stars")))
-                .thenReturn(List.of(project));
-        when(wikiPublishedVersionRepository.findTopByProjectIdOrderByVersionNumberDesc(1L))
-                .thenReturn(Optional.of(publishedVersion));
+        when(projectRepository.findAll(any(Sort.class))).thenReturn(List.of(project));
+        when(wikiSectionChunkRepository.findByProjectExternalId("github:repo"))
+                .thenReturn(List.of(summaryChunk));
 
-        assertThat(wikiService.getProjectsByDomain("web").getProjects()).hasSize(1);
-        assertThat(wikiService.getProjectsByDomain("web").getProjects().get(0).getSummary()).isEqualTo("wiki summary");
+        WikiProjectListResponse response = wikiService.getProjects();
+
+        assertThat(response.getProjects()).hasSize(1);
+        assertThat(response.getProjects().get(0).getSummary()).isEqualTo("browse summary text");
     }
 
     @Test
-    @DisplayName("domain browse excludes projects with neither published versions nor ready snapshots")
-    void getProjectsByDomain_excludesProjectsWithoutWikiSource() {
-        Port port = Port.builder().slug("web").build();
+    @DisplayName("getProjects excludes projects with no chunks")
+    void getProjects_excludesProjectsWithNoChunks() {
         Project project = Project.builder()
                 .id(9L)
                 .externalId("github:none")
@@ -181,14 +124,10 @@ class WikiServiceTest {
                 .language("Java")
                 .build();
 
-        when(portRepository.findBySlug("web")).thenReturn(Optional.of(port));
-        when(projectRepository.findByPort_Slug("web", Sort.by(Sort.Direction.DESC, "stars")))
-                .thenReturn(List.of(project));
-        when(wikiPublishedVersionRepository.findTopByProjectIdOrderByVersionNumberDesc(9L))
-                .thenReturn(Optional.empty());
-        when(wikiSnapshotRepository.findByProjectExternalIdAndIsDataReady("github:none", true))
-                .thenReturn(Optional.empty());
+        when(projectRepository.findAll(any(Sort.class))).thenReturn(List.of(project));
+        when(wikiSectionChunkRepository.findByProjectExternalId("github:none"))
+                .thenReturn(List.of());
 
-        assertThat(wikiService.getProjectsByDomain("web").getProjects()).isEmpty();
+        assertThat(wikiService.getProjects().getProjects()).isEmpty();
     }
 }

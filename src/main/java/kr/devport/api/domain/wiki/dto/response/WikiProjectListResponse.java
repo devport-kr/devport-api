@@ -7,32 +7,26 @@ import lombok.Getter;
 import java.util.List;
 
 /**
- * Response DTO for domain-based wiki browsing.
- * Returns top-starred data-ready projects grouped by domain.
+ * Flat list of wiki-ready projects, sorted by stars descending.
+ * Only projects with at least one wiki chunk are included.
  */
 @Getter
 @Builder
-@Schema(description = "Domain browse response with top-starred wiki-ready projects")
-public class WikiDomainBrowseResponse {
+@Schema(description = "Flat list of wiki-ready projects sorted by stars descending")
+public class WikiProjectListResponse {
 
-    @Schema(description = "Domain name", example = "web-frameworks")
-    private String domain;
-
-    @Schema(description = "List of wiki-ready projects in this domain, sorted by stars descending")
+    @Schema(description = "List of wiki-ready projects")
     private List<ProjectSummary> projects;
 
-    /**
-     * Project summary for domain browse listing.
-     */
     @Getter
     @Builder
     @Schema(description = "Project summary for browse listing")
     public static class ProjectSummary {
 
-        @Schema(description = "Project external ID", example = "github:12345")
+        @Schema(description = "Project external ID", example = "github:owner/repo")
         private String projectExternalId;
 
-        @Schema(description = "Repository full name", example = "vercel/next.js")
+        @Schema(description = "Repository full name", example = "owner/repo")
         private String fullName;
 
         @Schema(description = "Repository description")
@@ -44,7 +38,7 @@ public class WikiDomainBrowseResponse {
         @Schema(description = "Primary programming language")
         private String language;
 
-        @Schema(description = "Short summary (1 sentence)")
+        @Schema(description = "Content of first summary chunk")
         private String summary;
     }
 }

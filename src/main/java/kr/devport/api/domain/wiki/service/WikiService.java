@@ -1,55 +1,47 @@
 package kr.devport.api.domain.wiki.service;
 
-import kr.devport.api.domain.port.entity.Port;
 import kr.devport.api.domain.port.entity.Project;
-import kr.devport.api.domain.port.repository.PortRepository;
 import kr.devport.api.domain.port.repository.ProjectRepository;
-import kr.devport.api.domain.wiki.dto.response.WikiDomainBrowseResponse;
+import kr.devport.api.domain.wiki.dto.response.WikiProjectListResponse;
 import kr.devport.api.domain.wiki.dto.response.WikiProjectPageResponse;
-import kr.devport.api.domain.wiki.entity.ProjectWikiSnapshot;
-import kr.devport.api.domain.wiki.entity.WikiPublishedVersion;
-import kr.devport.api.domain.wiki.repository.ProjectWikiSnapshotRepository;
-import kr.devport.api.domain.wiki.repository.WikiPublishedVersionRepository;
+import kr.devport.api.domain.wiki.entity.WikiSectionChunk;
+import kr.devport.api.domain.wiki.repository.WikiSectionChunkRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.OffsetDateTime;
-import java.time.format.DateTimeParseException;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 /**
- * Wiki read orchestration and response mapping service.
+ * Wiki read orchestration service. Serves wiki pages directly from wiki_section_chunks.
  */
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
 public class WikiService {
 
+    private static final Pattern NUMERIC_SUFFIX = Pattern.compile("\\d+$");
+
     private final ProjectRepository projectRepository;
-    private final PortRepository portRepository;
-    private final ProjectWikiSnapshotRepository wikiSnapshotRepository;
-    private final WikiPublishedVersionRepository wikiPublishedVersionRepository;
-    private final WikiSectionVisibilityService visibilityService;
+    private final WikiSectionChunkRepository wikiSectionChunkRepository;
 
-    public WikiDomainBrowseResponse getProjectsByDomain(String domain) {
-        Port port = portRepository.findBySlug(domain)
-                .orElseThrow(() -> new IllegalArgumentException("Domain not found: " + domain));
+    public WikiProjectListResponse getProjects() {
+        List<Project> projects = projectRepository.findAll(Sort.by(Sort.Direction.DESC, "stars"));
 
-        List<Project> projects = projectRepository.findByPort_Slug(domain, Sort.by(Sort.Direction.DESC, "stars"));
-
-        List<WikiDomainBrowseResponse.ProjectSummary> projectSummaries = projects.stream()
+        List<WikiProjectListResponse.ProjectSummary> projectSummaries = projects.stream()
                 .map(project -> {
-                    String summary = resolveBrowseSummary(project);
+                    String summary = resolveBrowseSummary(project.getExternalId());
                     if (summary.isBlank()) {
                         return null;
                     }
-
-                    return WikiDomainBrowseResponse.ProjectSummary.builder()
+                    return WikiProjectListResponse.ProjectSummary.builder()
                             .projectExternalId(project.getExternalId())
                             .fullName(project.getFullName())
                             .description(project.getDescription())
@@ -58,11 +50,10 @@ public class WikiService {
                             .summary(summary)
                             .build();
                 })
-                .filter(summary -> summary != null)
+                .filter(s -> s != null)
                 .collect(Collectors.toList());
 
-        return WikiDomainBrowseResponse.builder()
-                .domain(port.getSlug())
+        return WikiProjectListResponse.builder()
                 .projects(projectSummaries)
                 .build();
     }
@@ -71,14 +62,26 @@ public class WikiService {
         Project project = projectRepository.findByExternalId(projectExternalId)
                 .orElseThrow(() -> new IllegalArgumentException("Project not found: " + projectExternalId));
 
-        WikiContentSource contentSource = resolvePublicContent(project);
+        List<WikiSectionChunk> chunks = wikiSectionChunkRepository.findByProjectExternalId(projectExternalId);
+        if (chunks.isEmpty()) {
+            throw new IllegalArgumentException("No wiki content found for project: " + projectExternalId);
+        }
 
-        List<Map<String, Object>> visibleSectionData = visibilityService.getVisibleSectionData(
-                contentSource.sections(),
-                contentSource.hiddenSections()
-        );
-        List<WikiProjectPageResponse.WikiSection> sections = visibleSectionData.stream()
-                .map(this::mapWikiSection)
+        Map<String, List<WikiSectionChunk>> bySectionId = chunks.stream()
+                .collect(Collectors.groupingBy(WikiSectionChunk::getSectionId));
+
+        List<String> sortedSectionIds = bySectionId.keySet().stream()
+                .sorted(Comparator.comparingInt(this::extractTrailingNumber))
+                .collect(Collectors.toList());
+
+        OffsetDateTime generatedAt = chunks.stream()
+                .map(WikiSectionChunk::getUpdatedAt)
+                .filter(t -> t != null)
+                .max(Comparator.naturalOrder())
+                .orElse(null);
+
+        List<WikiProjectPageResponse.WikiSection> sections = sortedSectionIds.stream()
+                .map(sectionId -> buildSection(sectionId, bySectionId.get(sectionId)))
                 .collect(Collectors.toList());
 
         List<WikiProjectPageResponse.AnchorItem> anchors = sections.stream()
@@ -96,162 +99,66 @@ public class WikiService {
                 .visibleSectionIds(anchors.stream().map(WikiProjectPageResponse.AnchorItem::getSectionId).toList())
                 .build();
 
+        WikiProjectPageResponse.CurrentCounters currentCounters = WikiProjectPageResponse.CurrentCounters.builder()
+                .stars(project.getStars())
+                .forks(project.getForks())
+                .build();
+
         return WikiProjectPageResponse.builder()
                 .projectExternalId(projectExternalId)
                 .fullName(project.getFullName())
-                .generatedAt(contentSource.generatedAt())
+                .generatedAt(generatedAt)
                 .sections(sections)
                 .anchors(anchors)
-                .hiddenSections(contentSource.hiddenSections())
-                .currentCounters(mapCurrentCounters(contentSource.currentCounters()))
+                .currentCounters(currentCounters)
                 .rightRail(rightRail)
                 .build();
     }
 
-    private String resolveBrowseSummary(Project project) {
-        Optional<WikiPublishedVersion> published = wikiPublishedVersionRepository
-                .findTopByProjectIdOrderByVersionNumberDesc(project.getId());
-        if (published.isPresent()) {
-            return extractBrowseSummary(published.get().getSectionsOrEmpty());
-        }
-
-        return wikiSnapshotRepository.findByProjectExternalIdAndIsDataReady(project.getExternalId(), true)
-                .map(snapshot -> extractBrowseSummary(snapshot.getResolvedSections()))
-                .orElse("");
-    }
-
-    private WikiContentSource resolvePublicContent(Project project) {
-        Optional<WikiPublishedVersion> published = wikiPublishedVersionRepository
-                .findTopByProjectIdOrderByVersionNumberDesc(project.getId());
-        if (published.isPresent()) {
-            WikiPublishedVersion latest = published.get();
-            return new WikiContentSource(
-                    latest.getSectionsOrEmpty(),
-                    latest.getHiddenSectionsOrEmpty(),
-                    latest.getCurrentCounters(),
-                    latest.getPublishedAt()
-            );
-        }
-
-        ProjectWikiSnapshot snapshot = wikiSnapshotRepository
-                .findByProjectExternalIdAndIsDataReady(project.getExternalId(), true)
-                .orElseThrow(() -> new IllegalArgumentException(
-                        "Wiki snapshot not ready for project: " + project.getExternalId()));
-
-        return new WikiContentSource(
-                snapshot.getResolvedSections(),
-                snapshot.getHiddenSectionsOrEmpty(),
-                snapshot.getResolvedCurrentCounters(),
-                snapshot.getGeneratedAt()
-        );
-    }
-
-    private String extractBrowseSummary(List<Map<String, Object>> sectionPayload) {
-        Optional<Map<String, Object>> whatSection = sectionPayload.stream()
-                .filter(section -> "what".equals(String.valueOf(section.get("sectionId"))))
-                .findFirst();
-
-        if (whatSection.isPresent()) {
-            return String.valueOf(whatSection.get().getOrDefault("summary", ""));
-        }
-
-        return sectionPayload.stream()
-                .map(section -> String.valueOf(section.getOrDefault("summary", "")))
-                .filter(summary -> !summary.isBlank())
+    private String resolveBrowseSummary(String projectExternalId) {
+        return wikiSectionChunkRepository.findByProjectExternalId(projectExternalId).stream()
+                .filter(c -> "summary".equals(c.getChunkType()))
+                .map(WikiSectionChunk::getContent)
+                .filter(content -> !content.isBlank())
                 .findFirst()
                 .orElse("");
     }
 
-    private record WikiContentSource(
-            List<Map<String, Object>> sections,
-            List<String> hiddenSections,
-            Map<String, Object> currentCounters,
-            OffsetDateTime generatedAt
-    ) {
-    }
+    private WikiProjectPageResponse.WikiSection buildSection(String sectionId, List<WikiSectionChunk> sectionChunks) {
+        WikiSectionChunk summaryChunk = sectionChunks.stream()
+                .filter(c -> "summary".equals(c.getChunkType()) && c.getSubsectionId() == null)
+                .findFirst()
+                .orElse(null);
 
-    private WikiProjectPageResponse.WikiSection mapWikiSection(Map<String, Object> sectionData) {
-        String sectionId = asText(sectionData.get("sectionId"));
-        String heading = asText(sectionData.get("heading"));
-        String anchor = asText(sectionData.get("anchor"));
-        String summary = asText(sectionData.get("summary"));
-        String deepDiveMarkdown = asText(sectionData.getOrDefault("deepDiveMarkdown", sectionData.get("deepDive")));
-
-        WikiProjectPageResponse.WikiSection.WikiSectionBuilder builder = WikiProjectPageResponse.WikiSection.builder()
-                .sectionId(sectionId)
-                .heading(heading.isBlank() ? sectionId : heading)
-                .anchor(anchor.isBlank() ? sectionId : anchor)
-                .summary(summary)
-                .deepDiveMarkdown(deepDiveMarkdown)
-                .defaultExpanded(Boolean.TRUE.equals(sectionData.get("defaultExpanded")))
-                .generatedDiagramDsl(asText(sectionData.get("generatedDiagramDsl")));
-
-        @SuppressWarnings("unchecked")
-        Map<String, Object> metadata = (Map<String, Object>) sectionData.get("metadata");
-        if (metadata != null && !metadata.isEmpty()) {
-            builder.metadata(metadata);
-
-            @SuppressWarnings("unchecked")
-            Map<String, Object> diagramMetadataMap = (Map<String, Object>) metadata.get("diagramMetadata");
-            if (diagramMetadataMap != null && !diagramMetadataMap.isEmpty()) {
-                builder.diagramMetadata(WikiProjectPageResponse.DiagramMetadata.builder()
-                        .diagramType(asText(diagramMetadataMap.get("diagramType")))
-                        .altText(asText(diagramMetadataMap.get("altText")))
-                        .renderHints(asText(diagramMetadataMap.get("renderHints")))
-                        .build());
+        String summary = summaryChunk != null ? summaryChunk.getContent() : "";
+        String heading = sectionId;
+        if (summaryChunk != null && summaryChunk.getMetadata() != null) {
+            Object titleKo = summaryChunk.getMetadata().get("titleKo");
+            if (titleKo != null && !String.valueOf(titleKo).isBlank()) {
+                heading = String.valueOf(titleKo);
             }
         }
 
-        return builder.build();
-    }
+        String deepDiveMarkdown = sectionChunks.stream()
+                .filter(c -> "body".equals(c.getChunkType()))
+                .sorted(Comparator.comparingInt(c -> extractTrailingNumber(c.getSubsectionId())))
+                .map(WikiSectionChunk::getContent)
+                .collect(Collectors.joining("\n\n"));
 
-    private WikiProjectPageResponse.CurrentCounters mapCurrentCounters(Map<String, Object> counters) {
-        if (counters == null || counters.isEmpty()) {
-            return null;
-        }
-
-        return WikiProjectPageResponse.CurrentCounters.builder()
-                .stars(asInteger(counters.get("stars")))
-                .forks(asInteger(counters.get("forks")))
-                .watchers(asInteger(counters.get("watchers")))
-                .openIssues(asInteger(counters.get("openIssues")))
-                .updatedAt(asOffsetDateTime(counters.get("updatedAt")))
+        return WikiProjectPageResponse.WikiSection.builder()
+                .sectionId(sectionId)
+                .heading(heading)
+                .anchor(sectionId)
+                .summary(summary)
+                .deepDiveMarkdown(deepDiveMarkdown)
                 .build();
     }
 
-    private Integer asInteger(Object value) {
-        if (value == null) {
-            return null;
+    private int extractTrailingNumber(String id) {
+        if (id == null) {
+            return Integer.MAX_VALUE;
         }
-
-        if (value instanceof Number number) {
-            return number.intValue();
-        }
-
-        try {
-            return Integer.parseInt(String.valueOf(value));
-        } catch (NumberFormatException ignored) {
-            return null;
-        }
-    }
-
-    private OffsetDateTime asOffsetDateTime(Object value) {
-        if (value == null) {
-            return null;
-        }
-
-        if (value instanceof OffsetDateTime time) {
-            return time;
-        }
-
-        try {
-            return OffsetDateTime.parse(String.valueOf(value));
-        } catch (DateTimeParseException ignored) {
-            return null;
-        }
-    }
-
-    private String asText(Object value) {
-        return value == null ? "" : String.valueOf(value);
+        Matcher m = NUMERIC_SUFFIX.matcher(id);
+        return m.find() ? Integer.parseInt(m.group()) : Integer.MAX_VALUE;
     }
 }

@@ -23,7 +23,7 @@ public interface ProjectEventRepository extends JpaRepository<ProjectEvent, Long
         Pageable pageable
     );
 
-    List<ProjectEvent> findTop10ByProject_Port_SlugAndImpactScoreGreaterThanEqualOrderByReleasedAtDesc(
-        String portSlug, Integer impactThreshold
+    List<ProjectEvent> findTop10ByImpactScoreGreaterThanEqualOrderByReleasedAtDesc(
+        Integer impactThreshold
     );
 }

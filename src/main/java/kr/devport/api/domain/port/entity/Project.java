@@ -2,13 +2,10 @@ package kr.devport.api.domain.port.entity;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
-import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Index;
-import jakarta.persistence.JoinColumn;
-import jakarta.persistence.ManyToOne;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
@@ -26,7 +23,6 @@ import java.util.UUID;
 
 @Entity
 @Table(name = "projects", indexes = {
-    @Index(name = "idx_projects_port_id", columnList = "port_id"),
     @Index(name = "idx_projects_stars", columnList = "stars")
 })
 @Getter
@@ -42,10 +38,6 @@ public class Project {
 
     @Column(name = "external_id", unique = true, nullable = false, length = 100)
     private String externalId;
-
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "port_id", nullable = false)
-    private Port port;
 
     @Column(nullable = false, length = 100)
     private String name;

@@ -27,10 +27,4 @@ public class WikiAdminProjectSummaryResponse {
 
     @Schema(description = "Primary language", example = "TypeScript")
     private String language;
-
-    @Schema(description = "Port display name", example = "Web")
-    private String portName;
-
-    @Schema(description = "Port slug", example = "web")
-    private String portSlug;
 }

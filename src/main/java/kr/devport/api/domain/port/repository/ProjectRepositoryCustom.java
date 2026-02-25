@@ -5,5 +5,5 @@ import kr.devport.api.domain.port.entity.Project;
 import java.util.List;
 
 public interface ProjectRepositoryCustom {
-    List<Project> findHotProjectsByPort(String portSlug, int limit);
+    List<Project> findHotProjects(int limit);
 }
