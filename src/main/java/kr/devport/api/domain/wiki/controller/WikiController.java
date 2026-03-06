@@ -14,6 +14,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
@@ -64,4 +65,15 @@ public class WikiController {
         WikiProjectPageResponse response = wikiService.getProjectWiki(projectExternalId);
         return ResponseEntity.ok(response);
     }
+
+    @Operation(
+            summary = "Get project wiki page by query param",
+            description = "Same as /projects/{id} but accepts id as a query param to avoid encoded-slash issues"
+    )
+    @GetMapping("/projects/page")
+    public ResponseEntity<WikiProjectPageResponse> getProjectWikiByQueryId(@RequestParam String id) {
+        WikiProjectPageResponse response = wikiService.getProjectWiki(id);
+        return ResponseEntity.ok(response);
+    }
 }
+

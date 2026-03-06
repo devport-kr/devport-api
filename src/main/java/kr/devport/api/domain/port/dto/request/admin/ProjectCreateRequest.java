@@ -14,7 +14,6 @@ public class ProjectCreateRequest {
     @Pattern(regexp = ".+/.+", message = "fullName must be in owner/repo format")
     private String fullName;
 
-    @NotBlank
     private String repoUrl;
 
     private String homepageUrl;

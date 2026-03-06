@@ -2,13 +2,10 @@ package kr.devport.api.domain.port.service;
 
 import kr.devport.api.domain.port.dto.response.ProjectDetailResponse;
 import kr.devport.api.domain.port.dto.response.ProjectEventResponse;
-import kr.devport.api.domain.port.dto.response.ProjectOverviewResponse;
 import kr.devport.api.domain.port.entity.Project;
 import kr.devport.api.domain.port.entity.ProjectEvent;
-import kr.devport.api.domain.port.entity.ProjectOverview;
 import kr.devport.api.domain.port.enums.EventType;
 import kr.devport.api.domain.port.repository.ProjectEventRepository;
-import kr.devport.api.domain.port.repository.ProjectOverviewRepository;
 import kr.devport.api.domain.port.repository.ProjectRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -24,7 +21,6 @@ public class ProjectService {
 
     private final ProjectRepository projectRepository;
     private final ProjectEventRepository projectEventRepository;
-    private final ProjectOverviewRepository overviewRepository;
 
     @Transactional(readOnly = true)
     public ProjectDetailResponse getProjectById(String externalId) {
@@ -60,22 +56,6 @@ public class ProjectService {
         }
 
         return events.map(this::toEventResponse);
-    }
-
-    @Transactional(readOnly = true)
-    public ProjectOverviewResponse getProjectOverview(String projectExternalId) {
-        ProjectOverview overview = overviewRepository.findByProject_ExternalId(projectExternalId)
-            .orElseThrow(() -> new IllegalArgumentException("Project overview not found for project: " + projectExternalId));
-
-        return ProjectOverviewResponse.builder()
-            .summary(overview.getSummary())
-            .highlights(overview.getHighlights())
-            .quickstart(overview.getQuickstart())
-            .links(overview.getLinks())
-            .sourceUrl(overview.getSourceUrl())
-            .fetchedAt(overview.getFetchedAt())
-            .summarizedAt(overview.getSummarizedAt())
-            .build();
     }
 
     private ProjectEventResponse toEventResponse(ProjectEvent event) {
