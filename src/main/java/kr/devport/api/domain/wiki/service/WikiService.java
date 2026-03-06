@@ -142,7 +142,16 @@ public class WikiService {
         String deepDiveMarkdown = sectionChunks.stream()
                 .filter(c -> "body".equals(c.getChunkType()))
                 .sorted(Comparator.comparingInt(c -> extractTrailingNumber(c.getSubsectionId())))
-                .map(WikiSectionChunk::getContent)
+                .map(c -> {
+                    String titleKo = null;
+                    if (c.getMetadata() != null) {
+                        Object t = c.getMetadata().get("titleKo");
+                        if (t != null && !String.valueOf(t).isBlank()) {
+                            titleKo = String.valueOf(t);
+                        }
+                    }
+                    return titleKo != null ? "## " + titleKo + "\n\n" + c.getContent() : c.getContent();
+                })
                 .collect(Collectors.joining("\n\n"));
 
         return WikiProjectPageResponse.WikiSection.builder()
