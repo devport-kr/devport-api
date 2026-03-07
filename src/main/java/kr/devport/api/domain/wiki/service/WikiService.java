@@ -139,10 +139,26 @@ public class WikiService {
             }
         }
 
+        if (heading.equals(sectionId)) {
+            WikiSectionChunk overviewChunk = sectionChunks.stream()
+                    .filter(c -> "overview".equals(c.getChunkType()))
+                    .findFirst()
+                    .orElse(null);
+            if (overviewChunk != null && overviewChunk.getMetadata() != null) {
+                Object titleKo = overviewChunk.getMetadata().get("titleKo");
+                if (titleKo != null && !String.valueOf(titleKo).isBlank()) {
+                    heading = String.valueOf(titleKo);
+                }
+            }
+        }
+
         String deepDiveMarkdown = sectionChunks.stream()
-                .filter(c -> "body".equals(c.getChunkType()))
+                .filter(c -> "body".equals(c.getChunkType()) || "overview".equals(c.getChunkType()))
                 .sorted(Comparator.comparingInt(c -> extractTrailingNumber(c.getSubsectionId())))
                 .map(c -> {
+                    if ("overview".equals(c.getChunkType())) {
+                        return c.getContent();
+                    }
                     String titleKo = null;
                     if (c.getMetadata() != null) {
                         Object t = c.getMetadata().get("titleKo");
