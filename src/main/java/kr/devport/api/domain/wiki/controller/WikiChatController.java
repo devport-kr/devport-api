@@ -3,6 +3,7 @@ package kr.devport.api.domain.wiki.controller;
 import jakarta.validation.Valid;
 import kr.devport.api.domain.wiki.dto.request.WikiChatRequest;
 import kr.devport.api.domain.wiki.dto.response.WikiChatResponse;
+import kr.devport.api.domain.wiki.dto.internal.WikiChatResult;
 import kr.devport.api.domain.wiki.service.WikiChatService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -34,23 +35,13 @@ public class WikiChatController {
             @PathVariable String projectExternalId,
             @Valid @RequestBody WikiChatRequest request
     ) {
-        // Generate chat answer with grounded context
-        String answer = wikiChatService.chat(
+        WikiChatResult result = wikiChatService.chatResult(
                 request.getSessionId(),
                 projectExternalId,
                 request.getQuestion()
         );
 
-        // Detect if answer is a clarification question
-        boolean isClarification = answer.contains("?");
-
-        WikiChatResponse response = WikiChatResponse.builder()
-                .answer(answer)
-                .isClarification(isClarification)
-                .sessionId(request.getSessionId())
-                .build();
-
-        return ResponseEntity.ok(response);
+        return ResponseEntity.ok(WikiChatResponse.from(result, request.getSessionId()));
     }
 
     /**
@@ -67,23 +58,13 @@ public class WikiChatController {
             @RequestParam String id,
             @Valid @RequestBody WikiChatRequest request
     ) {
-        // Generate chat answer with grounded context
-        String answer = wikiChatService.chat(
+        WikiChatResult result = wikiChatService.chatResult(
                 request.getSessionId(),
                 id,
                 request.getQuestion()
         );
 
-        // Detect if answer is a clarification question
-        boolean isClarification = answer.contains("?");
-
-        WikiChatResponse response = WikiChatResponse.builder()
-                .answer(answer)
-                .isClarification(isClarification)
-                .sessionId(request.getSessionId())
-                .build();
-
-        return ResponseEntity.ok(response);
+        return ResponseEntity.ok(WikiChatResponse.from(result, request.getSessionId()));
     }
 
     /**

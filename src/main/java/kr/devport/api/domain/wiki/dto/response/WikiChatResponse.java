@@ -1,6 +1,7 @@
 package kr.devport.api.domain.wiki.dto.response;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import kr.devport.api.domain.wiki.dto.internal.WikiChatResult;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -22,4 +23,12 @@ public class WikiChatResponse {
     private boolean isClarification;
 
     private String sessionId;
+
+    public static WikiChatResponse from(WikiChatResult result, String sessionId) {
+        return WikiChatResponse.builder()
+                .answer(result.answer())
+                .isClarification(result.isClarification())
+                .sessionId(sessionId)
+                .build();
+    }
 }
