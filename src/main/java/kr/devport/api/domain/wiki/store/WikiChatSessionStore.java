@@ -10,6 +10,7 @@ import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
@@ -23,6 +24,7 @@ public class WikiChatSessionStore {
 
     private static final int DEFAULT_TTL_MINUTES = 30;
     private static final int MAX_TURNS_PER_SESSION = 10;
+    private static final int MAX_RECENT_TURNS = 3;
 
     private final ConcurrentMap<String, ChatSession> sessions = new ConcurrentHashMap<>();
 
@@ -71,19 +73,15 @@ public class WikiChatSessionStore {
             String answer,
             boolean wasClarification
     ) {
-        // Remove expired sessions first
         cleanExpiredSessions();
 
-        ChatSession session = sessions.computeIfAbsent(sessionId, id ->
-                ChatSession.builder()
-                        .sessionId(id)
-                        .projectExternalId(projectExternalId)
-                        .turns(new ArrayList<>())
-                        .expiresAt(calculateExpiration())
-                        .build()
-        );
+        ChatSession session = sessions.compute(sessionId, (id, existingSession) -> {
+            if (existingSession == null || !projectMatches(existingSession, projectExternalId)) {
+                return newSession(id, projectExternalId);
+            }
+            return existingSession;
+        });
 
-        // Add new turn
         ChatTurn turn = ChatTurn.builder()
                 .question(question)
                 .answer(answer)
@@ -93,12 +91,10 @@ public class WikiChatSessionStore {
 
         session.getTurns().add(turn);
 
-        // Prune old turns if at capacity (keep recent turns only)
         if (session.getTurns().size() > MAX_TURNS_PER_SESSION) {
-            session.getTurns().remove(0); // Remove oldest
+            session.getTurns().remove(0);
         }
 
-        // Refresh TTL on activity
         session.setExpiresAt(calculateExpiration());
     }
 
@@ -110,14 +106,30 @@ public class WikiChatSessionStore {
      * @return List of chat turns
      */
     public List<ChatTurn> loadTurns(String sessionId) {
+        return loadTurnsInternal(sessionId, null);
+    }
+
+    public List<ChatTurn> loadTurns(String sessionId, String projectExternalId) {
+        return loadTurnsInternal(sessionId, projectExternalId);
+    }
+
+    public List<ChatTurn> loadRecentTurns(String sessionId, String projectExternalId) {
+        List<ChatTurn> turns = loadTurnsInternal(sessionId, projectExternalId);
+        if (turns.size() <= MAX_RECENT_TURNS) {
+            return turns;
+        }
+        return new ArrayList<>(turns.subList(turns.size() - MAX_RECENT_TURNS, turns.size()));
+    }
+
+    Optional<ChatSession> getSession(String sessionId) {
         cleanExpiredSessions();
 
         ChatSession session = sessions.get(sessionId);
         if (session == null || isExpired(session)) {
-            return List.of();
+            return Optional.empty();
         }
 
-        return new ArrayList<>(session.getTurns());
+        return Optional.of(session);
     }
 
     /**
@@ -140,6 +152,32 @@ public class WikiChatSessionStore {
      */
     public void clearSession(String sessionId) {
         sessions.remove(sessionId);
+    }
+
+    private List<ChatTurn> loadTurnsInternal(String sessionId, String projectExternalId) {
+        Optional<ChatSession> session = getSession(sessionId);
+        if (session.isEmpty()) {
+            return List.of();
+        }
+
+        if (projectExternalId != null && !projectMatches(session.get(), projectExternalId)) {
+            return List.of();
+        }
+
+        return new ArrayList<>(session.get().getTurns());
+    }
+
+    private ChatSession newSession(String sessionId, String projectExternalId) {
+        return ChatSession.builder()
+                .sessionId(sessionId)
+                .projectExternalId(projectExternalId)
+                .turns(new ArrayList<>())
+                .expiresAt(calculateExpiration())
+                .build();
+    }
+
+    private boolean projectMatches(ChatSession session, String projectExternalId) {
+        return projectExternalId != null && projectExternalId.equals(session.getProjectExternalId());
     }
 
     /**
