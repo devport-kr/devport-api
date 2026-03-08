@@ -90,7 +90,7 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4
 | 3. Regression Safety Net | 0/TBD | Not started | - |
 | 4. Observability and Security Hardening | 0/TBD | Not started | - |
 | 5. new phase1 | 17/17 | ✓ Complete | 2026-02-16 |
-| 6. Wiki chat and retrieval quality | 1/4 | In Progress | - |
+| 6. Wiki chat and retrieval quality | 2/4 | In Progress | - |
 
 ### Phase 5: new phase1
 

@@ -3,15 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: verifying
-stopped_at: Completed 06-01-PLAN.md
-last_updated: "2026-03-08T03:07:12.364Z"
-last_activity: "2026-02-16 - Completed execute-phase (05 --gaps-only) and generated `.planning/phases/05-new-phase1/05-VERIFICATION.md` with `status: gaps_found`."
+stopped_at: Completed 06-02-PLAN.md
+last_updated: "2026-03-08T03:14:19Z"
+last_activity: 2026-03-08 - Completed `06-02-PLAN.md` and generated `.planning/phases/06-i-want-to-improve-our-wikichat-and-retreval-service-controlloer-for-better-quillity-for-users-while-chatting/06-02-SUMMARY.md`.
 progress:
   total_phases: 6
   completed_phases: 1
   total_plans: 27
-  completed_plans: 20
-  percent: 100
+  completed_plans: 21
 ---
 
 # Project State
@@ -26,11 +25,11 @@ See: `.planning/PROJECT.md` (updated 2026-02-14)
 ## Current Position
 
 Phase: 6 (i-want-to-improve-our-wikichat-and-retreval-service-controlloer-for-better-quillity-for-users-while-chatting)
-Plan: 1 of 4 plans executed in current phase
-Status: 06-01 completed; internal DTO seams and Wave 0 regression scaffolds are in place for upcoming session, retrieval, and controller behavior work.
-Last activity: 2026-03-08 - Completed `06-01-PLAN.md` and generated `.planning/phases/06-i-want-to-improve-our-wikichat-and-retreval-service-controlloer-for-better-quillity-for-users-while-chatting/06-01-SUMMARY.md`.
+Plan: 2 of 4 plans executed in current phase
+Status: 06-02 completed; wiki chat session memory now resets on project mismatch and exposes bounded recent-turn loading for upcoming retrieval/chat orchestration work.
+Last activity: 2026-03-08 - Completed `06-02-PLAN.md` and generated `.planning/phases/06-i-want-to-improve-our-wikichat-and-retreval-service-controlloer-for-better-quillity-for-users-while-chatting/06-02-SUMMARY.md`.
 
-Progress: [███░░░░░░░] 1/4 plans executed in Phase 6
+Progress: [█████░░░░░] 2/4 plans executed in Phase 6
 
 ## Performance Metrics
 
@@ -50,8 +49,8 @@ Progress: [███░░░░░░░] 1/4 plans executed in Phase 6
 | 5 | 17 | 130 min | 7.6 min |
 
 **Recent Trend:**
-- Recent completed plan: Phase 06 P01 | 5 min | 2 tasks | 8 files |
-- Trend: Phase 6 execution has started with contract-first scaffolding for downstream quality work.
+- Recent completed plan: Phase 06 P02 | 1 min | 1 task | 2 files |
+- Trend: Phase 6 now has project-safe short-session memory in place for downstream retrieval and chat-service quality work.
 
 ## Accumulated Context
 
@@ -126,14 +125,13 @@ Recent decisions affecting current work:
 - [Phase 06]: Create phase-local internal DTO records under dto/internal so later plans can refactor retrieval and chat orchestration without changing the public controller payload. — Locks the retrieval and chat-result schema early while preserving the compact external controller response.
 - [Phase 06]: Use executable scaffold tests with selectively disabled future assertions to lock file locations and behavior names before service refactors land. — Wave 0 coverage now compiles and names each quality behavior without forcing unfinished production logic into this plan.
 - [Phase 06]: Annotate WikiChatResponse.isClarification with JsonProperty so the compact API contract serializes the expected field name. — The new MVC scaffold exposed a serialization mismatch, and fixing it keeps the public response aligned with the intended contract.
+- [Phase 06]: Session ownership is enforced on both save and load paths so reusing a session ID on another project hard-resets memory.
+- [Phase 06]: Prompt assembly uses a dedicated 3-turn recent-memory view while the store still keeps up to 10 turns for short-session continuity.
 
 ### Roadmap Evolution
 
 - Phase 5 added: new phase1
 - Phase 6 added: I want to improve our wikichat and retreval service (controlloer) for better quillity for users while chatting
-
-### Pending Todos
-None yet.
 
 ### Blockers/Concerns
 
@@ -144,7 +142,7 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-08T03:07:12.362Z
-Stopped at: Completed 06-01-PLAN.md
+Last session: 2026-03-08T03:13:59.747Z
+Stopped at: Completed 06-02-PLAN.md
 Resume file: None
-Next: Execute `06-02-PLAN.md` to harden project-scoped session memory and recent-turn selection.
+Next: Execute `06-03-PLAN.md` to improve retrieval assembly, reranking, and weak-grounding fallback behavior.
