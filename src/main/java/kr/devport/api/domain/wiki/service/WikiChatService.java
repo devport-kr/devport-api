@@ -192,6 +192,7 @@ public class WikiChatService {
                 - Use single backticks (`) for inline code, variables, or file paths.
                 - Use bolding (**text**) for emphasis on key technical terms.
                 - Use bullet points (-) or numbered lists to break down complex explanations or steps.
+                - You MUST insert an empty line between every bullet point, numbered list item, and paragraph to ensure extreme readability.
 
                 Answer policy:
                 - Start the answer with a short summary sentence.
@@ -228,10 +229,11 @@ public class WikiChatService {
                 Always write the answer in Korean only.
 
                 Markdown Formatting Policy:
-                - Use fenced code blocks with language identifiers (e.g., ```java) for multi-line code snippets.
+                - Use fenced code blocks with language identifiers (e.g., ```java, ```bash) for multi-line code snippets or command outputs.
                 - Use single backticks (`) for inline code, variables, or file paths.
                 - Use bolding (**text**) for emphasis on key technical terms.
-                - Use bullet points (-) or numbered lists to break down complex explanations.
+                - Use bullet points (-) or numbered lists to break down complex explanations or steps.
+                - You MUST insert an empty line between every bullet point, numbered list item, and paragraph to ensure extreme readability.
 
                 Answer policy:
                 - Start the answer with a short summary sentence.

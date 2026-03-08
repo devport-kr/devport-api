@@ -171,10 +171,7 @@ public class WikiChatController {
     private void sendToken(SseEmitter emitter, String token) {
         try {
             if (token != null) {
-                // Prepend a space to prevent the SSE client from stripping leading spaces,
-                // and replace newlines with "\ndata: " to preserve SSE framing for multi-line tokens.
-                String formattedToken = " " + token.replace("\n", "\ndata: ");
-                emitter.send(SseEmitter.event().name("token").data(formattedToken, MediaType.TEXT_PLAIN));
+                emitter.send(SseEmitter.event().name("token").data(token, MediaType.TEXT_PLAIN));
             }
         } catch (IOException e) {
             throw new IllegalStateException("Failed to send streaming token", e);
