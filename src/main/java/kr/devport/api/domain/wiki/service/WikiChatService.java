@@ -10,6 +10,7 @@ import com.openai.models.chat.completions.ChatCompletionUserMessageParam;
 import com.openai.models.chat.completions.ChatCompletionAssistantMessageParam;
 import kr.devport.api.domain.wiki.store.WikiChatSessionStore;
 import kr.devport.api.domain.wiki.store.WikiChatSessionStore.ChatTurn;
+import kr.devport.api.domain.wiki.dto.internal.WikiRetrievalContext;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -40,13 +41,13 @@ public class WikiChatService {
      */
     public String chat(String sessionId, String projectExternalId, String userQuestion) {
         // Retrieve grounded context
-        String context = retrievalService.retrieveContext(projectExternalId, userQuestion);
+        WikiRetrievalContext context = retrievalService.retrieveContext(projectExternalId, userQuestion);
 
         // Load session history
         List<ChatTurn> previousTurns = sessionStore.loadTurns(sessionId);
 
         // Build messages with context and history
-        List<ChatCompletionMessageParam> messages = buildMessages(context, previousTurns, userQuestion);
+        List<ChatCompletionMessageParam> messages = buildMessages(context.groundedContext(), previousTurns, userQuestion);
 
         // Generate response
         ChatCompletion completion = openAIClient.chat().completions().create(
