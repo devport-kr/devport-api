@@ -21,6 +21,8 @@ import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.atLeastOnce;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -41,7 +43,7 @@ class WikiChatServiceTest {
 
     @BeforeEach
     void setUp() {
-        when(openAIClient.chat().completions().create(any(ChatCompletionCreateParams.class)).choices().getFirst().message().content())
+        lenient().when(openAIClient.chat().completions().create(any(ChatCompletionCreateParams.class)).choices().getFirst().message().content())
                 .thenReturn(java.util.Optional.of("""
                         {"answer":"요약하면 인증 진입점은 SecurityConfig와 JwtAuthenticationFilter예요.","isClarification":false,"clarificationOptions":[],"suggestedNextQuestions":[],"usedPreviousContext":false}
                         """));
@@ -60,10 +62,10 @@ class WikiChatServiceTest {
                 ));
         when(sessionStore.hasActiveSession("session-123")).thenReturn(true);
 
-        WikiChatResult result = wikiChatService.chat("session-123", "github:repo", "JWT 흐름 설명해줘");
+        WikiChatResult result = wikiChatService.chatResult("session-123", "github:repo", "JWT 흐름 설명해줘");
 
         ArgumentCaptor<ChatCompletionCreateParams> captor = ArgumentCaptor.forClass(ChatCompletionCreateParams.class);
-        verify(openAIClient.chat().completions()).create(captor.capture());
+        verify(openAIClient.chat().completions(), atLeastOnce()).create(captor.capture());
         String messagesText = captor.getValue().messages().toString();
 
         assertThat(result.isClarification()).isFalse();
@@ -95,7 +97,7 @@ class WikiChatServiceTest {
                         {"answer":"요약하면 배포 정보는 CI 설정 위주로만 확인돼요.","isClarification":false,"clarificationOptions":[],"suggestedNextQuestions":["deploy.yml 기준으로 단계별로 설명해줘","배포에 쓰는 secret 목록을 알려줘","실패 시 롤백 흐름을 알려줘"],"usedPreviousContext":true}
                         """));
 
-        WikiChatResult result = wikiChatService.chat("session-123", "github:repo", "배포 파이프라인이 어디에 있어?");
+        WikiChatResult result = wikiChatService.chatResult("session-123", "github:repo", "배포 파이프라인이 어디에 있어?");
 
         assertThat(result.isClarification()).isFalse();
         assertThat(result.usedPreviousContext()).isFalse();

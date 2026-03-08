@@ -1,13 +1,18 @@
 package kr.devport.api.domain.wiki.service;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.openai.core.JsonValue;
 import com.openai.client.OpenAIClient;
 import com.openai.models.ChatModel;
+import com.openai.models.ResponseFormatJsonSchema;
 import com.openai.models.chat.completions.ChatCompletion;
 import com.openai.models.chat.completions.ChatCompletionCreateParams;
+import com.openai.models.chat.completions.ChatCompletionAssistantMessageParam;
 import com.openai.models.chat.completions.ChatCompletionMessageParam;
 import com.openai.models.chat.completions.ChatCompletionSystemMessageParam;
 import com.openai.models.chat.completions.ChatCompletionUserMessageParam;
-import com.openai.models.chat.completions.ChatCompletionAssistantMessageParam;
+import kr.devport.api.domain.wiki.dto.internal.WikiChatResult;
 import kr.devport.api.domain.wiki.store.WikiChatSessionStore;
 import kr.devport.api.domain.wiki.store.WikiChatSessionStore.ChatTurn;
 import kr.devport.api.domain.wiki.dto.internal.WikiRetrievalContext;
@@ -15,7 +20,11 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Locale;
+import java.util.Set;
+import java.util.regex.Pattern;
 
 /**
  * Wiki chat service with uncertainty handling and session-scoped memory.
@@ -26,9 +35,14 @@ import java.util.List;
 @RequiredArgsConstructor
 public class WikiChatService {
 
+    private static final int MAX_PROMPT_TURNS = 2;
+    private static final int MAX_CLARIFICATION_TURNS = 2;
+    private static final Pattern TOKEN_SPLIT = Pattern.compile("[^a-z0-9가-힣]+");
+
     private final WikiRetrievalService retrievalService;
     private final WikiChatSessionStore sessionStore;
     private final OpenAIClient openAIClient;
+    private final ObjectMapper objectMapper = new ObjectMapper();
 
     /**
      * Generate chat response with grounded context and uncertainty handling.
@@ -40,53 +54,53 @@ public class WikiChatService {
      * @return Chat answer (or clarifying question if uncertain)
      */
     public String chat(String sessionId, String projectExternalId, String userQuestion) {
-        // Retrieve grounded context
+        return chatResult(sessionId, projectExternalId, userQuestion).answer();
+    }
+
+    public WikiChatResult chatResult(String sessionId, String projectExternalId, String userQuestion) {
         WikiRetrievalContext context = retrievalService.retrieveContext(projectExternalId, userQuestion);
+        boolean hadActiveSession = sessionStore.hasActiveSession(sessionId);
+        List<ChatTurn> previousTurns = sessionStore.loadRecentTurns(sessionId, projectExternalId);
+        boolean sessionReset = hadActiveSession && previousTurns.isEmpty();
+        boolean topicShift = isTopicShift(previousTurns, userQuestion);
+        List<ChatTurn> promptTurns = topicShift ? List.of() : selectPromptTurns(previousTurns);
+        int clarificationTurns = countClarificationTurns(previousTurns);
 
-        // Load session history
-        List<ChatTurn> previousTurns = sessionStore.loadTurns(sessionId);
-
-        // Build messages with context and history
-        List<ChatCompletionMessageParam> messages = buildMessages(context.groundedContext(), previousTurns, userQuestion);
-
-        // Generate response
+        List<ChatCompletionMessageParam> messages = buildMessages(context, promptTurns, userQuestion, clarificationTurns);
         ChatCompletion completion = openAIClient.chat().completions().create(
                 ChatCompletionCreateParams.builder()
                         .model(ChatModel.GPT_5_MINI)
                         .messages(messages)
+                        .responseFormat(buildResponseFormat())
                         .build()
         );
 
-        String answer = completion.choices().get(0).message().content().orElse("");
+        String payload = completion.choices().getFirst().message().content().orElse("");
+        WikiChatResult result = normalizeResult(parseResult(payload, context), context, topicShift, sessionReset, clarificationTurns);
 
-        // Check if response indicates uncertainty
-        boolean isClarification = isUncertainResponse(answer);
+        sessionStore.saveTurn(sessionId, projectExternalId, userQuestion, result.answer(), result.isClarification());
 
-        // Save turn to session
-        sessionStore.saveTurn(sessionId, projectExternalId, userQuestion, answer, isClarification);
-
-        return answer;
+        return result;
     }
 
     /**
      * Build chat messages with system prompt, context, history, and current question.
      */
     private List<ChatCompletionMessageParam> buildMessages(
-            String context,
+            WikiRetrievalContext context,
             List<ChatTurn> previousTurns,
-            String userQuestion
+            String userQuestion,
+            int clarificationTurns
     ) {
         List<ChatCompletionMessageParam> messages = new ArrayList<>();
 
-        // System prompt with high-precision guidance
-        String systemPrompt = buildSystemPrompt(context);
+        String systemPrompt = buildSystemPrompt(context, clarificationTurns > 0);
         messages.add(ChatCompletionMessageParam.ofSystem(
                 ChatCompletionSystemMessageParam.builder()
                         .content(systemPrompt)
                         .build()
         ));
 
-        // Add previous turns for context
         for (ChatTurn turn : previousTurns) {
             messages.add(ChatCompletionMessageParam.ofUser(
                     ChatCompletionUserMessageParam.builder()
@@ -100,10 +114,9 @@ public class WikiChatService {
             ));
         }
 
-        // Add current question
         messages.add(ChatCompletionMessageParam.ofUser(
                 ChatCompletionUserMessageParam.builder()
-                        .content(userQuestion)
+                        .content(buildUserPrompt(context, userQuestion, clarificationTurns))
                         .build()
         ));
 
@@ -113,55 +126,230 @@ public class WikiChatService {
     /**
      * Build system prompt with context and uncertainty handling instructions.
      */
-    private String buildSystemPrompt(String context) {
+    private String buildSystemPrompt(WikiRetrievalContext context, boolean hasPreviousContext) {
         return """
-                You are a highly concise, precise technical assistant for this repository.
-                You must ALWAYS answer queries in Korean (한국어).
-                
-                YOUR PRIMARY DIRECTIVE IS BREVITY (No Yapping):
-                - NEVER use conversational filler (e.g., "안녕하세요", "요약해 드리겠습니다", "결론적으로", "질문해주셔서 감사합니다").
-                - ALWAYS provide a 1-2 sentence short summary first (TL;DR approach).
-                - USE concise bullet points for details.
-                - KEEP the overall response under 3-4 short bullet points unless a highly detailed explanation is explicitly requested.
-                - If the answer is simple, just answer it directly.
-                
-                Your answers must be grounded in the provided repository context.
-                When the context does not contain sufficient information to answer accurately:
-                1. Acknowledge what you don't know politely but briefly.
-                2. Ask a short clarifying question to narrow down the user's intent.
-                3. Never fabricate or guess information.
-                
+                You are a repository-grounded technical teammate.
+                Output must be valid JSON matching the schema.
+                Always write the answer in Korean only.
+
+                Answer policy:
+                - Start the answer with a short summary sentence.
+                - Stay concise, direct, and repository-specific.
+                - Mention file paths, classes, or methods only when grounded context supports them.
+                - If the question is broad but partly answerable, answer the safest slice first and then add one narrow clarification.
+                - If the question is ambiguous across repo areas, set isClarification=true and return 2-3 short clarificationOptions without question marks.
+                - If grounding is weak, keep the answer short and action-oriented and include 2-3 suggestedNextQuestions.
+                - Do not add confidence labels, citations, or generic chat filler.
+                - usedPreviousContext should be true only when recent turns materially help this answer.
+
+                Conversation policy:
+                - Recent turns are already filtered to the most relevant context.
+                - Do not repeat stale earlier topics unless they are clearly needed.
+                - When previous clarification exists, continue naturally without looping.
+
+                Grounding strength: %s
+                Previous context included: %s
+
                 Repository Context:
                 %s
-                
-                Guidelines:
-                - ALWAYS answer in Korean.
-                - Use a professional and friendly tone (해요체/하십시오체) but keep it strictly informational.
-                - Be concise and technical.
-                - Organize your answer with clear markdown formatting (bullet points, bold text).
-                - Reference concrete files and functions from the repository context when relevant.
-                - Focus on repository-specific details, not general ecosystem knowledge.
-                """.formatted(context);
+                """.formatted(context.weakGrounding() ? "weak" : "strong", hasPreviousContext, context.groundedContext());
     }
 
-    /**
-     * Detect if response indicates uncertainty or is a clarifying question.
-     * Simple heuristic: check for question marks and uncertainty phrases.
-     */
-    private boolean isUncertainResponse(String response) {
-        String lower = response.toLowerCase();
-        return response.contains("?") ||
-               lower.contains("could you clarify") ||
-               lower.contains("can you specify") ||
-               lower.contains("what do you mean") ||
-               lower.contains("i don't have") ||
-               lower.contains("not sure") ||
-               lower.contains("unclear") ||
-               lower.contains("자세히 알려주세요") ||
-               lower.contains("명확히") ||
-               lower.contains("알 수 없습") ||
-               lower.contains("확실하지 않") ||
-               lower.contains("모르겠습");
+    private String buildUserPrompt(WikiRetrievalContext context, String userQuestion, int clarificationTurns) {
+        return """
+                질문: %s
+                약한 근거 여부: %s
+                기존 추천 질문: %s
+                누적 clarification 턴: %d
+                응답 JSON만 반환하세요.
+                """.formatted(
+                userQuestion,
+                context.weakGrounding(),
+                context.suggestedNextQuestions(),
+                clarificationTurns
+        );
+    }
+
+    private WikiChatResult parseResult(String payload, WikiRetrievalContext context) {
+        try {
+            JsonNode root = objectMapper.readTree(payload);
+            return new WikiChatResult(
+                    root.path("answer").asText("").strip(),
+                    root.path("isClarification").asBoolean(false),
+                    readStringList(root.path("clarificationOptions")),
+                    readStringList(root.path("suggestedNextQuestions")),
+                    root.path("usedPreviousContext").asBoolean(false),
+                    false
+            );
+        } catch (Exception ignored) {
+            return fallbackResult(context);
+        }
+    }
+
+    private WikiChatResult normalizeResult(
+            WikiChatResult raw,
+            WikiRetrievalContext context,
+            boolean topicShift,
+            boolean sessionReset,
+            int clarificationTurns
+    ) {
+        String answer = raw.answer().isBlank() ? fallbackAnswer(context) : raw.answer();
+        boolean isClarification = raw.isClarification();
+        List<String> clarificationOptions = sanitizeList(raw.clarificationOptions());
+        List<String> suggestedNextQuestions = sanitizeList(raw.suggestedNextQuestions());
+
+        if (isClarification && clarificationOptions.isEmpty()) {
+            clarificationOptions = deriveClarificationOptions(context);
+        }
+        if (context.weakGrounding() && suggestedNextQuestions.isEmpty()) {
+            suggestedNextQuestions = sanitizeList(context.suggestedNextQuestions());
+        }
+        if (clarificationTurns >= MAX_CLARIFICATION_TURNS && isClarification) {
+            isClarification = false;
+            clarificationOptions = List.of();
+            answer = fallbackAnswer(context);
+        }
+
+        return new WikiChatResult(
+                answer,
+                isClarification,
+                clarificationOptions,
+                suggestedNextQuestions,
+                !topicShift && raw.usedPreviousContext(),
+                sessionReset
+        );
+    }
+
+    private WikiChatResult fallbackResult(WikiRetrievalContext context) {
+        return new WikiChatResult(
+                fallbackAnswer(context),
+                false,
+                List.of(),
+                sanitizeList(context.suggestedNextQuestions()),
+                false,
+                false
+        );
+    }
+
+    private String fallbackAnswer(WikiRetrievalContext context) {
+        if (!context.chunks().isEmpty()) {
+            var firstChunk = context.chunks().getFirst();
+            String anchor = firstChunk.sourcePathHint() != null ? firstChunk.sourcePathHint() : firstChunk.heading();
+            if (context.weakGrounding()) {
+                return "요약하면 지금은 " + anchor + " 근거까지만 확인돼요.";
+            }
+            return "요약하면 핵심 흐름은 " + anchor + " 기준으로 보는 게 가장 안전해요.";
+        }
+        return "요약하면 지금 확보된 저장소 근거만으로는 좁은 범위부터 확인하는 게 안전해요.";
+    }
+
+    private List<ChatTurn> selectPromptTurns(List<ChatTurn> previousTurns) {
+        if (previousTurns.size() <= MAX_PROMPT_TURNS) {
+            return previousTurns;
+        }
+        return new ArrayList<>(previousTurns.subList(previousTurns.size() - MAX_PROMPT_TURNS, previousTurns.size()));
+    }
+
+    private int countClarificationTurns(List<ChatTurn> turns) {
+        return (int) turns.stream().filter(ChatTurn::isWasClarification).count();
+    }
+
+    private boolean isTopicShift(List<ChatTurn> previousTurns, String userQuestion) {
+        if (previousTurns.isEmpty()) {
+            return false;
+        }
+        Set<String> currentTokens = tokenize(userQuestion);
+        if (currentTokens.isEmpty()) {
+            return false;
+        }
+
+        Set<String> previousTokens = new LinkedHashSet<>();
+        for (ChatTurn turn : selectPromptTurns(previousTurns)) {
+            previousTokens.addAll(tokenize(turn.getQuestion()));
+            previousTokens.addAll(tokenize(turn.getAnswer()));
+        }
+
+        return currentTokens.stream().noneMatch(previousTokens::contains);
+    }
+
+    private Set<String> tokenize(String text) {
+        return TOKEN_SPLIT.splitAsStream(text.toLowerCase(Locale.ROOT))
+                .filter(token -> token.length() >= 2)
+                .collect(LinkedHashSet::new, Set::add, Set::addAll);
+    }
+
+    private List<String> readStringList(JsonNode node) {
+        if (!node.isArray()) {
+            return List.of();
+        }
+        List<String> values = new ArrayList<>();
+        node.forEach(item -> {
+            String value = item.asText("").strip();
+            if (!value.isBlank()) {
+                values.add(value);
+            }
+        });
+        return values;
+    }
+
+    private List<String> sanitizeList(List<String> values) {
+        if (values == null || values.isEmpty()) {
+            return List.of();
+        }
+        LinkedHashSet<String> sanitized = new LinkedHashSet<>();
+        for (String value : values) {
+            if (value == null) {
+                continue;
+            }
+            String trimmed = value.strip();
+            if (!trimmed.isBlank()) {
+                sanitized.add(trimmed);
+            }
+            if (sanitized.size() == 3) {
+                break;
+            }
+        }
+        return List.copyOf(sanitized);
+    }
+
+    private List<String> deriveClarificationOptions(WikiRetrievalContext context) {
+        LinkedHashSet<String> options = new LinkedHashSet<>();
+        context.chunks().forEach(chunk -> {
+            options.add(chunk.heading());
+            if (chunk.sourcePathHint() != null) {
+                options.add(chunk.sourcePathHint());
+            }
+        });
+        return sanitizeList(new ArrayList<>(options));
+    }
+
+    private ResponseFormatJsonSchema buildResponseFormat() {
+        var schema = ResponseFormatJsonSchema.JsonSchema.Schema.builder()
+                .putAdditionalProperty("type", JsonValue.from("object"))
+                .putAdditionalProperty("properties", JsonValue.from(java.util.Map.of(
+                        "answer", java.util.Map.of("type", "string"),
+                        "isClarification", java.util.Map.of("type", "boolean"),
+                        "clarificationOptions", java.util.Map.of("type", "array", "items", java.util.Map.of("type", "string")),
+                        "suggestedNextQuestions", java.util.Map.of("type", "array", "items", java.util.Map.of("type", "string")),
+                        "usedPreviousContext", java.util.Map.of("type", "boolean")
+                )))
+                .putAdditionalProperty("required", JsonValue.from(List.of(
+                        "answer",
+                        "isClarification",
+                        "clarificationOptions",
+                        "suggestedNextQuestions",
+                        "usedPreviousContext"
+                )))
+                .putAdditionalProperty("additionalProperties", JsonValue.from(false))
+                .build();
+
+        return ResponseFormatJsonSchema.builder()
+                .jsonSchema(ResponseFormatJsonSchema.JsonSchema.builder()
+                        .name("wiki_chat_result")
+                        .strict(true)
+                        .schema(schema)
+                        .build())
+                .build();
     }
 
     /**
