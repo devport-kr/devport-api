@@ -53,7 +53,6 @@ public class WikiChatService {
                 ChatCompletionCreateParams.builder()
                         .model(ChatModel.GPT_5_MINI)
                         .messages(messages)
-                        .temperature(0.1)
                         .build()
         );
 
@@ -115,22 +114,32 @@ public class WikiChatService {
      */
     private String buildSystemPrompt(String context) {
         return """
-                You are a precise technical assistant for this repository.
+                You are a highly concise, precise technical assistant for this repository.
+                You must ALWAYS answer queries in Korean (한국어).
+                
+                YOUR PRIMARY DIRECTIVE IS BREVITY (No Yapping):
+                - NEVER use conversational filler (e.g., "안녕하세요", "요약해 드리겠습니다", "결론적으로", "질문해주셔서 감사합니다").
+                - ALWAYS provide a 1-2 sentence short summary first (TL;DR approach).
+                - USE concise bullet points for details.
+                - KEEP the overall response under 3-4 short bullet points unless a highly detailed explanation is explicitly requested.
+                - If the answer is simple, just answer it directly.
                 
                 Your answers must be grounded in the provided repository context.
                 When the context does not contain sufficient information to answer accurately:
-                1. Acknowledge what you don't know
-                2. Ask a clarifying question to narrow down the user's intent
-                3. Never fabricate or guess information
+                1. Acknowledge what you don't know politely but briefly.
+                2. Ask a short clarifying question to narrow down the user's intent.
+                3. Never fabricate or guess information.
                 
                 Repository Context:
                 %s
                 
                 Guidelines:
-                - Be concise and technical
-                - Reference concrete files and functions from the repository context when relevant
-                - If uncertain, ask for clarification instead of making assumptions
-                - Focus on repository-specific details, not general ecosystem knowledge
+                - ALWAYS answer in Korean.
+                - Use a professional and friendly tone (해요체/하십시오체) but keep it strictly informational.
+                - Be concise and technical.
+                - Organize your answer with clear markdown formatting (bullet points, bold text).
+                - Reference concrete files and functions from the repository context when relevant.
+                - Focus on repository-specific details, not general ecosystem knowledge.
                 """.formatted(context);
     }
 
@@ -146,7 +155,12 @@ public class WikiChatService {
                lower.contains("what do you mean") ||
                lower.contains("i don't have") ||
                lower.contains("not sure") ||
-               lower.contains("unclear");
+               lower.contains("unclear") ||
+               lower.contains("자세히 알려주세요") ||
+               lower.contains("명확히") ||
+               lower.contains("알 수 없습") ||
+               lower.contains("확실하지 않") ||
+               lower.contains("모르겠습");
     }
 
     /**
