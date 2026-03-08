@@ -52,3 +52,12 @@ HELP.md
 REFRESH_TOKEN_IMPLEMENTATION.md
 
 .planning/
+
+.env
+app.sh
+docker-compose.yml
+docs/
+init-scripts/	
+jvm-dev.yml
+native-dev.yml
+ports.md
