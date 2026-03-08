@@ -39,7 +39,7 @@
 - [x] **CHAT-QUAL-03**: Wiki chat memory is project-scoped and short-lived: the last 2-3 relevant turns dominate, project mismatches reset memory, and stale context can be dropped on topic shift.
 - [x] **CHAT-QUAL-04**: Retrieval assembles diverse grounded repo context from `wiki_section_chunks` and degrades gracefully so partial retrieval still yields short grounded guidance plus 2-3 better next questions.
 - [x] **CHAT-QUAL-05**: The existing compact authenticated wiki chat surface (`/api/wiki/projects/*/chat` plus session clear) remains stable while supporting resume and intentional fresh starts within the current short session window.
-- [ ] **CHAT-QUAL-06**: Final wiki chat replies remain Korean-only, concise, teammate-like, and mention concrete repo files/classes/methods when grounding supports it.
+- [x] **CHAT-QUAL-06**: Final wiki chat replies remain Korean-only, concise, teammate-like, and mention concrete repo files/classes/methods when grounding supports it.
 
 ## v2 Requirements
 
@@ -82,7 +82,7 @@
 | CHAT-QUAL-03 | Phase 6 | Complete |
 | CHAT-QUAL-04 | Phase 6 | Complete |
 | CHAT-QUAL-05 | Phase 6 | Complete |
-| CHAT-QUAL-06 | Phase 6 | Pending |
+| CHAT-QUAL-06 | Phase 6 | Complete |
 
 **Coverage:**
 - v1 requirements: 21 total

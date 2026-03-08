@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: verifying
-stopped_at: Completed 06-02-PLAN.md
-last_updated: "2026-03-08T03:14:19Z"
-last_activity: 2026-03-08 - Completed `06-02-PLAN.md` and generated `.planning/phases/06-i-want-to-improve-our-wikichat-and-retreval-service-controlloer-for-better-quillity-for-users-while-chatting/06-02-SUMMARY.md`.
+status: in_progress
+stopped_at: Completed 06-03-PLAN.md
+last_updated: "2026-03-08T03:17:54.250Z"
+last_activity: 2026-03-08 - Completed `06-03-PLAN.md` and generated `.planning/phases/06-i-want-to-improve-our-wikichat-and-retreval-service-controlloer-for-better-quillity-for-users-while-chatting/06-03-SUMMARY.md`.
 progress:
   total_phases: 6
   completed_phases: 1
   total_plans: 27
-  completed_plans: 21
+  completed_plans: 22
 ---
 
 # Project State
@@ -25,11 +25,11 @@ See: `.planning/PROJECT.md` (updated 2026-02-14)
 ## Current Position
 
 Phase: 6 (i-want-to-improve-our-wikichat-and-retreval-service-controlloer-for-better-quillity-for-users-while-chatting)
-Plan: 2 of 4 plans executed in current phase
-Status: 06-02 completed; wiki chat session memory now resets on project mismatch and exposes bounded recent-turn loading for upcoming retrieval/chat orchestration work.
-Last activity: 2026-03-08 - Completed `06-02-PLAN.md` and generated `.planning/phases/06-i-want-to-improve-our-wikichat-and-retreval-service-controlloer-for-better-quillity-for-users-while-chatting/06-02-SUMMARY.md`.
+Plan: 3 of 4 plans executed in current phase
+Status: 06-03 completed; retrieval now returns structured reranked grounding with weak-grounding recovery prompts for downstream chat orchestration.
+Last activity: 2026-03-08 - Completed `06-03-PLAN.md` and generated `.planning/phases/06-i-want-to-improve-our-wikichat-and-retreval-service-controlloer-for-better-quillity-for-users-while-chatting/06-03-SUMMARY.md`.
 
-Progress: [█████░░░░░] 2/4 plans executed in Phase 6
+Progress: [████████░░] 3/4 plans executed in Phase 6
 
 ## Performance Metrics
 
@@ -49,8 +49,8 @@ Progress: [█████░░░░░] 2/4 plans executed in Phase 6
 | 5 | 17 | 130 min | 7.6 min |
 
 **Recent Trend:**
-- Recent completed plan: Phase 06 P02 | 1 min | 1 task | 2 files |
-- Trend: Phase 6 now has project-safe short-session memory in place for downstream retrieval and chat-service quality work.
+- Recent completed plan: Phase 06 P03 | 2 min | 1 task | 4 files |
+- Trend: Phase 6 retrieval now keeps grounded fallback context and diverse chunk selection ready for final chat-orchestration work.
 
 ## Accumulated Context
 
@@ -127,6 +127,8 @@ Recent decisions affecting current work:
 - [Phase 06]: Annotate WikiChatResponse.isClarification with JsonProperty so the compact API contract serializes the expected field name. — The new MVC scaffold exposed a serialization mismatch, and fixing it keeps the public response aligned with the intended contract.
 - [Phase 06]: Session ownership is enforced on both save and load paths so reusing a session ID on another project hard-resets memory.
 - [Phase 06]: Prompt assembly uses a dedicated 3-turn recent-memory view while the store still keeps up to 10 turns for short-session continuity.
+- [Phase 06]: Fetch 8 pgvector candidates, then greedily rerank in application code with heading overlap and section diversity before building prompt context.
+- [Phase 06]: Treat retrieval outages or empty vector matches as weak-grounding fallbacks that still return chunk-backed context plus 2-3 recovery questions.
 
 ### Roadmap Evolution
 
@@ -142,7 +144,7 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-03-08T03:13:59.747Z
-Stopped at: Completed 06-02-PLAN.md
+Last session: 2026-03-08T03:16:24.333Z
+Stopped at: Completed 06-03-PLAN.md
 Resume file: None
-Next: Execute `06-03-PLAN.md` to improve retrieval assembly, reranking, and weak-grounding fallback behavior.
+Next: Execute `06-04-PLAN.md` to rework chat orchestration and controller mapping around the new retrieval metadata.
