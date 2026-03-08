@@ -1,5 +1,6 @@
 package kr.devport.api.domain.wiki.controller;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.annotation.PreDestroy;
 import jakarta.validation.Valid;
 import kr.devport.api.domain.common.security.CustomUserDetails;
@@ -171,12 +172,11 @@ public class WikiChatController {
     private void sendToken(SseEmitter emitter, String token) {
         try {
             if (token != null) {
-                // Spring's SseEmitter does not add a space after 'data:'.
-                // Since SSE parsers strip the first space after 'data:', we must prepend a space
-                // to every line to prevent the parser from eating the token's actual spaces.
-                // Spring automatically handles splitting by newline and prefixing with 'data:'.
-                String formattedToken = " " + token.replace("\n", "\n ");
-                emitter.send(SseEmitter.event().name("token").data(formattedToken, MediaType.TEXT_PLAIN));
+                // The frontend parser expects tokens to be JSON strings to safely preserve newlines and spaces 
+                // without breaking the SSE structure (which splits on literal \n).
+                ObjectMapper mapper = new ObjectMapper();
+                String jsonToken = mapper.writeValueAsString(token);
+                emitter.send(SseEmitter.event().name("token").data(jsonToken, MediaType.APPLICATION_JSON));
             }
         } catch (IOException e) {
             throw new IllegalStateException("Failed to send streaming token", e);
