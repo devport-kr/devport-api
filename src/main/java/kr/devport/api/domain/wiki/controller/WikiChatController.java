@@ -171,7 +171,12 @@ public class WikiChatController {
     private void sendToken(SseEmitter emitter, String token) {
         try {
             if (token != null) {
-                emitter.send(SseEmitter.event().name("token").data(token, MediaType.TEXT_PLAIN));
+                // Spring's SseEmitter does not add a space after 'data:'.
+                // Since SSE parsers strip the first space after 'data:', we must prepend a space
+                // to every line to prevent the parser from eating the token's actual spaces.
+                // Spring automatically handles splitting by newline and prefixing with 'data:'.
+                String formattedToken = " " + token.replace("\n", "\n ");
+                emitter.send(SseEmitter.event().name("token").data(formattedToken, MediaType.TEXT_PLAIN));
             }
         } catch (IOException e) {
             throw new IllegalStateException("Failed to send streaming token", e);
