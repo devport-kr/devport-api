@@ -40,7 +40,6 @@ class WikiRetrievalServiceFallbackTest {
         assertThat(context.suggestedNextQuestions()).hasSize(2);
     }
 
-    @Disabled("Enable in 06-03 when partial-grounding fallback is implemented")
     @Test
     @DisplayName("partial retrieval fallback returns short grounded guidance with better next questions")
     void retrieveContext_returnsShortGroundedGuidanceWhenGroundingIsWeak() {
@@ -54,7 +53,6 @@ class WikiRetrievalServiceFallbackTest {
         ).suggestedNextQuestions()).hasSizeBetween(2, 3);
     }
 
-    @Disabled("Enable in 06-03 when retrieval reranking and section diversity land")
     @Test
     @DisplayName("retrieval reranking favors diverse sections over duplicate chunk clusters")
     void retrieveContext_favorsDiverseSectionsOverDuplicateClusters() {
