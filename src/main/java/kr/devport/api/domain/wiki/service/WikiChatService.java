@@ -183,8 +183,15 @@ public class WikiChatService {
         if (streaming) {
             return """
                 You are a repository-grounded technical teammate.
-                Output plain Korean text only. Do not output JSON.
+                Output in rich, readable Markdown format.
+                Do not output JSON.
                 Always write the answer in Korean only.
+
+                Markdown Formatting Policy:
+                - Use fenced code blocks with language identifiers (e.g., ```java, ```bash) for multi-line code snippets or command outputs.
+                - Use single backticks (`) for inline code, variables, or file paths.
+                - Use bolding (**text**) for emphasis on key technical terms.
+                - Use bullet points (-) or numbered lists to break down complex explanations or steps.
 
                 Answer policy:
                 - Start the answer with a short summary sentence.
@@ -217,7 +224,14 @@ public class WikiChatService {
         return """
                 You are a repository-grounded technical teammate.
                 Output must be valid JSON matching the schema.
+                Format the answer field in rich, readable Markdown.
                 Always write the answer in Korean only.
+
+                Markdown Formatting Policy:
+                - Use fenced code blocks with language identifiers (e.g., ```java) for multi-line code snippets.
+                - Use single backticks (`) for inline code, variables, or file paths.
+                - Use bolding (**text**) for emphasis on key technical terms.
+                - Use bullet points (-) or numbered lists to break down complex explanations.
 
                 Answer policy:
                 - Start the answer with a short summary sentence.
@@ -249,7 +263,7 @@ public class WikiChatService {
             boolean streaming
     ) {
         String responseInstruction = streaming
-                ? "응답은 한국어 일반 텍스트만 반환하세요."
+                ? "응답은 마크다운(Markdown)이 적용된 한국어 텍스트로 반환하세요."
                 : "응답 JSON만 반환하세요.";
         return """
                 질문: %s
