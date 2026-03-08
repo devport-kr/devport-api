@@ -1,6 +1,7 @@
 package kr.devport.api.domain.wiki.controller;
 
 import kr.devport.api.domain.wiki.dto.request.WikiChatRequest;
+import kr.devport.api.domain.wiki.dto.internal.WikiChatResult;
 import kr.devport.api.domain.wiki.dto.response.WikiChatResponse;
 import kr.devport.api.domain.wiki.service.WikiChatService;
 import org.junit.jupiter.api.DisplayName;
@@ -14,7 +15,6 @@ import org.springframework.http.ResponseEntity;
 import java.util.Arrays;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -36,30 +36,64 @@ class WikiChatControllerTest {
     }
 
     @Test
-    @DisplayName("chat endpoint returns precise answer with session tracking")
-    void chat_returnsPreciseAnswerWithSessionTracking() {
-        // Given
+    @DisplayName("chat endpoint maps typed service results directly")
+    void chat_mapsTypedServiceResultsDirectly() {
         String projectExternalId = "github:12345";
-        String answer = "This project uses JWT authentication.";
-        
-        when(wikiChatService.chat(anyString(), anyString(), anyString()))
-                .thenReturn(answer);
+        WikiChatResult serviceResult = new WikiChatResult(
+                "요약하면 인증은 JwtAuthenticationFilter 중심이에요.",
+                true,
+                java.util.List.of("로그인", "인가"),
+                java.util.List.of(),
+                false,
+                false
+        );
+
+        when(wikiChatService.chatResult("session-123", projectExternalId, "How does auth work?"))
+                .thenReturn(serviceResult);
 
         WikiChatRequest request = WikiChatRequest.builder()
                 .question("How does auth work?")
                 .sessionId("session-123")
                 .build();
 
-        // When
         ResponseEntity<WikiChatResponse> response = wikiChatController.chat(projectExternalId, request);
 
-        // Then
         assertThat(response.getBody()).isNotNull();
-        assertThat(response.getBody().getAnswer()).isEqualTo(answer);
+        assertThat(response.getBody().getAnswer()).isEqualTo(serviceResult.answer());
         assertThat(response.getBody().getSessionId()).isEqualTo("session-123");
+        assertThat(response.getBody().isClarification()).isTrue();
+
+        verify(wikiChatService).chatResult("session-123", projectExternalId, "How does auth work?");
+    }
+
+    @Test
+    @DisplayName("query-id chat endpoint preserves compact contract")
+    void chatByQueryId_preservesCompactContract() {
+        WikiChatResult serviceResult = new WikiChatResult(
+                "요약하면 배포는 workflow 파일 기준으로 보는 게 좋아요.",
+                false,
+                java.util.List.of(),
+                java.util.List.of("deploy workflow 경로를 알려줘"),
+                false,
+                false
+        );
+
+        when(wikiChatService.chatResult("session-123", "github:12345", "배포는 어디서 봐?"))
+                .thenReturn(serviceResult);
+
+        WikiChatRequest request = WikiChatRequest.builder()
+                .question("배포는 어디서 봐?")
+                .sessionId("session-123")
+                .build();
+
+        ResponseEntity<WikiChatResponse> response = wikiChatController.chatByQueryId("github:12345", request);
+
+        assertThat(response.getBody()).isNotNull();
+        assertThat(response.getBody().getAnswer()).isEqualTo(serviceResult.answer());
         assertThat(response.getBody().isClarification()).isFalse();
-        
-        verify(wikiChatService).chat("session-123", projectExternalId, "How does auth work?");
+        assertThat(response.getBody().getSessionId()).isEqualTo("session-123");
+
+        verify(wikiChatService).chatResult("session-123", "github:12345", "배포는 어디서 봐?");
     }
 
     @Test
