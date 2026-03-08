@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: in_progress
-stopped_at: Completed 06-03-PLAN.md
-last_updated: "2026-03-08T03:17:54.250Z"
-last_activity: 2026-03-08 - Completed `06-03-PLAN.md` and generated `.planning/phases/06-i-want-to-improve-our-wikichat-and-retreval-service-controlloer-for-better-quillity-for-users-while-chatting/06-03-SUMMARY.md`.
+status: verifying
+stopped_at: Completed 06-04-PLAN.md; pending final live wiki chat verification pass
+last_updated: "2026-03-08T04:09:01.677Z"
+last_activity: 2026-03-08 - Paused `06-04-PLAN.md` at the human verification checkpoint after completing Tasks 1-2 and starting the API locally for live chat validation.
 progress:
   total_phases: 6
-  completed_phases: 1
+  completed_phases: 3
   total_plans: 27
-  completed_plans: 22
+  completed_plans: 23
 ---
 
 # Project State
@@ -20,16 +20,14 @@ progress:
 See: `.planning/PROJECT.md` (updated 2026-02-14)
 
 **Core value:** API behavior stays predictable and debuggable under normal and failure conditions.
-**Current focus:** Phase 6 - Wiki chat and retrieval quality
+**Current focus:** Phase 6 closeout - wiki chat and retrieval quality verification
 
 ## Current Position
-
 Phase: 6 (i-want-to-improve-our-wikichat-and-retreval-service-controlloer-for-better-quillity-for-users-while-chatting)
-Plan: 3 of 4 plans executed in current phase
-Status: 06-03 completed; retrieval now returns structured reranked grounding with weak-grounding recovery prompts for downstream chat orchestration.
-Last activity: 2026-03-08 - Completed `06-03-PLAN.md` and generated `.planning/phases/06-i-want-to-improve-our-wikichat-and-retreval-service-controlloer-for-better-quillity-for-users-while-chatting/06-03-SUMMARY.md`.
-
-Progress: [████████░░] 3/4 plans executed in Phase 6
+Plan: 4 of 4 plans executed in current phase
+Status: `06-04-PLAN.md` is closed with green automated regression coverage; representative live prompt verification is deferred to the final manual quality pass by user choice.
+Last activity: 2026-03-08 - Completed `06-04-PLAN.md`, wrote the phase summary, and recorded the deferred live verification note for final sign-off.
+Progress: [██████████] 4/4 plans executed in Phase 6 (implementation complete; final live verification still pending)
 
 ## Performance Metrics
 
@@ -49,8 +47,8 @@ Progress: [████████░░] 3/4 plans executed in Phase 6
 | 5 | 17 | 130 min | 7.6 min |
 
 **Recent Trend:**
-- Recent completed plan: Phase 06 P03 | 2 min | 1 task | 4 files |
-- Trend: Phase 6 retrieval now keeps grounded fallback context and diverse chunk selection ready for final chat-orchestration work.
+- Recent completed plan: Phase 06 P04 | 3 min | 3 tasks | 7 files |
+- Trend: Phase 6 now has typed chat orchestration, direct controller mapping, and a documented deferred live verification pass for final manual QA.
 
 ## Accumulated Context
 
@@ -129,9 +127,11 @@ Recent decisions affecting current work:
 - [Phase 06]: Prompt assembly uses a dedicated 3-turn recent-memory view while the store still keeps up to 10 turns for short-session continuity.
 - [Phase 06]: Fetch 8 pgvector candidates, then greedily rerank in application code with heading overlap and section diversity before building prompt context.
 - [Phase 06]: Treat retrieval outages or empty vector matches as weak-grounding fallbacks that still return chunk-backed context plus 2-3 recovery questions.
+- [Phase 06]: WikiChatService owns clarification, weak-grounding, and recent-turn memory decisions through WikiChatResult instead of controller heuristics. — Keeps clarification and fallback policy inside the service so the compact controller contract stays stable and testable.
+- [Phase 06]: WikiChatController maps typed service state directly into the compact answer/isClarification/sessionId contract. — Preserves the authenticated public API shape while removing punctuation-based clarification inference from the controller.
+- [Phase 06]: Live wiki chat verification for representative prompts is deferred to the final manual quality pass. — User explicitly chose to postpone the human-verification checkpoint; automated regression tests were rerun and remained green in this continuation.
 
 ### Roadmap Evolution
-
 - Phase 5 added: new phase1
 - Phase 6 added: I want to improve our wikichat and retreval service (controlloer) for better quillity for users while chatting
 
@@ -143,8 +143,7 @@ Recent decisions affecting current work:
   3. Wiki chat grounding/citation path is incomplete (snapshot-only retrieval + citation extractor stub).
 
 ## Session Continuity
-
-Last session: 2026-03-08T03:16:24.333Z
-Stopped at: Completed 06-03-PLAN.md
+Last session: 2026-03-08T04:09:01.675Z
+Stopped at: Completed 06-04-PLAN.md; pending final live wiki chat verification pass
 Resume file: None
-Next: Execute `06-04-PLAN.md` to rework chat orchestration and controller mapping around the new retrieval metadata.
+Next: Run the deferred live verification pass from `06-04-PLAN.md` Task 3 during final QA and capture any failing prompt/behavior pairs if the real chat quality deviates.

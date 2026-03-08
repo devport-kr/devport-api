@@ -90,7 +90,7 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4
 | 3. Regression Safety Net | 0/TBD | Not started | - |
 | 4. Observability and Security Hardening | 0/TBD | Not started | - |
 | 5. new phase1 | 17/17 | ✓ Complete | 2026-02-16 |
-| 6. Wiki chat and retrieval quality | 3/4 | In Progress | - |
+| 6. Wiki chat and retrieval quality | 4/4 | ✓ Complete | 2026-03-08 |
 
 ### Phase 5: new phase1
 
@@ -133,4 +133,4 @@ Plans:
 - [x] 06-01-PLAN.md - Define internal wiki chat quality contracts and wave-1 regression scaffolds.
 - [x] 06-02-PLAN.md - Harden project-scoped session memory and recent-turn selection behavior.
 - [x] 06-03-PLAN.md - Upgrade retrieval assembly, reranking, and weak-grounding fallback behavior.
-- [ ] 06-04-PLAN.md - Rework chat orchestration and controller mapping to deliver Korean grounded answers with human verification.
+- [x] 06-04-PLAN.md - Rework chat orchestration and controller mapping to deliver Korean grounded answers with deferred final live verification.
