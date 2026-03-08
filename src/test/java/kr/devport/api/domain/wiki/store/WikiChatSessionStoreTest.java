@@ -1,16 +1,59 @@
 package kr.devport.api.domain.wiki.store;
 
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.core.ValueOperations;
 
+import java.time.Duration;
 import java.time.Instant;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.lenient;
+import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.when;
 
+@ExtendWith(MockitoExtension.class)
 class WikiChatSessionStoreTest {
 
-    private final WikiChatSessionStore sessionStore = new WikiChatSessionStore();
+    @Mock
+    private RedisTemplate<String, Object> redisTemplate;
+
+    @Mock
+    private ValueOperations<String, Object> valueOperations;
+
+    private WikiChatSessionStore sessionStore;
+    private final Map<String, Object> redisStore = new HashMap<>();
+
+    @BeforeEach
+    void setUp() {
+        when(redisTemplate.opsForValue()).thenReturn(valueOperations);
+
+        doAnswer(invocation -> {
+            redisStore.put(invocation.getArgument(0), invocation.getArgument(1));
+            return null;
+        }).when(valueOperations).set(anyString(), any(), any(Duration.class));
+
+        when(valueOperations.get(anyString()))
+                .thenAnswer(invocation -> redisStore.get(invocation.getArgument(0)));
+
+        lenient().when(redisTemplate.delete(anyString()))
+                .thenAnswer(invocation -> redisStore.remove(invocation.getArgument(0)) != null);
+
+        lenient().when(redisTemplate.hasKey(anyString()))
+                .thenAnswer(invocation -> redisStore.containsKey(invocation.getArgument(0)));
+
+        sessionStore = new WikiChatSessionStore(redisTemplate);
+    }
 
     @Test
     @DisplayName("saveTurn keeps recent turns available for the active session")

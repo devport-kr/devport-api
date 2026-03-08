@@ -4,29 +4,34 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
+import org.springframework.data.redis.core.RedisTemplate;
 
+import java.time.Duration;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
+import java.util.Set;
 
 /**
- * Short-lived session memory store for wiki chat turns.
- * Sessions expire after TTL with no cross-session persistence.
- * Keeps memory footprint minimal by storing recent turns only.
+ * Redis-backed session store for wiki chat turns.
+ * Sessions expire via Redis TTL and remain available across restarts and nodes.
+ * Keeps storage bounded by storing only recent turns per session.
  */
 @Component
+@RequiredArgsConstructor
 public class WikiChatSessionStore {
 
     private static final int DEFAULT_TTL_MINUTES = 30;
     private static final int MAX_TURNS_PER_SESSION = 10;
     private static final int MAX_RECENT_TURNS = 3;
+    private static final Duration SESSION_TTL = Duration.ofMinutes(DEFAULT_TTL_MINUTES);
+    private static final String KEY_PREFIX = "wiki:session:";
 
-    private final ConcurrentMap<String, ChatSession> sessions = new ConcurrentHashMap<>();
+    private final RedisTemplate<String, Object> redisTemplate;
 
     /**
      * Chat session with TTL expiration tracking.
@@ -73,14 +78,11 @@ public class WikiChatSessionStore {
             String answer,
             boolean wasClarification
     ) {
-        cleanExpiredSessions();
-
-        ChatSession session = sessions.compute(sessionId, (id, existingSession) -> {
-            if (existingSession == null || !projectMatches(existingSession, projectExternalId)) {
-                return newSession(id, projectExternalId);
-            }
-            return existingSession;
-        });
+        String key = KEY_PREFIX + sessionId;
+        ChatSession session = fetchSession(key);
+        if (session == null || !projectMatches(session, projectExternalId)) {
+            session = newSession(sessionId, projectExternalId);
+        }
 
         ChatTurn turn = ChatTurn.builder()
                 .question(question)
@@ -96,6 +98,7 @@ public class WikiChatSessionStore {
         }
 
         session.setExpiresAt(calculateExpiration());
+        redisTemplate.opsForValue().set(key, session, SESSION_TTL);
     }
 
     /**
@@ -122,14 +125,7 @@ public class WikiChatSessionStore {
     }
 
     Optional<ChatSession> getSession(String sessionId) {
-        cleanExpiredSessions();
-
-        ChatSession session = sessions.get(sessionId);
-        if (session == null || isExpired(session)) {
-            return Optional.empty();
-        }
-
-        return Optional.of(session);
+        return Optional.ofNullable(fetchSession(KEY_PREFIX + sessionId));
     }
 
     /**
@@ -139,10 +135,7 @@ public class WikiChatSessionStore {
      * @return true if session is active
      */
     public boolean hasActiveSession(String sessionId) {
-        cleanExpiredSessions();
-
-        ChatSession session = sessions.get(sessionId);
-        return session != null && !isExpired(session);
+        return Boolean.TRUE.equals(redisTemplate.hasKey(KEY_PREFIX + sessionId));
     }
 
     /**
@@ -151,7 +144,7 @@ public class WikiChatSessionStore {
      * @param sessionId Session identifier
      */
     public void clearSession(String sessionId) {
-        sessions.remove(sessionId);
+        redisTemplate.delete(KEY_PREFIX + sessionId);
     }
 
     private List<ChatTurn> loadTurnsInternal(String sessionId, String projectExternalId) {
@@ -181,17 +174,11 @@ public class WikiChatSessionStore {
     }
 
     /**
-     * Clean all expired sessions (automatic garbage collection).
+     * Load a session from Redis, returning null if missing or deserialized to an unexpected type.
      */
-    private void cleanExpiredSessions() {
-        sessions.entrySet().removeIf(entry -> isExpired(entry.getValue()));
-    }
-
-    /**
-     * Check if session is expired.
-     */
-    private boolean isExpired(ChatSession session) {
-        return Instant.now().isAfter(session.getExpiresAt());
+    private ChatSession fetchSession(String key) {
+        Object raw = redisTemplate.opsForValue().get(key);
+        return raw instanceof ChatSession session ? session : null;
     }
 
     /**
@@ -202,10 +189,11 @@ public class WikiChatSessionStore {
     }
 
     /**
-     * Get active session count (for monitoring).
+     * Get active session count for observability.
+     * Uses Redis KEYS and should not be treated as a hot-path operation.
      */
     public int getActiveSessionCount() {
-        cleanExpiredSessions();
-        return sessions.size();
+        Set<String> keys = redisTemplate.keys(KEY_PREFIX + "*");
+        return keys == null ? 0 : keys.size();
     }
 }

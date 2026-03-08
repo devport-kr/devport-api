@@ -1,5 +1,6 @@
 package kr.devport.api.domain.common.exception;
 
+import kr.devport.api.domain.wiki.exception.WikiChatRateLimitExceededException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -111,6 +112,18 @@ public class GlobalExceptionHandler {
             .message(ex.getMessage())
             .build();
         return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body(error);
+    }
+
+    @ExceptionHandler(WikiChatRateLimitExceededException.class)
+    public ResponseEntity<ErrorResponse> handleWikiChatRateLimit(WikiChatRateLimitExceededException ex) {
+        log.warn("Wiki chat rate limit exceeded: {}", ex.getMessage());
+        ErrorResponse error = ErrorResponse.builder()
+            .timestamp(LocalDateTime.now())
+            .status(HttpStatus.TOO_MANY_REQUESTS.value())
+            .error("Too Many Requests")
+            .message(ex.getMessage())
+            .build();
+        return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS).body(error);
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)

@@ -1,8 +1,10 @@
 package kr.devport.api.domain.wiki.controller;
 
+import kr.devport.api.domain.common.security.CustomUserDetails;
 import kr.devport.api.domain.wiki.dto.request.WikiChatRequest;
 import kr.devport.api.domain.wiki.dto.internal.WikiChatResult;
 import kr.devport.api.domain.wiki.dto.response.WikiChatResponse;
+import kr.devport.api.domain.wiki.service.WikiChatRateLimiter;
 import kr.devport.api.domain.wiki.service.WikiChatService;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -11,8 +13,10 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 
 import java.util.Arrays;
+import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.*;
@@ -23,8 +27,16 @@ class WikiChatControllerTest {
     @Mock
     private WikiChatService wikiChatService;
 
+    @Mock
+    private WikiChatRateLimiter rateLimiter;
+
     @InjectMocks
     private WikiChatController wikiChatController;
+
+    private CustomUserDetails testUser() {
+        return new CustomUserDetails(42L, "test@example.com", "testuser", null, "Test",
+                List.of(new SimpleGrantedAuthority("ROLE_USER")), null);
+    }
 
     @Test
     @DisplayName("chat response no longer contains citation payload")
@@ -56,7 +68,7 @@ class WikiChatControllerTest {
                 .sessionId("session-123")
                 .build();
 
-        ResponseEntity<WikiChatResponse> response = wikiChatController.chat(projectExternalId, request);
+        ResponseEntity<WikiChatResponse> response = wikiChatController.chat(projectExternalId, request, testUser());
 
         assertThat(response.getBody()).isNotNull();
         assertThat(response.getBody().getAnswer()).isEqualTo(serviceResult.answer());
@@ -86,7 +98,7 @@ class WikiChatControllerTest {
                 .sessionId("session-123")
                 .build();
 
-        ResponseEntity<WikiChatResponse> response = wikiChatController.chatByQueryId("github:12345", request);
+        ResponseEntity<WikiChatResponse> response = wikiChatController.chatByQueryId("github:12345", request, testUser());
 
         assertThat(response.getBody()).isNotNull();
         assertThat(response.getBody().getAnswer()).isEqualTo(serviceResult.answer());
