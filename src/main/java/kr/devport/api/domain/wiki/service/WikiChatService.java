@@ -14,10 +14,13 @@ import com.openai.models.chat.completions.ChatCompletionAssistantMessageParam;
 import com.openai.models.chat.completions.ChatCompletionMessageParam;
 import com.openai.models.chat.completions.ChatCompletionSystemMessageParam;
 import com.openai.models.chat.completions.ChatCompletionUserMessageParam;
+import kr.devport.api.domain.auth.entity.User;
 import kr.devport.api.domain.wiki.dto.internal.WikiChatResult;
+import kr.devport.api.domain.wiki.enums.WikiChatSessionType;
 import kr.devport.api.domain.wiki.store.WikiChatSessionStore;
 import kr.devport.api.domain.wiki.store.WikiChatSessionStore.ChatTurn;
 import kr.devport.api.domain.wiki.dto.internal.WikiRetrievalContext;
+import kr.devport.api.domain.wiki.entity.WikiChatSession;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -38,7 +41,7 @@ import java.util.regex.Pattern;
 @RequiredArgsConstructor
 public class WikiChatService {
 
-    private static final int MAX_PROMPT_TURNS = 2;
+    private static final int MAX_PROMPT_TURNS = 10;
     private static final int MAX_CLARIFICATION_TURNS = 2;
     private static final Pattern TOKEN_SPLIT = Pattern.compile("[^a-z0-9가-힣]+");
     private static final String CLARIFICATION_HEADING = "선택할 수 있는 범위:";
@@ -51,6 +54,8 @@ public class WikiChatService {
 
     private final WikiRetrievalService retrievalService;
     private final WikiChatSessionStore sessionStore;
+    private final WikiChatSessionPersistenceService persistenceService;
+    private final WikiChatTitleService titleService;
     private final OpenAIClient openAIClient;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
@@ -64,11 +69,11 @@ public class WikiChatService {
      * @return Chat answer (or clarifying question if uncertain)
      */
     public String chat(String sessionId, String projectExternalId, String userQuestion) {
-        return chatResult(sessionId, projectExternalId, userQuestion).answer();
+        return chatResult(sessionId, projectExternalId, userQuestion, null).answer();
     }
 
-    public WikiChatResult chatResult(String sessionId, String projectExternalId, String userQuestion) {
-        ChatRequestContext chatRequest = prepareChatRequest(sessionId, projectExternalId, userQuestion);
+    public WikiChatResult chatResult(String sessionId, String projectExternalId, String userQuestion, User user) {
+        ChatRequestContext chatRequest = prepareChatRequest(sessionId, projectExternalId, userQuestion, user);
         List<ChatCompletionMessageParam> messages = buildMessages(
                 chatRequest.context(),
                 chatRequest.promptTurns(),
@@ -93,6 +98,16 @@ public class WikiChatService {
                 chatRequest.clarificationTurns()
         );
 
+        if (user != null) {
+            boolean isFirst = persistenceService.isFirstMessage(sessionId);
+            WikiChatSession session = persistenceService.findOrCreateSession(
+                    sessionId, user, projectExternalId, WikiChatSessionType.PROJECT);
+            persistenceService.saveUserMessage(session, userQuestion);
+            persistenceService.saveAssistantMessage(session, result.answer(), result.isClarification());
+            if (isFirst) {
+                titleService.generateAndSave(sessionId, userQuestion);
+            }
+        }
         sessionStore.saveTurn(sessionId, projectExternalId, userQuestion, result.answer(), result.isClarification());
 
         return result;
@@ -102,9 +117,10 @@ public class WikiChatService {
             String sessionId,
             String projectExternalId,
             String userQuestion,
-            Consumer<String> tokenConsumer
+            Consumer<String> tokenConsumer,
+            User user
     ) {
-        ChatRequestContext chatRequest = prepareChatRequest(sessionId, projectExternalId, userQuestion);
+        ChatRequestContext chatRequest = prepareChatRequest(sessionId, projectExternalId, userQuestion, user);
         List<ChatCompletionMessageParam> messages = buildMessages(
                 chatRequest.context(),
                 chatRequest.promptTurns(),
@@ -130,6 +146,16 @@ public class WikiChatService {
                 !chatRequest.topicShift() && !chatRequest.promptTurns().isEmpty()
         );
 
+        if (user != null) {
+            boolean isFirst = persistenceService.isFirstMessage(sessionId);
+            WikiChatSession session = persistenceService.findOrCreateSession(
+                    sessionId, user, projectExternalId, WikiChatSessionType.PROJECT);
+            persistenceService.saveUserMessage(session, userQuestion);
+            persistenceService.saveAssistantMessage(session, result.answer(), result.isClarification());
+            if (isFirst) {
+                titleService.generateAndSave(sessionId, userQuestion);
+            }
+        }
         sessionStore.saveTurn(sessionId, projectExternalId, userQuestion, result.answer(), result.isClarification());
 
         return result;
@@ -195,7 +221,6 @@ public class WikiChatService {
                 - You MUST insert an empty line between every bullet point, numbered list item, and paragraph to ensure extreme readability.
 
                 Answer policy:
-                - Start the answer with a short summary sentence.
                 - Stay concise, direct, and repository-specific.
                 - Mention file paths, classes, or methods only when grounded context supports them.
                 - If the question is broad but partly answerable, answer the safest slice first and then add one narrow clarification.
@@ -236,7 +261,6 @@ public class WikiChatService {
                 - You MUST insert an empty line between every bullet point, numbered list item, and paragraph to ensure extreme readability.
 
                 Answer policy:
-                - Start the answer with a short summary sentence.
                 - Stay concise, direct, and repository-specific.
                 - Mention file paths, classes, or methods only when grounded context supports them.
                 - If the question is broad but partly answerable, answer the safest slice first and then add one narrow clarification.
@@ -267,19 +291,47 @@ public class WikiChatService {
         String responseInstruction = streaming
                 ? "응답은 마크다운(Markdown)이 적용된 한국어 텍스트로 반환하세요."
                 : "응답 JSON만 반환하세요.";
+        String faqInstruction = buildFaqInstruction(userQuestion);
         return """
                 질문: %s
                 약한 근거 여부: %s
                 기존 추천 질문: %s
                 누적 clarification 턴: %d
                 %s
+                %s
                 """.formatted(
                 userQuestion,
                 context.weakGrounding(),
                 context.suggestedNextQuestions(),
                 clarificationTurns,
+                faqInstruction,
                 responseInstruction
         );
+    }
+
+    private static final java.util.regex.Pattern FAQ_PROBLEM  = java.util.regex.Pattern.compile(
+            "문제.*해결|해결.*문제|왜 만들|어떤.*목적|what.*problem|solve|why.*built", java.util.regex.Pattern.CASE_INSENSITIVE);
+    private static final java.util.regex.Pattern FAQ_ARCH     = java.util.regex.Pattern.compile(
+            "아키텍처|구조|설계|architecture|design|어떻게.*동작|동작.*원리|how.*work|내부.*구조", java.util.regex.Pattern.CASE_INSENSITIVE);
+    private static final java.util.regex.Pattern FAQ_START    = java.util.regex.Pattern.compile(
+            "시작하려면|어떻게.*시작|설치|install|setup|getting.?started|사용.*방법|how.*use|how.*start", java.util.regex.Pattern.CASE_INSENSITIVE);
+    private static final java.util.regex.Pattern FAQ_CHANGES  = java.util.regex.Pattern.compile(
+            "최근.*변경|변경.*사항|changelog|release|업데이트|최근.*업|새로운|recent.*change|what.*new", java.util.regex.Pattern.CASE_INSENSITIVE);
+    private static final java.util.regex.Pattern FAQ_FEATURES = java.util.regex.Pattern.compile(
+            "주요.*기능|기능.*무엇|특징|feature|capabilities|what.*can|뭘.*할|어떤.*기능", java.util.regex.Pattern.CASE_INSENSITIVE);
+
+    private String buildFaqInstruction(String question) {
+        if (FAQ_PROBLEM.matcher(question).find())
+            return "FAQ 유형: 프로젝트 목적/문제 해결. 명확화 질문 없이 이 프로젝트가 해결하는 핵심 문제와 존재 이유를 포괄적으로 답하세요.";
+        if (FAQ_ARCH.matcher(question).find())
+            return "FAQ 유형: 핵심 아키텍처. 명확화 질문 없이 전체 시스템 구조, 주요 컴포넌트, 데이터 흐름을 구조화하여 설명하세요.";
+        if (FAQ_START.matcher(question).find())
+            return "FAQ 유형: 시작 방법. 명확화 질문 없이 설치/설정/첫 실행까지의 단계를 순서대로 안내하세요.";
+        if (FAQ_CHANGES.matcher(question).find())
+            return "FAQ 유형: 최근 변경 사항. 명확화 질문 없이 최근 업데이트, 릴리즈, 주요 변경 내용을 정리해 답하세요.";
+        if (FAQ_FEATURES.matcher(question).find())
+            return "FAQ 유형: 주요 기능. 명확화 질문 없이 핵심 기능 목록을 간결하게 나열하여 설명하세요.";
+        return "";
     }
 
     private WikiChatResult parseResult(String payload, WikiRetrievalContext context) {
@@ -538,11 +590,17 @@ public class WikiChatService {
         }
     }
 
-    private ChatRequestContext prepareChatRequest(String sessionId, String projectExternalId, String userQuestion) {
+    private ChatRequestContext prepareChatRequest(
+            String sessionId, String projectExternalId, String userQuestion, User user) {
         WikiRetrievalContext context = retrievalService.retrieveContext(projectExternalId, userQuestion);
         boolean hadActiveSession = sessionStore.hasActiveSession(sessionId);
-        List<ChatTurn> previousTurns = sessionStore.loadRecentTurns(sessionId, projectExternalId);
-        boolean sessionReset = hadActiveSession && previousTurns.isEmpty();
+        List<ChatTurn> redisTurns = sessionStore.loadRecentTurns(sessionId, projectExternalId);
+        // If Redis is cold but user is authenticated, load from DB (resumed session)
+        List<ChatTurn> previousTurns = redisTurns;
+        if (redisTurns.isEmpty() && user != null) {
+            previousTurns = persistenceService.loadRecentMessages(sessionId, MAX_PROMPT_TURNS);
+        }
+        boolean sessionReset = hadActiveSession && redisTurns.isEmpty();
         boolean topicShift = isTopicShift(previousTurns, userQuestion);
         List<ChatTurn> promptTurns = topicShift ? List.of() : selectPromptTurns(previousTurns);
         int clarificationTurns = countClarificationTurns(previousTurns);

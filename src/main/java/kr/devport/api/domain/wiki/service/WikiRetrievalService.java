@@ -29,9 +29,29 @@ import java.util.regex.Pattern;
 public class WikiRetrievalService {
 
     private static final int CANDIDATE_LIMIT = 8;
+    private static final int FAQ_CANDIDATE_LIMIT = 16;
     private static final int MAX_CONTEXT_CHUNKS = 4;
     private static final int MAX_CONTEXT_TOKENS = 3000;
     private static final Pattern TOKEN_SPLIT = Pattern.compile("[^a-z0-9가-힣]+");
+
+    // FAQ question patterns — matched in order; first match wins
+    private static final Pattern FAQ_PROBLEM    = Pattern.compile(
+            "문제.*해결|해결.*문제|왜 만들|어떤.*목적|what.*problem|solve|why.*built",
+            Pattern.CASE_INSENSITIVE);
+    private static final Pattern FAQ_ARCH       = Pattern.compile(
+            "아키텍처|구조|설계|architecture|design|어떻게.*동작|동작.*원리|how.*work|내부.*구조",
+            Pattern.CASE_INSENSITIVE);
+    private static final Pattern FAQ_START      = Pattern.compile(
+            "시작하려면|어떻게.*시작|설치|install|setup|getting.?started|사용.*방법|how.*use|how.*start",
+            Pattern.CASE_INSENSITIVE);
+    private static final Pattern FAQ_CHANGES    = Pattern.compile(
+            "최근.*변경|변경.*사항|changelog|release|업데이트|최근.*업|새로운|recent.*change|what.*new",
+            Pattern.CASE_INSENSITIVE);
+    private static final Pattern FAQ_FEATURES   = Pattern.compile(
+            "주요.*기능|기능.*무엇|특징|feature|capabilities|what.*can|뭘.*할|어떤.*기능",
+            Pattern.CASE_INSENSITIVE);
+
+    private enum FaqType { PROBLEM_SOLVED, ARCHITECTURE, GETTING_STARTED, RECENT_CHANGES, KEY_FEATURES, NONE }
 
     private final WikiSectionChunkRepository chunkRepository;
     private final OpenAIClient openAIClient;
@@ -47,17 +67,20 @@ public class WikiRetrievalService {
         }
 
         try {
+            FaqType faqType = detectFaq(userQuestion);
+            int candidateLimit = faqType != FaqType.NONE ? FAQ_CANDIDATE_LIMIT : CANDIDATE_LIMIT;
+
             float[] questionEmbedding = embedText(userQuestion);
             String vectorStr = toVectorString(questionEmbedding);
 
             List<WikiSectionChunk> similarChunks = chunkRepository.findSimilarChunks(
-                    projectExternalId, vectorStr, CANDIDATE_LIMIT);
+                    projectExternalId, vectorStr, candidateLimit);
 
             if (similarChunks.isEmpty()) {
                 return buildWeakGroundingContext(projectExternalId, allChunks, userQuestion);
             }
 
-            List<ScoredChunk> selectedChunks = selectDiverseChunks(similarChunks, userQuestion);
+            List<ScoredChunk> selectedChunks = selectDiverseChunks(similarChunks, userQuestion, faqType);
             boolean weakGrounding = selectedChunks.size() < 2;
 
             return new WikiRetrievalContext(
@@ -91,13 +114,15 @@ public class WikiRetrievalService {
         );
     }
 
-    private List<ScoredChunk> selectDiverseChunks(List<WikiSectionChunk> candidates, String userQuestion) {
+    private List<ScoredChunk> selectDiverseChunks(
+            List<WikiSectionChunk> candidates, String userQuestion, FaqType faqType) {
         List<ScoredChunk> scoredCandidates = new ArrayList<>();
         for (int i = 0; i < candidates.size(); i++) {
             WikiSectionChunk chunk = candidates.get(i);
-            double similarityScore = Math.max(0.1d, 1.0d - (i * 0.05d));
+            double similarityScore = Math.max(0.1d, 1.0d - (i * 0.04d));
             double headingScore = computeHeadingScore(chunk, userQuestion);
-            double qualityScore = similarityScore + headingScore;
+            double faqBonus = faqChunkBonus(faqType, chunk);
+            double qualityScore = similarityScore + headingScore + faqBonus;
             scoredCandidates.add(new ScoredChunk(chunk, similarityScore, headingScore, qualityScore));
         }
 
@@ -223,6 +248,29 @@ public class WikiRetrievalService {
 
     private boolean matchesToken(String left, String right) {
         return left.equals(right) || left.startsWith(right) || right.startsWith(left);
+    }
+
+    private FaqType detectFaq(String question) {
+        if (FAQ_PROBLEM.matcher(question).find())  return FaqType.PROBLEM_SOLVED;
+        if (FAQ_ARCH.matcher(question).find())     return FaqType.ARCHITECTURE;
+        if (FAQ_START.matcher(question).find())    return FaqType.GETTING_STARTED;
+        if (FAQ_CHANGES.matcher(question).find())  return FaqType.RECENT_CHANGES;
+        if (FAQ_FEATURES.matcher(question).find()) return FaqType.KEY_FEATURES;
+        return FaqType.NONE;
+    }
+
+    /**
+     * Returns a bonus score for a chunk based on the detected FAQ type.
+     * Only boosts summary chunks for purpose/feature questions — the only reliable
+     * discriminator given chunk_type has just 3 values and sectionIds are numeric.
+     * Everything else is handled by vector similarity + LLM instruction.
+     */
+    private double faqChunkBonus(FaqType faqType, WikiSectionChunk chunk) {
+        String chunkType = chunk.getChunkType();
+        return switch (faqType) {
+            case PROBLEM_SOLVED, KEY_FEATURES -> "summary".equals(chunkType) ? 0.5d : 0.0d;
+            default -> 0.0d;
+        };
     }
 
     private List<String> suggestNextQuestions(String userQuestion, List<ScoredChunk> chunks) {

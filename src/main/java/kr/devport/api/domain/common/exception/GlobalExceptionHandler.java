@@ -1,6 +1,7 @@
 package kr.devport.api.domain.common.exception;
 
 import kr.devport.api.domain.wiki.exception.WikiChatRateLimitExceededException;
+import kr.devport.api.domain.wiki.exception.WikiSessionNotFoundException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -112,6 +113,18 @@ public class GlobalExceptionHandler {
             .message(ex.getMessage())
             .build();
         return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body(error);
+    }
+
+    @ExceptionHandler(WikiSessionNotFoundException.class)
+    public ResponseEntity<ErrorResponse> handleWikiSessionNotFound(WikiSessionNotFoundException ex) {
+        log.warn("Wiki session not found: {}", ex.getMessage());
+        ErrorResponse error = ErrorResponse.builder()
+            .timestamp(LocalDateTime.now())
+            .status(HttpStatus.NOT_FOUND.value())
+            .error("Not Found")
+            .message(ex.getMessage())
+            .build();
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(error);
     }
 
     @ExceptionHandler(WikiChatRateLimitExceededException.class)

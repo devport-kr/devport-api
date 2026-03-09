@@ -84,8 +84,15 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.PUT, "/api/projects/*/comments/*").authenticated()
                 .requestMatchers(HttpMethod.DELETE, "/api/projects/*/comments/*").authenticated()
                 .requestMatchers(HttpMethod.POST, "/api/projects/*/comments/*/vote").authenticated()
-                .requestMatchers(HttpMethod.POST, "/api/wiki/projects/*/chat").authenticated()
-                .requestMatchers(HttpMethod.DELETE, "/api/wiki/projects/*/chat/sessions/*").authenticated()
+                .requestMatchers(HttpMethod.POST,
+                    "/api/wiki/projects/*/chat",
+                    "/api/wiki/projects/*/chat/stream",
+                    "/api/wiki/projects/chat",
+                    "/api/wiki/projects/chat/stream",
+                    "/api/wiki/chat",
+                    "/api/wiki/chat/stream"
+                ).permitAll()
+                .requestMatchers("/api/wiki/sessions/**").authenticated()
                 .requestMatchers(HttpMethod.GET,
                     "/api/wiki/admin/projects/*/drafts",
                     "/api/wiki/admin/projects/*/drafts/*"
@@ -112,11 +119,7 @@ public class SecurityConfig {
                     if (request.getRequestURI().startsWith("/api/")) {
                         response.setStatus(401);
                         response.setContentType("application/json;charset=UTF-8");
-                        String message = request.getRequestURI().contains("/api/wiki/projects/")
-                                && request.getRequestURI().contains("/chat")
-                                ? "챗봇과 대화할려면 로그인하세요"
-                                : "로그인이 필요합니다";
-                        response.getWriter().write("{\"message\":\"" + message + "\"}");
+                        response.getWriter().write("{\"message\":\"로그인이 필요합니다\"}");
                         return;
                     }
                     response.sendRedirect("/login");

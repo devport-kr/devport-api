@@ -11,6 +11,9 @@ public interface WikiSectionChunkRepository extends JpaRepository<WikiSectionChu
 
     List<WikiSectionChunk> findByProjectExternalId(String projectExternalId);
 
+    @Query("SELECT c FROM WikiSectionChunk c WHERE c.chunkType = 'summary' ORDER BY c.id ASC")
+    List<WikiSectionChunk> findAllSummaryChunks();
+
     void deleteByProjectExternalId(String projectExternalId);
 
     @Query(value = """
@@ -21,6 +24,15 @@ public interface WikiSectionChunkRepository extends JpaRepository<WikiSectionChu
             """, nativeQuery = true)
     List<WikiSectionChunk> findSimilarChunks(
             @Param("projectExternalId") String projectExternalId,
+            @Param("queryEmbedding") String queryEmbedding,
+            @Param("limit") int limit);
+
+    @Query(value = """
+            SELECT c.* FROM wiki_section_chunks c
+            ORDER BY c.embedding <=> cast(:queryEmbedding AS vector)
+            LIMIT :limit
+            """, nativeQuery = true)
+    List<WikiSectionChunk> findSimilarChunksGlobal(
             @Param("queryEmbedding") String queryEmbedding,
             @Param("limit") int limit);
 }

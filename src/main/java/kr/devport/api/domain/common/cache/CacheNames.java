@@ -20,6 +20,10 @@ public final class CacheNames {
     public static final String LLM_LEADERBOARD = "llmLeaderboard";
     public static final String LLM_BENCHMARKS = "benchmarks";
     public static final String LLM_MODELS = "llmModels";
+
+    // Wiki domain caches
+    public static final String WIKI_PROJECTS = "wikiProjects";
+    public static final String WIKI_PROJECT_PAGE = "wikiProjectPage";
     
     private CacheNames() {
         throw new UnsupportedOperationException("This is a constants class and cannot be instantiated");

@@ -30,6 +30,10 @@ public final class CacheTtlPolicy {
         map.put(CacheNames.LLM_LEADERBOARD, Duration.ofHours(24));
         map.put(CacheNames.LLM_BENCHMARKS, Duration.ofHours(24));
         map.put(CacheNames.LLM_MODELS, Duration.ofHours(24));
+
+        // Wiki caches - content changes infrequently (ingested externally)
+        map.put(CacheNames.WIKI_PROJECTS, Duration.ofMinutes(30));
+        map.put(CacheNames.WIKI_PROJECT_PAGE, Duration.ofMinutes(30));
         
         TTL_MAP = Collections.unmodifiableMap(map);
     }

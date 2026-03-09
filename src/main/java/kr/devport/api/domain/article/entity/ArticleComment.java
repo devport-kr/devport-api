@@ -6,6 +6,7 @@ import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.Index;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.PrePersist;
@@ -22,7 +23,11 @@ import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Entity
-@Table(name = "article_comments")
+@Table(name = "article_comments", indexes = {
+    @Index(name = "idx_article_comments_article_id", columnList = "article_id"),
+    @Index(name = "idx_article_comments_user_id", columnList = "user_id"),
+    @Index(name = "idx_article_comments_parent_id", columnList = "parent_id")
+})
 @Getter
 @Setter
 @NoArgsConstructor
@@ -41,7 +46,7 @@ public class ArticleComment {
     @JoinColumn(name = "article_id", nullable = false)
     private Article article;
 
-    @ManyToOne(fetch = FetchType.EAGER)
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", nullable = false)
     private User user;
 

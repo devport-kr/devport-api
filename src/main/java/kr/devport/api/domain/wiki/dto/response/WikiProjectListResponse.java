@@ -1,8 +1,10 @@
 package kr.devport.api.domain.wiki.dto.response;
 
 import io.swagger.v3.oas.annotations.media.Schema;
+import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 
 import java.util.List;
 
@@ -12,6 +14,8 @@ import java.util.List;
  */
 @Getter
 @Builder
+@NoArgsConstructor
+@AllArgsConstructor
 @Schema(description = "Flat list of wiki-ready projects sorted by stars descending")
 public class WikiProjectListResponse {
 
@@ -20,6 +24,8 @@ public class WikiProjectListResponse {
 
     @Getter
     @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
     @Schema(description = "Project summary for browse listing")
     public static class ProjectSummary {
 

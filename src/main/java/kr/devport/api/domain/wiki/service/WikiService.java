@@ -1,5 +1,6 @@
 package kr.devport.api.domain.wiki.service;
 
+import kr.devport.api.domain.common.cache.CacheNames;
 import kr.devport.api.domain.port.entity.Project;
 import kr.devport.api.domain.port.repository.ProjectRepository;
 import kr.devport.api.domain.wiki.dto.response.WikiProjectListResponse;
@@ -7,6 +8,7 @@ import kr.devport.api.domain.wiki.dto.response.WikiProjectPageResponse;
 import kr.devport.api.domain.wiki.entity.WikiSectionChunk;
 import kr.devport.api.domain.wiki.repository.WikiSectionChunkRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -32,12 +34,21 @@ public class WikiService {
     private final ProjectRepository projectRepository;
     private final WikiSectionChunkRepository wikiSectionChunkRepository;
 
+    @Cacheable(cacheNames = CacheNames.WIKI_PROJECTS)
     public WikiProjectListResponse getProjects() {
         List<Project> projects = projectRepository.findAll(Sort.by(Sort.Direction.DESC, "stars"));
 
+        // Single query to fetch all summary chunks across all projects (avoids N+1)
+        Map<String, String> summaryByProject = wikiSectionChunkRepository.findAllSummaryChunks().stream()
+                .collect(Collectors.toMap(
+                        WikiSectionChunk::getProjectExternalId,
+                        WikiSectionChunk::getContent,
+                        (existing, replacement) -> existing  // keep first if duplicates
+                ));
+
         List<WikiProjectListResponse.ProjectSummary> projectSummaries = projects.stream()
                 .map(project -> {
-                    String summary = resolveBrowseSummary(project.getExternalId());
+                    String summary = summaryByProject.getOrDefault(project.getExternalId(), "");
                     if (summary.isBlank()) {
                         return null;
                     }
@@ -58,6 +69,7 @@ public class WikiService {
                 .build();
     }
 
+    @Cacheable(cacheNames = CacheNames.WIKI_PROJECT_PAGE, key = "#projectExternalId")
     public WikiProjectPageResponse getProjectWiki(String projectExternalId) {
         Project project = projectRepository.findByExternalId(projectExternalId)
                 .orElseThrow(() -> new IllegalArgumentException("Project not found: " + projectExternalId));
@@ -113,15 +125,6 @@ public class WikiService {
                 .currentCounters(currentCounters)
                 .rightRail(rightRail)
                 .build();
-    }
-
-    private String resolveBrowseSummary(String projectExternalId) {
-        return wikiSectionChunkRepository.findByProjectExternalId(projectExternalId).stream()
-                .filter(c -> "summary".equals(c.getChunkType()))
-                .map(WikiSectionChunk::getContent)
-                .filter(content -> !content.isBlank())
-                .findFirst()
-                .orElse("");
     }
 
     private WikiProjectPageResponse.WikiSection buildSection(String sectionId, List<WikiSectionChunk> sectionChunks) {

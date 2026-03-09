@@ -1,8 +1,10 @@
 package kr.devport.api.domain.wiki.dto.response;
 
 import io.swagger.v3.oas.annotations.media.Schema;
+import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 
 import java.time.OffsetDateTime;
 import java.util.List;
@@ -13,6 +15,8 @@ import java.util.Map;
  */
 @Getter
 @Builder
+@NoArgsConstructor
+@AllArgsConstructor
 @Schema(description = "Project wiki page with dynamic sections, anchors, and current counters")
 public class WikiProjectPageResponse {
 
@@ -43,6 +47,8 @@ public class WikiProjectPageResponse {
      */
     @Getter
     @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
     @Schema(description = "Dynamic wiki section")
     public static class WikiSection {
 
@@ -75,6 +81,8 @@ public class WikiProjectPageResponse {
 
     @Getter
     @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
     @Schema(description = "Anchor item for left-rail navigation")
     public static class AnchorItem {
 
@@ -93,6 +101,8 @@ public class WikiProjectPageResponse {
      */
     @Getter
     @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
     @Schema(description = "Diagram metadata and render hints")
     public static class DiagramMetadata {
 
@@ -108,6 +118,8 @@ public class WikiProjectPageResponse {
 
     @Getter
     @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
     @Schema(description = "Current repository counters")
     public static class CurrentCounters {
 
@@ -132,6 +144,8 @@ public class WikiProjectPageResponse {
      */
     @Getter
     @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
     @Schema(description = "Right-rail module ordering")
     public static class RightRailOrdering {
 
