@@ -127,6 +127,10 @@ management:
   info:
     env:
       enabled: true
+  cloudwatch:
+    metrics:
+      export:
+        enabled: false
 
 logging:
   level:
