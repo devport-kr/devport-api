@@ -66,8 +66,6 @@ jobs:
             -PbuildJvm=true \
             --imageName="$FIRST_TAG" \
             -Pspring-boot.build-image.imageName="$FIRST_TAG" \
-            -Pspring-boot.build-image.buildpacks="urn:cnb:buildpack:paketo-buildpacks/java,docker.io/paketobuildpacks/health-checker" \
-            -Pspring-boot.build-image.env.BP_HEALTH_CHECKER_ENABLED=true \
             --no-daemon
 
           # Push the image

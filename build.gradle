@@ -84,6 +84,14 @@ dependencies {
 	testRuntimeOnly 'com.h2database:h2'
 }
 
+tasks.named('bootBuildImage') {
+	def baseBuildpack = project.hasProperty('buildJvm')
+		? "urn:cnb:builder:paketo-buildpacks/java"
+		: "urn:cnb:builder:paketo-buildpacks/java-native-image"
+	buildpacks = [baseBuildpack, "docker.io/paketobuildpacks/health-checker"]
+	environment = ["BP_HEALTH_CHECKER_ENABLED": "true"]
+}
+
 tasks.named('test') {
 	useJUnitPlatform()
 }
