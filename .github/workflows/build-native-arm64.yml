@@ -61,13 +61,11 @@ jobs:
           TAGS="${{ steps.meta.outputs.tags }}"
           FIRST_TAG=$(echo "$TAGS" | head -n 1)
 
-          # Clean to remove stale AOT-generated sources from cache
-          ./gradlew clean
-
-          # Build native image using bootBuildImage
-          ./gradlew bootBuildImage \
+          # Build native image (--no-build-cache prevents stale AOT outputs from Gradle build cache)
+          ./gradlew clean bootBuildImage \
             --imageName="$FIRST_TAG" \
             -Pspring-boot.build-image.imageName="$FIRST_TAG" \
+            --no-build-cache \
             --no-daemon
 
           # Push the image
