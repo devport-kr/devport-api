@@ -25,7 +25,6 @@ spring:
     properties:
       hibernate:
         format_sql: false
-        dialect: org.hibernate.dialect.PostgreSQLDialect
 
   h2:
     console:
@@ -37,7 +36,6 @@ spring:
         - https://devport.kr
         - https://www.devport.kr
       allowed-methods:
-        -
         - GET
         - POST
         - PUT
