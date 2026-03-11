@@ -1,7 +1,5 @@
 package kr.devport.api.domain.auth.service;
 
-import kr.devport.api.domain.auth.dto.request.TurnstileValidationRequest;
-import kr.devport.api.domain.auth.dto.response.TurnstileValidationResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -10,6 +8,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
 import org.springframework.web.client.RestTemplate;
+
+import java.util.List;
+import java.util.Map;
 
 /** Cloudflare Turnstile 토큰을 검증 서비스. */
 @Service
@@ -43,27 +44,31 @@ public class TurnstileService {
 
             HttpEntity<MultiValueMap<String, String>> request = new HttpEntity<>(requestBody, headers);
 
-            ResponseEntity<TurnstileValidationResponse> response = restTemplate.exchange(
+            ResponseEntity<Map> response = restTemplate.exchange(
                 TURNSTILE_VERIFY_URL,
                 HttpMethod.POST,
                 request,
-                TurnstileValidationResponse.class
+                Map.class
             );
 
-            TurnstileValidationResponse validationResponse = response.getBody();
+            Map<String, Object> validationResponse = response.getBody();
 
             if (validationResponse == null) {
                 log.error("Turnstile validation failed: Response body is null");
                 return false;
             }
 
-            if (validationResponse.isSuccess()) {
-                log.info("Turnstile token validated successfully for hostname: {}", validationResponse.getHostname());
+            boolean success = Boolean.TRUE.equals(validationResponse.get("success"));
+            Object hostname = validationResponse.get("hostname");
+            Object errorCodes = validationResponse.get("error-codes");
+
+            if (success) {
+                log.info("Turnstile token validated successfully for hostname: {}", hostname);
             } else {
-                log.warn("Turnstile token validation failed. Error codes: {}", validationResponse.getErrorCodes());
+                log.warn("Turnstile token validation failed. Error codes: {}", errorCodes);
             }
 
-            return validationResponse.isSuccess();
+            return success;
 
         } catch (Exception e) {
             log.error("Error during Turnstile token validation", e);

@@ -20,8 +20,16 @@ public class OAuth2AuthenticationFailureHandler extends SimpleUrlAuthenticationF
     public void onAuthenticationFailure(HttpServletRequest request,
                                         HttpServletResponse response,
                                         AuthenticationException exception) throws IOException {
+        String errorMessage = exception.getLocalizedMessage();
+        if (errorMessage == null || errorMessage.isBlank()) {
+            errorMessage = exception.getMessage();
+        }
+        if (errorMessage == null || errorMessage.isBlank()) {
+            errorMessage = exception.getClass().getSimpleName();
+        }
+
         String targetUrl = UriComponentsBuilder.fromUriString(redirectUri)
-            .queryParam("error", exception.getLocalizedMessage())
+            .queryParam("error", errorMessage)
             .build()
             .toUriString();
 
