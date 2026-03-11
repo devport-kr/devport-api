@@ -5,12 +5,11 @@ import kr.devport.api.domain.auth.entity.User;
 import kr.devport.api.domain.auth.enums.AuthProvider;
 import kr.devport.api.domain.auth.enums.UserRole;
 import kr.devport.api.domain.auth.dto.request.SignupRequest;
-import kr.devport.api.domain.auth.dto.response.AuthResponse;
+import kr.devport.api.domain.auth.dto.response.SignupResponse;
 import kr.devport.api.domain.common.exception.DuplicateEmailException;
 import kr.devport.api.domain.common.exception.DuplicateUsernameException;
 import kr.devport.api.domain.auth.repository.EmailVerificationTokenRepository;
 import kr.devport.api.domain.auth.repository.UserRepository;
-import kr.devport.api.domain.common.security.JwtTokenProvider;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -28,12 +27,10 @@ public class SignupService {
     private final UserRepository userRepository;
     private final EmailVerificationTokenRepository verificationTokenRepository;
     private final PasswordEncoder passwordEncoder;
-    private final JwtTokenProvider jwtTokenProvider;
     private final EmailService emailService;
-    private final RefreshTokenService refreshTokenService;
 
     @Transactional
-    public AuthResponse signup(SignupRequest request) {
+    public SignupResponse signup(SignupRequest request) {
         // Check username uniqueness
         if (userRepository.existsByUsername(request.getUsername())) {
             throw new DuplicateUsernameException("Username already exists: " + request.getUsername());
@@ -57,7 +54,6 @@ public class SignupService {
             .emailAddedAt(now)
             .createdAt(now)
             .updatedAt(now)
-            .lastLoginAt(now)
             .build();
 
         user = userRepository.save(user);
@@ -77,15 +73,10 @@ public class SignupService {
         // Send verification email
         emailService.sendVerificationEmail(user, token);
 
-        // Generate JWT tokens
-        String accessToken = jwtTokenProvider.createAccessToken(user.getId());
-        String refreshToken = refreshTokenService.createRefreshToken(user).getToken();
-
-        return AuthResponse.builder()
-            .accessToken(accessToken)
-            .refreshToken(refreshToken)
-            .tokenType("Bearer")
-            .expiresIn(jwtTokenProvider.getAccessTokenExpirationMs())
+        return SignupResponse.builder()
+            .message("Account created. Verify your email before logging in.")
+            .requiresEmailVerification(true)
+            .email(user.getEmail())
             .build();
     }
 

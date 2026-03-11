@@ -30,15 +30,16 @@ public class OpenApiConfig {
                         .description("Backend API for DevPort - Developer Portfolio Platform\n\n" +
                                 "## Authentication\n" +
                                 "This API uses OAuth2 authentication with GitHub and Google. " +
-                                "After successful authentication, you'll receive a JWT token. " +
-                                "Use this token in the Authorization header as: `Bearer {token}`\n\n" +
+                                "Access tokens are returned in JSON responses and refresh tokens are stored in an HttpOnly cookie. " +
+                                "Use the access token in the Authorization header as: `Bearer {token}`\n\n" +
                                 "## OAuth2 Flow\n" +
                                 "1. Initiate login: `GET /oauth2/authorization/{provider}` (github or google)\n" +
                                 "2. User authenticates with provider\n" +
-                                "3. Backend issues Access Token (1h) + Refresh Token (30d)\n" +
-                                "4. Callback redirects to frontend: `/oauth2/redirect?accessToken={xxx}&refreshToken={yyy}`\n" +
-                                "5. Use access token for authenticated endpoints: `Authorization: Bearer {accessToken}`\n" +
-                                "6. Refresh token when access token expires: `POST /api/auth/refresh`")
+                                "3. Backend redirects to frontend with a one-time code: `/oauth2/redirect?code={opaque}`\n" +
+                                "4. Frontend exchanges the code via `POST /api/auth/oauth2/exchange`\n" +
+                                "5. Backend returns an access token and sets the refresh-token cookie\n" +
+                                "6. Use access token for authenticated endpoints: `Authorization: Bearer {accessToken}`\n" +
+                                "7. Refresh the access token with `POST /api/auth/refresh` (cookie-based)")
                         .version("v1.0.0")
                         .contact(new Contact()
                                 .name("DevPort Team")

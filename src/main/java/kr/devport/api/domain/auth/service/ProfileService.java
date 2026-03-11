@@ -27,6 +27,7 @@ public class ProfileService {
     private final PasswordEncoder passwordEncoder;
     private final EmailVerificationService emailVerificationService;
     private final EmailService emailService;
+    private final RefreshTokenService refreshTokenService;
 
     @Transactional
     public User updateProfile(Long userId, ProfileUpdateRequest request) {
@@ -93,6 +94,7 @@ public class ProfileService {
         user.setPassword(passwordEncoder.encode(request.getNewPassword()));
         user.setUpdatedAt(LocalDateTime.now());
         userRepository.save(user);
+        refreshTokenService.deleteByUser(user);
 
         log.info("Password changed for user: {}", user.getUsername());
     }

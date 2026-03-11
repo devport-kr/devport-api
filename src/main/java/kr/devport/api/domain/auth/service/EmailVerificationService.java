@@ -2,6 +2,7 @@ package kr.devport.api.domain.auth.service;
 
 import kr.devport.api.domain.auth.entity.EmailVerificationToken;
 import kr.devport.api.domain.auth.entity.User;
+import kr.devport.api.domain.auth.enums.AuthProvider;
 import kr.devport.api.domain.common.exception.TokenExpiredException;
 import kr.devport.api.domain.common.exception.TokenNotFoundException;
 import kr.devport.api.domain.auth.repository.EmailVerificationTokenRepository;
@@ -72,6 +73,19 @@ public class EmailVerificationService {
         emailService.sendVerificationEmail(user, token.getToken());
 
         log.info("Verification email resent to: {}", user.getEmail());
+    }
+
+    @Transactional
+    public void resendVerificationEmailIfEligible(String email) {
+        userRepository.findByEmail(email).ifPresent(user -> {
+            if (user.getAuthProvider() != AuthProvider.local || Boolean.TRUE.equals(user.getEmailVerified())) {
+                return;
+            }
+
+            EmailVerificationToken token = createVerificationToken(user);
+            emailService.sendVerificationEmail(user, token.getToken());
+            log.info("Verification email resent to eligible user: {}", user.getEmail());
+        });
     }
 
     @Transactional

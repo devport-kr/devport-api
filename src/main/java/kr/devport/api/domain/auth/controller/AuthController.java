@@ -9,10 +9,12 @@ import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import kr.devport.api.domain.auth.dto.request.ForgotPasswordRequest;
 import kr.devport.api.domain.auth.dto.request.LoginRequest;
-import kr.devport.api.domain.auth.dto.request.RefreshTokenRequest;
+import kr.devport.api.domain.auth.dto.request.OAuth2ExchangeRequest;
 import kr.devport.api.domain.auth.dto.request.ResetPasswordRequest;
+import kr.devport.api.domain.auth.dto.request.ResendVerificationRequest;
 import kr.devport.api.domain.auth.dto.request.SignupRequest;
 import kr.devport.api.domain.auth.dto.response.AuthResponse;
+import kr.devport.api.domain.auth.dto.response.SignupResponse;
 import kr.devport.api.domain.auth.dto.response.TokenResponse;
 import kr.devport.api.domain.auth.dto.response.UserResponse;
 import kr.devport.api.domain.common.security.CustomUserDetails;
@@ -20,7 +22,12 @@ import kr.devport.api.domain.auth.service.AuthService;
 import kr.devport.api.domain.auth.service.EmailVerificationService;
 import kr.devport.api.domain.auth.service.LoginService;
 import kr.devport.api.domain.auth.service.PasswordResetService;
+import kr.devport.api.domain.auth.service.RefreshTokenCookieService;
 import kr.devport.api.domain.auth.service.SignupService;
+import kr.devport.api.domain.common.exception.InvalidTokenException;
+import jakarta.servlet.http.Cookie;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -41,6 +48,7 @@ public class AuthController {
     private final LoginService loginService;
     private final EmailVerificationService emailVerificationService;
     private final PasswordResetService passwordResetService;
+    private final RefreshTokenCookieService refreshTokenCookieService;
 
     @Operation(
         summary = "Get current user",
@@ -84,10 +92,13 @@ public class AuthController {
     })
     @PostMapping("/refresh")
     public ResponseEntity<TokenResponse> refreshAccessToken(
-        @Valid @RequestBody RefreshTokenRequest request
+        HttpServletRequest request,
+        HttpServletResponse response
     ) {
-        TokenResponse tokenResponse = authService.refreshAccessToken(request.getRefreshToken());
-        return ResponseEntity.ok(tokenResponse);
+        String refreshToken = requireRefreshToken(resolveRefreshToken(request));
+        TokenResponse tokenResponse = authService.refreshAccessToken(requireRefreshToken(refreshToken));
+        refreshTokenCookieService.addRefreshTokenCookie(response, tokenResponse.getRefreshToken());
+        return ResponseEntity.ok(stripRefreshToken(tokenResponse));
     }
 
     @Operation(
@@ -107,9 +118,11 @@ public class AuthController {
     })
     @PostMapping("/logout")
     public ResponseEntity<Void> logout(
-        @AuthenticationPrincipal CustomUserDetails userDetails
+        @AuthenticationPrincipal CustomUserDetails userDetails,
+        HttpServletResponse response
     ) {
         authService.logout(userDetails.getId());
+        refreshTokenCookieService.clearRefreshTokenCookie(response);
         return ResponseEntity.ok().build();
     }
 
@@ -121,7 +134,7 @@ public class AuthController {
         @ApiResponse(
             responseCode = "200",
             description = "Successfully created account",
-            content = @Content(schema = @Schema(implementation = AuthResponse.class))
+            content = @Content(schema = @Schema(implementation = SignupResponse.class))
         ),
         @ApiResponse(
             responseCode = "409",
@@ -130,8 +143,8 @@ public class AuthController {
         )
     })
     @PostMapping("/signup")
-    public ResponseEntity<AuthResponse> signup(@Valid @RequestBody SignupRequest request) {
-        AuthResponse response = signupService.signup(request);
+    public ResponseEntity<SignupResponse> signup(@Valid @RequestBody SignupRequest request) {
+        SignupResponse response = signupService.signup(request);
         return ResponseEntity.ok(response);
     }
 
@@ -152,9 +165,40 @@ public class AuthController {
         )
     })
     @PostMapping("/login")
-    public ResponseEntity<AuthResponse> login(@Valid @RequestBody LoginRequest request) {
-        AuthResponse response = loginService.login(request);
-        return ResponseEntity.ok(response);
+    public ResponseEntity<AuthResponse> login(
+        @Valid @RequestBody LoginRequest request,
+        HttpServletResponse servletResponse
+    ) {
+        AuthResponse authResponse = loginService.login(request);
+        refreshTokenCookieService.addRefreshTokenCookie(servletResponse, authResponse.getRefreshToken());
+        return ResponseEntity.ok(stripRefreshToken(authResponse));
+    }
+
+    @Operation(
+        summary = "Exchange OAuth2 callback code",
+        description = "Exchange a one-time OAuth2 callback code for an access token and refresh-token cookie."
+    )
+    @ApiResponses(value = {
+        @ApiResponse(
+            responseCode = "200",
+            description = "Successfully exchanged OAuth2 callback code",
+            content = @Content(schema = @Schema(implementation = TokenResponse.class))
+        ),
+        @ApiResponse(
+            responseCode = "401",
+            description = "Invalid or expired exchange code",
+            content = @Content
+        )
+    })
+    @PostMapping("/oauth2/exchange")
+    public ResponseEntity<TokenResponse> exchangeOAuth2Code(
+        @Valid @RequestBody OAuth2ExchangeRequest request,
+        HttpServletRequest httpRequest,
+        HttpServletResponse response
+    ) {
+        TokenResponse tokenResponse = authService.exchangeOAuth2Code(request.getCode(), httpRequest);
+        refreshTokenCookieService.addRefreshTokenCookie(response, tokenResponse.getRefreshToken());
+        return ResponseEntity.ok(stripRefreshToken(tokenResponse));
     }
 
     @Operation(
@@ -177,15 +221,14 @@ public class AuthController {
         description = "Resend email verification link to the current user"
     )
     @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "Verification email sent"),
-        @ApiResponse(responseCode = "401", description = "Unauthorized", content = @Content)
+        @ApiResponse(responseCode = "200", description = "Verification email sent if the account is eligible")
     })
     @PostMapping("/resend-verification")
     public ResponseEntity<Map<String, String>> resendVerification(
-        @AuthenticationPrincipal CustomUserDetails userDetails
+        @Valid @RequestBody ResendVerificationRequest request
     ) {
-        emailVerificationService.resendVerificationEmail(userDetails.getId());
-        return ResponseEntity.ok(Map.of("message", "Verification email sent"));
+        emailVerificationService.resendVerificationEmailIfEligible(request.getEmail());
+        return ResponseEntity.ok(Map.of("message", "If the account is eligible, a verification email will be sent."));
     }
 
     @Operation(
@@ -193,13 +236,12 @@ public class AuthController {
         description = "Request password reset link via email (LOCAL accounts only)"
     )
     @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "Password reset email sent"),
-        @ApiResponse(responseCode = "404", description = "User not found", content = @Content)
+        @ApiResponse(responseCode = "200", description = "Password reset email sent if the account is eligible")
     })
     @PostMapping("/forgot-password")
     public ResponseEntity<Map<String, String>> forgotPassword(@Valid @RequestBody ForgotPasswordRequest request) {
         passwordResetService.createResetToken(request.getEmail());
-        return ResponseEntity.ok(Map.of("message", "Password reset email sent"));
+        return ResponseEntity.ok(Map.of("message", "If the account is eligible, password reset instructions will be sent."));
     }
 
     @Operation(
@@ -217,29 +259,42 @@ public class AuthController {
         return ResponseEntity.ok(Map.of("message", "Password reset successfully"));
     }
 
-    @Operation(
-        summary = "Check username availability",
-        description = "Check if a username is available for registration"
-    )
-    @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "Username availability checked")
-    })
-    @GetMapping("/check-username")
-    public ResponseEntity<Map<String, Boolean>> checkUsername(@RequestParam String username) {
-        boolean available = signupService.isUsernameAvailable(username);
-        return ResponseEntity.ok(Map.of("available", available));
+    private AuthResponse stripRefreshToken(AuthResponse response) {
+        return AuthResponse.builder()
+            .accessToken(response.getAccessToken())
+            .tokenType(response.getTokenType())
+            .expiresIn(response.getExpiresIn())
+            .user(response.getUser())
+            .build();
     }
 
-    @Operation(
-        summary = "Check email availability",
-        description = "Check if an email is available for registration"
-    )
-    @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "Email availability checked")
-    })
-    @GetMapping("/check-email")
-    public ResponseEntity<Map<String, Boolean>> checkEmail(@RequestParam String email) {
-        boolean available = signupService.isEmailAvailable(email);
-        return ResponseEntity.ok(Map.of("available", available));
+    private TokenResponse stripRefreshToken(TokenResponse response) {
+        return TokenResponse.builder()
+            .accessToken(response.getAccessToken())
+            .tokenType(response.getTokenType())
+            .expiresIn(response.getExpiresIn())
+            .build();
+    }
+
+    private String requireRefreshToken(String refreshToken) {
+        if (refreshToken == null || refreshToken.isBlank()) {
+            throw new InvalidTokenException("Refresh token is invalid or expired");
+        }
+        return refreshToken;
+    }
+
+    private String resolveRefreshToken(HttpServletRequest request) {
+        Cookie[] cookies = request.getCookies();
+        if (cookies == null) {
+            return null;
+        }
+
+        for (Cookie cookie : cookies) {
+            if (refreshTokenCookieService.getCookieName().equals(cookie.getName())) {
+                return cookie.getValue();
+            }
+        }
+
+        return null;
     }
 }

@@ -68,11 +68,11 @@ public class SecurityConfig {
                     "/api/auth/refresh",
                     "/api/auth/signup",
                     "/api/auth/login",
+                    "/api/auth/oauth2/exchange",
                     "/api/auth/verify-email",
+                    "/api/auth/resend-verification",
                     "/api/auth/forgot-password",
-                    "/api/auth/reset-password",
-                    "/api/auth/check-username",
-                    "/api/auth/check-email"
+                    "/api/auth/reset-password"
                 ).permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/articles/**").permitAll()
                 .requestMatchers(HttpMethod.POST, "/api/articles/*/view").permitAll()

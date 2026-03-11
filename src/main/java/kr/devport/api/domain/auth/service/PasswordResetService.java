@@ -3,7 +3,6 @@ package kr.devport.api.domain.auth.service;
 import kr.devport.api.domain.auth.entity.PasswordResetToken;
 import kr.devport.api.domain.auth.entity.User;
 import kr.devport.api.domain.auth.enums.AuthProvider;
-import kr.devport.api.domain.common.exception.OAuth2AccountException;
 import kr.devport.api.domain.common.exception.TokenExpiredException;
 import kr.devport.api.domain.common.exception.TokenNotFoundException;
 import kr.devport.api.domain.auth.repository.PasswordResetTokenRepository;
@@ -26,17 +25,20 @@ public class PasswordResetService {
     private final UserRepository userRepository;
     private final EmailService emailService;
     private final PasswordEncoder passwordEncoder;
+    private final RefreshTokenService refreshTokenService;
 
     @Transactional
     public void createResetToken(String email) {
-        User user = userRepository.findByEmail(email)
-            .orElseThrow(() -> new TokenNotFoundException("User not found with email: " + email));
+        User user = userRepository.findByEmail(email).orElse(null);
+        if (user == null) {
+            log.info("Password reset requested for non-existent email");
+            return;
+        }
 
         // Only LOCAL users can reset password
         if (user.getAuthProvider() != AuthProvider.local) {
-            throw new OAuth2AccountException(
-                "This account uses " + user.getAuthProvider().name() + " login. Password reset is not available."
-            );
+            log.info("Password reset requested for non-local account: {}", user.getEmail());
+            return;
         }
 
         // Delete old tokens for this user
@@ -73,6 +75,7 @@ public class PasswordResetService {
         User user = resetToken.getUser();
         user.setPassword(passwordEncoder.encode(newPassword));
         userRepository.save(user);
+        refreshTokenService.deleteByUser(user);
 
         // Mark token as used
         resetToken.setUsed(true);

@@ -158,6 +158,14 @@ app:
     redirect-uri: http://localhost:5173/oauth2/redirect
     failure-redirect-uri: http://localhost:5173/login
 
+  auth:
+    refresh-cookie-name: devport_refresh_token
+    refresh-cookie-path: /api/auth
+    refresh-cookie-domain:
+    refresh-cookie-secure: false
+    refresh-cookie-same-site: Lax
+    oauth2-exchange-ttl-seconds: 60
+
   email:
     from: ${EMAIL_FROM:noreply@devport.kr}
     verification-url: ${FRONTEND_URL:http://localhost:5173}/verify-email?token={token}

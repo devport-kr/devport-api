@@ -4,8 +4,8 @@ import kr.devport.api.domain.auth.entity.User;
 import kr.devport.api.domain.auth.enums.AuthProvider;
 import kr.devport.api.domain.auth.dto.request.LoginRequest;
 import kr.devport.api.domain.auth.dto.response.AuthResponse;
+import kr.devport.api.domain.common.exception.EmailVerificationRequiredException;
 import kr.devport.api.domain.common.exception.InvalidCredentialsException;
-import kr.devport.api.domain.common.exception.OAuth2AccountException;
 import kr.devport.api.domain.auth.repository.UserRepository;
 import kr.devport.api.domain.common.security.JwtTokenProvider;
 import lombok.RequiredArgsConstructor;
@@ -34,14 +34,16 @@ public class LoginService {
 
         // Verify authProvider is LOCAL
         if (user.getAuthProvider() != AuthProvider.local) {
-            throw new OAuth2AccountException(
-                "This account uses " + user.getAuthProvider().name() + " login. Please use OAuth2 to sign in."
-            );
+            throw new InvalidCredentialsException("Invalid username or password");
         }
 
         // Verify password
         if (!passwordEncoder.matches(request.getPassword(), user.getPassword())) {
             throw new InvalidCredentialsException("Invalid username or password");
+        }
+
+        if (!Boolean.TRUE.equals(user.getEmailVerified())) {
+            throw new EmailVerificationRequiredException("Email verification is required before login");
         }
 
         // Update last login
@@ -52,13 +54,13 @@ public class LoginService {
 
         // Generate JWT tokens
         String accessToken = jwtTokenProvider.createAccessToken(user.getId());
-        String refreshToken = refreshTokenService.createRefreshToken(user).getToken();
+        String refreshToken = refreshTokenService.createRefreshToken(user);
 
         return AuthResponse.builder()
             .accessToken(accessToken)
             .refreshToken(refreshToken)
             .tokenType("Bearer")
-            .expiresIn(jwtTokenProvider.getAccessTokenExpirationMs())
+            .expiresIn(jwtTokenProvider.getAccessTokenExpirationMs() / 1000)
             .build();
     }
 }

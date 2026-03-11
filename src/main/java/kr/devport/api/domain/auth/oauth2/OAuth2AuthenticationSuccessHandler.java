@@ -2,12 +2,10 @@ package kr.devport.api.domain.auth.oauth2;
 
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-import kr.devport.api.domain.auth.entity.RefreshToken;
 import kr.devport.api.domain.auth.entity.User;
 import kr.devport.api.domain.auth.repository.UserRepository;
 import kr.devport.api.domain.common.security.CustomUserDetails;
-import kr.devport.api.domain.common.security.JwtTokenProvider;
-import kr.devport.api.domain.auth.service.RefreshTokenService;
+import kr.devport.api.domain.auth.service.OAuth2ExchangeCodeService;
 import kr.devport.api.domain.auth.service.TurnstileService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -24,8 +22,7 @@ import java.io.IOException;
 @Slf4j
 public class OAuth2AuthenticationSuccessHandler extends SimpleUrlAuthenticationSuccessHandler {
 
-    private final JwtTokenProvider jwtTokenProvider;
-    private final RefreshTokenService refreshTokenService;
+    private final OAuth2ExchangeCodeService oAuth2ExchangeCodeService;
     private final UserRepository userRepository;
     private final TurnstileService turnstileService;
 
@@ -72,16 +69,12 @@ public class OAuth2AuthenticationSuccessHandler extends SimpleUrlAuthenticationS
         log.info("Turnstile token validated successfully. Proceeding with OAuth2 login.");
 
         CustomUserDetails userDetails = (CustomUserDetails) authentication.getPrincipal();
-
-        String accessToken = jwtTokenProvider.generateAccessToken(userDetails.getId());
-
         User user = userRepository.findById(userDetails.getId())
             .orElseThrow(() -> new RuntimeException("User not found"));
-        RefreshToken refreshToken = refreshTokenService.createRefreshToken(user);
+        String exchangeCode = oAuth2ExchangeCodeService.createExchangeCode(user, request);
 
         return UriComponentsBuilder.fromUriString(redirectUri)
-            .queryParam("accessToken", accessToken)
-            .queryParam("refreshToken", refreshToken.getToken())
+            .queryParam("code", exchangeCode)
             .build()
             .toUriString();
     }

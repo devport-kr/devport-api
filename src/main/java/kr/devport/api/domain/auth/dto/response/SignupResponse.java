@@ -4,14 +4,18 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 @Getter
-@Builder
+@Setter
+@NoArgsConstructor
 @AllArgsConstructor
+@Builder
 @JsonInclude(JsonInclude.Include.NON_NULL)
-public class TokenResponse {
-    private String accessToken;
-    private String refreshToken;
-    private String tokenType;
-    private Long expiresIn; // 만료 시간(초 단위)
+public class SignupResponse {
+
+    private String message;
+    private boolean requiresEmailVerification;
+    private String email;
 }

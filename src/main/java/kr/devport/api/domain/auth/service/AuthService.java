@@ -6,6 +6,7 @@ import kr.devport.api.domain.auth.dto.response.TokenResponse;
 import kr.devport.api.domain.auth.dto.response.UserResponse;
 import kr.devport.api.domain.auth.repository.UserRepository;
 import kr.devport.api.domain.common.security.JwtTokenProvider;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -18,6 +19,7 @@ public class AuthService {
     private final UserRepository userRepository;
     private final RefreshTokenService refreshTokenService;
     private final JwtTokenProvider jwtTokenProvider;
+    private final OAuth2ExchangeCodeService oAuth2ExchangeCodeService;
 
     public UserResponse getCurrentUser(Long userId) {
         User user = userRepository.findById(userId)
@@ -28,21 +30,16 @@ public class AuthService {
 
     @Transactional
     public TokenResponse refreshAccessToken(String refreshTokenString) {
-        RefreshToken refreshToken = refreshTokenService.findByToken(refreshTokenString)
-            .orElseThrow(() -> new RuntimeException("Refresh token not found"));
-
-        if (!refreshTokenService.verifyRefreshToken(refreshToken)) {
-            throw new RuntimeException("Refresh token is expired or revoked");
-        }
-
+        RefreshToken refreshToken = refreshTokenService.requireValidRefreshToken(refreshTokenString);
         User user = refreshToken.getUser();
         String newAccessToken = jwtTokenProvider.generateAccessToken(user.getId());
+        String rotatedRefreshToken = refreshTokenService.rotateRefreshToken(refreshToken);
 
         return TokenResponse.builder()
             .accessToken(newAccessToken)
-            .refreshToken(refreshTokenString)
+            .refreshToken(rotatedRefreshToken)
             .tokenType("Bearer")
-            .expiresIn(3600L) // 만료 시간 1시간(초 단위)
+            .expiresIn(jwtTokenProvider.getAccessTokenExpirationMs() / 1000)
             .build();
     }
 
@@ -52,6 +49,20 @@ public class AuthService {
             .orElseThrow(() -> new RuntimeException("User not found with id: " + userId));
 
         refreshTokenService.deleteByUser(user);
+    }
+
+    @Transactional
+    public TokenResponse exchangeOAuth2Code(String code, HttpServletRequest request) {
+        User user = oAuth2ExchangeCodeService.consumeExchangeCode(code, request);
+        String accessToken = jwtTokenProvider.generateAccessToken(user.getId());
+        String refreshToken = refreshTokenService.createRefreshToken(user);
+
+        return TokenResponse.builder()
+            .accessToken(accessToken)
+            .refreshToken(refreshToken)
+            .tokenType("Bearer")
+            .expiresIn(jwtTokenProvider.getAccessTokenExpirationMs() / 1000)
+            .build();
     }
 
     private UserResponse convertToUserResponse(User user) {

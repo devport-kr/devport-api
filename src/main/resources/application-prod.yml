@@ -149,3 +149,12 @@ app:
 
   oauth2:
     redirect-uri: https://devport.kr/oauth2/redirect
+    failure-redirect-uri: https://devport.kr/login
+
+  auth:
+    refresh-cookie-name: devport_refresh_token
+    refresh-cookie-path: /api/auth
+    refresh-cookie-domain: .devport.kr
+    refresh-cookie-secure: true
+    refresh-cookie-same-site: Lax
+    oauth2-exchange-ttl-seconds: 60
