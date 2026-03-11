@@ -84,6 +84,15 @@ dependencies {
 	testRuntimeOnly 'com.h2database:h2'
 }
 
+tasks.named('bootBuildImage') {
+	buildpacks = [
+		"urn:cnb:buildpack:paketo-buildpacks/health-checker"
+	]
+	environment = [
+		"BP_HEALTH_CHECKER_DEPENDENCY": "curl"
+	]
+}
+
 tasks.named('test') {
 	useJUnitPlatform()
 }
