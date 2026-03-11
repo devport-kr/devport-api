@@ -27,7 +27,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 @ExtendWith(MockitoExtension.class)
 @DisplayName("Cache Invalidation Integration Tests")
 class CacheInvalidationIntegrationTest {
-    
+
+    private final CacheKeyFactory CacheKeyFactory = new CacheKeyFactory();
     private CacheManager cacheManager;
     private CacheFallbackStateStore fallbackStateStore;
     private CacheInvalidationService invalidationService;

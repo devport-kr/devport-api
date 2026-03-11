@@ -7,7 +7,6 @@ import kr.devport.api.domain.llm.dto.request.LLMModelSearchCondition;
 import kr.devport.api.domain.llm.dto.response.*;
 import kr.devport.api.domain.llm.repository.LLMBenchmarkRepository;
 import kr.devport.api.domain.llm.repository.LLMModelRepository;
-import kr.devport.api.domain.common.cache.CacheKeyFactory;
 import kr.devport.api.domain.common.cache.CacheNames;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -89,7 +88,7 @@ public class LLMRankingService {
 
     @Cacheable(
         value = CacheNames.LLM_LEADERBOARD,
-        key = "T(kr.devport.api.domain.common.cache.CacheKeyFactory).llmLeaderboardKey(#benchmarkType, #provider, #creatorSlug, #license, #maxPrice, #minContextWindow)",
+        key = "@cacheKeyFactory.llmLeaderboardKey(#benchmarkType, #provider, #creatorSlug, #license, #maxPrice, #minContextWindow)",
         unless = "@cacheFallbackBypass.shouldBypass('LLM')"
     )
     public List<LLMLeaderboardEntryResponse> getLeaderboard(
@@ -111,7 +110,7 @@ public class LLMRankingService {
 
     @Cacheable(
         value = CacheNames.LLM_BENCHMARKS,
-        key = "T(kr.devport.api.domain.common.cache.CacheKeyFactory).allBenchmarksKey()",
+        key = "@cacheKeyFactory.allBenchmarksKey()",
         unless = "@cacheFallbackBypass.shouldBypass('LLM')"
     )
     public List<LLMBenchmarkResponse> getAllBenchmarks() {

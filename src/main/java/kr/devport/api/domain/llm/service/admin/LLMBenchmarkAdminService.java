@@ -7,6 +7,7 @@ import kr.devport.api.domain.llm.dto.request.admin.LLMBenchmarkUpdateRequest;
 import kr.devport.api.domain.llm.dto.response.LLMBenchmarkResponse;
 import kr.devport.api.domain.llm.repository.LLMBenchmarkRepository;
 import lombok.RequiredArgsConstructor;
+import kr.devport.api.domain.common.cache.CacheNames;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -20,7 +21,7 @@ public class LLMBenchmarkAdminService {
 
     private final LLMBenchmarkRepository llmBenchmarkRepository;
 
-    @CacheEvict(value = "#{T(kr.devport.api.domain.common.cache.CacheNames).LLM_BENCHMARKS}", allEntries = true)
+    @CacheEvict(value = CacheNames.LLM_BENCHMARKS, allEntries = true)
     public LLMBenchmarkResponse createLLMBenchmark(LLMBenchmarkCreateRequest request) {
         LLMBenchmark benchmark = LLMBenchmark.builder()
             .benchmarkType(request.getBenchmarkType())
@@ -36,7 +37,7 @@ public class LLMBenchmarkAdminService {
         return convertToResponse(saved);
     }
 
-    @CacheEvict(value = "#{T(kr.devport.api.domain.common.cache.CacheNames).LLM_BENCHMARKS}", allEntries = true)
+    @CacheEvict(value = CacheNames.LLM_BENCHMARKS, allEntries = true)
     public LLMBenchmarkResponse updateLLMBenchmark(BenchmarkType benchmarkType, LLMBenchmarkUpdateRequest request) {
         LLMBenchmark benchmark = llmBenchmarkRepository.findById(benchmarkType)
             .orElseThrow(() -> new IllegalArgumentException("LLMBenchmark not found with type: " + benchmarkType));
@@ -51,7 +52,7 @@ public class LLMBenchmarkAdminService {
         return convertToResponse(updated);
     }
 
-    @CacheEvict(value = "#{T(kr.devport.api.domain.common.cache.CacheNames).LLM_BENCHMARKS}", allEntries = true)
+    @CacheEvict(value = CacheNames.LLM_BENCHMARKS, allEntries = true)
     public void deleteLLMBenchmark(BenchmarkType benchmarkType) {
         if (!llmBenchmarkRepository.existsById(benchmarkType)) {
             throw new IllegalArgumentException("LLMBenchmark not found with type: " + benchmarkType);

@@ -9,6 +9,7 @@ import kr.devport.api.domain.llm.dto.response.ModelCreatorResponse;
 import kr.devport.api.domain.llm.repository.LLMModelRepository;
 import kr.devport.api.domain.llm.repository.ModelCreatorRepository;
 import lombok.RequiredArgsConstructor;
+import kr.devport.api.domain.common.cache.CacheNames;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -24,8 +25,8 @@ public class LLMModelAdminService {
     private final ModelCreatorRepository modelCreatorRepository;
 
     @CacheEvict(value = {
-        "#{T(kr.devport.api.domain.common.cache.CacheNames).LLM_MODELS}",
-        "#{T(kr.devport.api.domain.common.cache.CacheNames).LLM_LEADERBOARD}"
+        CacheNames.LLM_MODELS,
+        CacheNames.LLM_LEADERBOARD
     }, allEntries = true)
     public LLMModelDetailResponse createLLMModel(LLMModelCreateRequest request) {
         LLMModel model = LLMModel.builder()
@@ -74,8 +75,8 @@ public class LLMModelAdminService {
     }
 
     @CacheEvict(value = {
-        "#{T(kr.devport.api.domain.common.cache.CacheNames).LLM_MODELS}",
-        "#{T(kr.devport.api.domain.common.cache.CacheNames).LLM_LEADERBOARD}"
+        CacheNames.LLM_MODELS,
+        CacheNames.LLM_LEADERBOARD
     }, allEntries = true)
     public LLMModelDetailResponse updateLLMModel(Long id, LLMModelUpdateRequest request) {
         LLMModel model = llmModelRepository.findById(id)
@@ -124,8 +125,8 @@ public class LLMModelAdminService {
     }
 
     @CacheEvict(value = {
-        "#{T(kr.devport.api.domain.common.cache.CacheNames).LLM_MODELS}",
-        "#{T(kr.devport.api.domain.common.cache.CacheNames).LLM_LEADERBOARD}"
+        CacheNames.LLM_MODELS,
+        CacheNames.LLM_LEADERBOARD
     }, allEntries = true)
     public void deleteLLMModel(Long id) {
         if (!llmModelRepository.existsById(id)) {

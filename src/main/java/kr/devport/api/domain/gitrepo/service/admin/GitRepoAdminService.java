@@ -6,6 +6,7 @@ import kr.devport.api.domain.gitrepo.dto.request.admin.GitRepoUpdateRequest;
 import kr.devport.api.domain.gitrepo.dto.response.GitRepoResponse;
 import kr.devport.api.domain.gitrepo.repository.GitRepoRepository;
 import lombok.RequiredArgsConstructor;
+import kr.devport.api.domain.common.cache.CacheNames;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -20,9 +21,9 @@ public class GitRepoAdminService {
     private final GitRepoRepository gitRepoRepository;
 
     @CacheEvict(value = {
-        "#{T(kr.devport.api.domain.common.cache.CacheNames).GIT_REPOS}",
-        "#{T(kr.devport.api.domain.common.cache.CacheNames).TRENDING_GIT_REPOS}",
-        "#{T(kr.devport.api.domain.common.cache.CacheNames).GIT_REPOS_BY_LANGUAGE}"
+        CacheNames.GIT_REPOS,
+        CacheNames.TRENDING_GIT_REPOS,
+        CacheNames.GIT_REPOS_BY_LANGUAGE
     }, allEntries = true)
     public GitRepoResponse createGitRepo(GitRepoCreateRequest request) {
         GitRepo gitRepo = GitRepo.builder()
@@ -46,9 +47,9 @@ public class GitRepoAdminService {
     }
 
     @CacheEvict(value = {
-        "#{T(kr.devport.api.domain.common.cache.CacheNames).GIT_REPOS}",
-        "#{T(kr.devport.api.domain.common.cache.CacheNames).TRENDING_GIT_REPOS}",
-        "#{T(kr.devport.api.domain.common.cache.CacheNames).GIT_REPOS_BY_LANGUAGE}"
+        CacheNames.GIT_REPOS,
+        CacheNames.TRENDING_GIT_REPOS,
+        CacheNames.GIT_REPOS_BY_LANGUAGE
     }, allEntries = true)
     public GitRepoResponse updateGitRepo(Long id, GitRepoUpdateRequest request) {
         GitRepo gitRepo = gitRepoRepository.findById(id)
@@ -72,9 +73,9 @@ public class GitRepoAdminService {
     }
 
     @CacheEvict(value = {
-        "#{T(kr.devport.api.domain.common.cache.CacheNames).GIT_REPOS}",
-        "#{T(kr.devport.api.domain.common.cache.CacheNames).TRENDING_GIT_REPOS}",
-        "#{T(kr.devport.api.domain.common.cache.CacheNames).GIT_REPOS_BY_LANGUAGE}"
+        CacheNames.GIT_REPOS,
+        CacheNames.TRENDING_GIT_REPOS,
+        CacheNames.GIT_REPOS_BY_LANGUAGE
     }, allEntries = true)
     public void deleteGitRepo(Long id) {
         if (!gitRepoRepository.existsById(id)) {

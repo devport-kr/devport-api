@@ -11,7 +11,6 @@ import kr.devport.api.domain.article.dto.response.ArticlePageResponse;
 import kr.devport.api.domain.article.dto.response.ArticleResponse;
 import kr.devport.api.domain.article.dto.response.TrendingTickerResponse;
 import kr.devport.api.domain.article.repository.ArticleRepository;
-import kr.devport.api.domain.common.cache.CacheKeyFactory;
 import kr.devport.api.domain.common.cache.CacheNames;
 import lombok.RequiredArgsConstructor;
 import org.springframework.cache.annotation.Cacheable;
@@ -34,7 +33,7 @@ public class ArticleService {
 
     @Cacheable(
         value = CacheNames.ARTICLES,
-        key = "T(kr.devport.api.domain.common.cache.CacheKeyFactory).articleListKey(#category, #page, #size)",
+        key = "@cacheKeyFactory.articleListKey(#category, #page, #size)",
         unless = "@cacheFallbackBypass.shouldBypass('ARTICLE')"
     )
     public ArticlePageResponse getArticles(Category category, int page, int size) {
@@ -66,7 +65,7 @@ public class ArticleService {
 
     @Cacheable(
         value = CacheNames.TRENDING_TICKER,
-        key = "T(kr.devport.api.domain.common.cache.CacheKeyFactory).trendingTickerKey(#limit)",
+        key = "@cacheKeyFactory.trendingTickerKey(#limit)",
         unless = "@cacheFallbackBypass.shouldBypass('ARTICLE')"
     )
     public List<TrendingTickerResponse> getTrendingTicker(int limit) {

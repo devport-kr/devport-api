@@ -5,7 +5,6 @@ import kr.devport.api.domain.gitrepo.enums.Category;
 import kr.devport.api.domain.gitrepo.dto.response.GitRepoPageResponse;
 import kr.devport.api.domain.gitrepo.dto.response.GitRepoResponse;
 import kr.devport.api.domain.gitrepo.repository.GitRepoRepository;
-import kr.devport.api.domain.common.cache.CacheKeyFactory;
 import kr.devport.api.domain.common.cache.CacheNames;
 import lombok.RequiredArgsConstructor;
 import org.springframework.cache.annotation.Cacheable;
@@ -28,7 +27,7 @@ public class GitRepoService {
 
     @Cacheable(
         value = CacheNames.GIT_REPOS,
-        key = "T(kr.devport.api.domain.common.cache.CacheKeyFactory).gitRepoListKey(#category, #page, #size)",
+        key = "@cacheKeyFactory.gitRepoListKey(#category, #page, #size)",
         unless = "@cacheFallbackBypass.shouldBypass('GIT_REPO')"
     )
     public GitRepoPageResponse getGitRepos(Category category, int page, int size) {
@@ -59,7 +58,7 @@ public class GitRepoService {
 
     @Cacheable(
         value = CacheNames.TRENDING_GIT_REPOS,
-        key = "T(kr.devport.api.domain.common.cache.CacheKeyFactory).trendingGitReposKey(#page, #size)",
+        key = "@cacheKeyFactory.trendingGitReposKey(#page, #size)",
         unless = "@cacheFallbackBypass.shouldBypass('GIT_REPO')"
     )
     public GitRepoPageResponse getTrendingGitRepos(int page, int size) {
@@ -80,7 +79,7 @@ public class GitRepoService {
 
     @Cacheable(
         value = CacheNames.GIT_REPOS_BY_LANGUAGE,
-        key = "T(kr.devport.api.domain.common.cache.CacheKeyFactory).gitReposByLanguageKey(#language, #limit)",
+        key = "@cacheKeyFactory.gitReposByLanguageKey(#language, #limit)",
         unless = "@cacheFallbackBypass.shouldBypass('GIT_REPO')"
     )
     public List<GitRepoResponse> getGitReposByLanguage(String language, int limit) {

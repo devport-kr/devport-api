@@ -13,6 +13,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 @DisplayName("CacheKeyFactory: 캐시 키 정규화 및 충돌 방지 테스트")
 class CacheKeyFactoryTest {
 
+    private final CacheKeyFactory CacheKeyFactory = new CacheKeyFactory();
+
     @Nested
     @DisplayName("Article 도메인 키 생성")
     class ArticleDomainKeys {

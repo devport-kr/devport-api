@@ -28,7 +28,8 @@ import static org.mockito.Mockito.*;
 @ExtendWith(MockitoExtension.class)
 @DisplayName("Webhook Fallback Integration Tests")
 class WebhookFallbackIntegrationTest {
-    
+
+    private final CacheKeyFactory CacheKeyFactory = new CacheKeyFactory();
     private CacheManager cacheManager;
     private CacheFallbackStateStore fallbackStateStore;
     private CacheFallbackBypass cacheFallbackBypass;

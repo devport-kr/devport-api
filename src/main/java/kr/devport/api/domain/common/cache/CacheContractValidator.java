@@ -7,7 +7,6 @@ import org.springframework.cache.CacheManager;
 import org.springframework.stereotype.Component;
 
 import java.util.Collection;
-import java.util.HashSet;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -17,24 +16,24 @@ import java.util.stream.Collectors;
  */
 @Component
 public class CacheContractValidator {
-    
+
     private static final Logger log = LoggerFactory.getLogger(CacheContractValidator.class);
-    
+
     private final CacheManager cacheManager;
-    
+
     public CacheContractValidator(CacheManager cacheManager) {
         this.cacheManager = cacheManager;
     }
-    
+
     @PostConstruct
     public void validateCacheContract() {
         Set<String> requiredCaches = getRequiredCacheNames();
         Collection<String> initializedCaches = cacheManager.getCacheNames();
-        
+
         Set<String> missingCaches = requiredCaches.stream()
             .filter(cacheName -> !initializedCaches.contains(cacheName))
             .collect(Collectors.toSet());
-        
+
         if (!missingCaches.isEmpty()) {
             String errorMessage = String.format(
                 "Cache contract violation: Required caches are not initialized in CacheManager: %s. " +
@@ -44,23 +43,24 @@ public class CacheContractValidator {
             log.error(errorMessage);
             throw new IllegalStateException(errorMessage);
         }
-        
-        log.info("Cache contract validation passed. All {} required caches are initialized: {}", 
+
+        log.info("Cache contract validation passed. All {} required caches are initialized: {}",
             requiredCaches.size(), requiredCaches);
     }
-    
+
     private Set<String> getRequiredCacheNames() {
-        // Extract all cache names from CacheNames constants via reflection
-        Set<String> cacheNames = new HashSet<>();
-        try {
-            for (var field : CacheNames.class.getDeclaredFields()) {
-                if (field.getType() == String.class && java.lang.reflect.Modifier.isStatic(field.getModifiers())) {
-                    cacheNames.add((String) field.get(null));
-                }
-            }
-        } catch (IllegalAccessException e) {
-            throw new IllegalStateException("Failed to extract cache names from CacheNames class", e);
-        }
-        return cacheNames;
+        return Set.of(
+            CacheNames.ARTICLES,
+            CacheNames.TRENDING_TICKER,
+            CacheNames.GIT_REPOS,
+            CacheNames.TRENDING_GIT_REPOS,
+            CacheNames.GIT_REPOS_BY_LANGUAGE,
+            CacheNames.GITHUB_TRENDING,
+            CacheNames.LLM_LEADERBOARD,
+            CacheNames.LLM_BENCHMARKS,
+            CacheNames.LLM_MODELS,
+            CacheNames.WIKI_PROJECTS,
+            CacheNames.WIKI_PROJECT_PAGE
+        );
     }
 }
