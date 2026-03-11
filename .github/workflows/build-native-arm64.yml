@@ -61,6 +61,9 @@ jobs:
           TAGS="${{ steps.meta.outputs.tags }}"
           FIRST_TAG=$(echo "$TAGS" | head -n 1)
 
+          # Clean to remove stale AOT-generated sources from cache
+          ./gradlew clean
+
           # Build native image using bootBuildImage
           ./gradlew bootBuildImage \
             --imageName="$FIRST_TAG" \
