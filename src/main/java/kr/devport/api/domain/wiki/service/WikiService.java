@@ -14,6 +14,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.OffsetDateTime;
+import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
@@ -94,7 +95,7 @@ public class WikiService {
 
         List<WikiProjectPageResponse.WikiSection> sections = sortedSectionIds.stream()
                 .map(sectionId -> buildSection(sectionId, bySectionId.get(sectionId)))
-                .collect(Collectors.toList());
+                .collect(Collectors.toCollection(ArrayList::new));
 
         List<WikiProjectPageResponse.AnchorItem> anchors = sections.stream()
                 .map(section -> WikiProjectPageResponse.AnchorItem.builder()
@@ -102,13 +103,15 @@ public class WikiService {
                         .heading(section.getHeading())
                         .anchor(section.getAnchor())
                         .build())
-                .collect(Collectors.toList());
+                .collect(Collectors.toCollection(ArrayList::new));
 
         WikiProjectPageResponse.RightRailOrdering rightRail = WikiProjectPageResponse.RightRailOrdering.builder()
                 .activityPriority(1)
                 .releasesPriority(2)
                 .chatPriority(3)
-                .visibleSectionIds(anchors.stream().map(WikiProjectPageResponse.AnchorItem::getSectionId).toList())
+                .visibleSectionIds(anchors.stream()
+                        .map(WikiProjectPageResponse.AnchorItem::getSectionId)
+                        .collect(Collectors.toCollection(ArrayList::new)))
                 .build();
 
         WikiProjectPageResponse.CurrentCounters currentCounters = WikiProjectPageResponse.CurrentCounters.builder()
