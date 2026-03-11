@@ -65,6 +65,8 @@ jobs:
           ./gradlew clean bootBuildImage \
             --imageName="$FIRST_TAG" \
             -Pspring-boot.build-image.imageName="$FIRST_TAG" \
+            -Pspring-boot.build-image.buildpacks="urn:cnb:buildpack:paketo-buildpacks/java-native-image,docker.io/paketobuildpacks/health-checker" \
+            -Pspring-boot.build-image.env.BP_HEALTH_CHECKER_ENABLED=true \
             --no-build-cache \
             --no-daemon
 
