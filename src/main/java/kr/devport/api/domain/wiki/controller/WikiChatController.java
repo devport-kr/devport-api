@@ -10,10 +10,12 @@ import kr.devport.api.domain.common.security.CustomUserDetails;
 import kr.devport.api.domain.wiki.dto.request.WikiChatRequest;
 import kr.devport.api.domain.wiki.dto.response.WikiChatResponse;
 import kr.devport.api.domain.wiki.dto.internal.WikiChatResult;
+import kr.devport.api.domain.wiki.exception.WikiChatRateLimitExceededException;
 import kr.devport.api.domain.wiki.service.WikiAnonRateLimiter;
 import kr.devport.api.domain.wiki.service.WikiChatRateLimiter;
 import kr.devport.api.domain.wiki.service.WikiChatService;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -30,13 +32,13 @@ import java.util.concurrent.Executors;
  * Wiki chat controller.
  * Supports both authenticated and anonymous users (anon: 1 req/day via IP limit).
  */
+@Slf4j
 @RestController
 @RequestMapping("/api/wiki/projects")
 @RequiredArgsConstructor
 public class WikiChatController {
 
     private static final long STREAM_TIMEOUT_MILLIS = 120_000L;
-    private static final String STREAM_ERROR_MESSAGE = "처리 중 오류가 발생했습니다.";
 
     private final WikiChatService wikiChatService;
     private final WikiChatRateLimiter rateLimiter;
@@ -188,10 +190,11 @@ public class WikiChatController {
     }
 
     private void handleStreamFailure(SseEmitter emitter, Exception ex) {
+        log.error("Wiki chat stream failed", ex);
         try {
-            String message = (ex.getMessage() != null && !ex.getMessage().isBlank())
+            String message = ex instanceof WikiChatRateLimitExceededException
                     ? ex.getMessage()
-                    : STREAM_ERROR_MESSAGE;
+                    : "서비스 처리 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.";
             emitter.send(SseEmitter.event()
                     .name("error")
                     .data(Map.of("message", message), MediaType.APPLICATION_JSON));
