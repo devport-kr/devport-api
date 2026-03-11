@@ -2,13 +2,8 @@ package kr.devport.api.domain.auth.service;
 
 import jakarta.servlet.http.HttpServletRequest;
 import kr.devport.api.domain.auth.entity.User;
-import kr.devport.api.domain.auth.enums.AuthProvider;
 import kr.devport.api.domain.auth.repository.UserRepository;
 import kr.devport.api.domain.common.exception.InvalidTokenException;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.RedisTemplate;
@@ -20,14 +15,16 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
 import java.time.Duration;
-import java.time.LocalDateTime;
 import java.util.Base64;
+import java.util.Map;
 
 @Service
 @RequiredArgsConstructor
 public class OAuth2ExchangeCodeService {
 
     private static final String KEY_PREFIX = "auth:oauth2:exchange:";
+    private static final String USER_ID_KEY = "userId";
+    private static final String USER_AGENT_HASH_KEY = "userAgentHash";
 
     private final RedisTemplate<String, Object> redisTemplate;
     private final UserRepository userRepository;
@@ -38,12 +35,10 @@ public class OAuth2ExchangeCodeService {
 
     public String createExchangeCode(User user, HttpServletRequest request) {
         String code = generateCode();
-        OAuth2ExchangeCodePayload payload = OAuth2ExchangeCodePayload.builder()
-            .userId(user.getId())
-            .provider(user.getAuthProvider())
-            .userAgentHash(hash(normalizeUserAgent(request.getHeader("User-Agent"))))
-            .createdAt(LocalDateTime.now())
-            .build();
+        Map<String, Object> payload = Map.of(
+            USER_ID_KEY, user.getId(),
+            USER_AGENT_HASH_KEY, hash(normalizeUserAgent(request.getHeader("User-Agent")))
+        );
 
         ValueOperations<String, Object> valueOperations = redisTemplate.opsForValue();
         valueOperations.set(buildKey(code), payload, Duration.ofSeconds(exchangeCodeTtlSeconds));
@@ -52,16 +47,22 @@ public class OAuth2ExchangeCodeService {
 
     public User consumeExchangeCode(String code, HttpServletRequest request) {
         Object stored = redisTemplate.opsForValue().getAndDelete(buildKey(code));
-        if (!(stored instanceof OAuth2ExchangeCodePayload payload)) {
+        if (!(stored instanceof Map<?, ?> payload)) {
+            throw new InvalidTokenException("OAuth2 exchange code is invalid or expired");
+        }
+
+        Object userIdValue = payload.get(USER_ID_KEY);
+        Object userAgentHashValue = payload.get(USER_AGENT_HASH_KEY);
+        if (!(userIdValue instanceof Number userIdNumber) || !(userAgentHashValue instanceof String userAgentHash)) {
             throw new InvalidTokenException("OAuth2 exchange code is invalid or expired");
         }
 
         String presentedUserAgentHash = hash(normalizeUserAgent(request.getHeader("User-Agent")));
-        if (!payload.getUserAgentHash().equals(presentedUserAgentHash)) {
+        if (!userAgentHash.equals(presentedUserAgentHash)) {
             throw new InvalidTokenException("OAuth2 exchange code is invalid or expired");
         }
 
-        return userRepository.findById(payload.getUserId())
+        return userRepository.findById(userIdNumber.longValue())
             .orElseThrow(() -> new InvalidTokenException("OAuth2 exchange code is invalid or expired"));
     }
 
@@ -87,16 +88,5 @@ public class OAuth2ExchangeCodeService {
         } catch (NoSuchAlgorithmException e) {
             throw new IllegalStateException("SHA-256 algorithm is not available", e);
         }
-    }
-
-    @Data
-    @Builder
-    @NoArgsConstructor
-    @AllArgsConstructor
-    public static class OAuth2ExchangeCodePayload {
-        private Long userId;
-        private AuthProvider provider;
-        private String userAgentHash;
-        private LocalDateTime createdAt;
     }
 }

@@ -12,7 +12,9 @@ import java.time.Duration;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 
@@ -30,6 +32,14 @@ public class WikiChatSessionStore {
     private static final int MAX_RECENT_TURNS = 3;
     private static final Duration SESSION_TTL = Duration.ofMinutes(DEFAULT_TTL_MINUTES);
     private static final String KEY_PREFIX = "wiki:session:";
+    private static final String SESSION_ID_KEY = "sessionId";
+    private static final String TURNS_KEY = "turns";
+    private static final String EXPIRES_AT_KEY = "expiresAt";
+    private static final String PROJECT_EXTERNAL_ID_KEY = "projectExternalId";
+    private static final String QUESTION_KEY = "question";
+    private static final String ANSWER_KEY = "answer";
+    private static final String TIMESTAMP_KEY = "timestamp";
+    private static final String WAS_CLARIFICATION_KEY = "wasClarification";
 
     private final RedisTemplate<String, Object> redisTemplate;
 
@@ -98,7 +108,7 @@ public class WikiChatSessionStore {
         }
 
         session.setExpiresAt(calculateExpiration());
-        redisTemplate.opsForValue().set(key, session, SESSION_TTL);
+        redisTemplate.opsForValue().set(key, serializeSession(session), SESSION_TTL);
     }
 
     /**
@@ -178,7 +188,13 @@ public class WikiChatSessionStore {
      */
     private ChatSession fetchSession(String key) {
         Object raw = redisTemplate.opsForValue().get(key);
-        return raw instanceof ChatSession session ? session : null;
+        if (raw instanceof ChatSession session) {
+            return session;
+        }
+        if (!(raw instanceof Map<?, ?> payload)) {
+            return null;
+        }
+        return deserializeSession(payload);
     }
 
     /**
@@ -186,6 +202,99 @@ public class WikiChatSessionStore {
      */
     private Instant calculateExpiration() {
         return Instant.now().plus(DEFAULT_TTL_MINUTES, ChronoUnit.MINUTES);
+    }
+
+    private Map<String, Object> serializeSession(ChatSession session) {
+        List<Map<String, Object>> serializedTurns = session.getTurns().stream()
+                .map(this::serializeTurn)
+                .toList();
+
+        Map<String, Object> payload = new HashMap<>();
+        payload.put(SESSION_ID_KEY, session.getSessionId());
+        payload.put(PROJECT_EXTERNAL_ID_KEY, session.getProjectExternalId());
+        payload.put(EXPIRES_AT_KEY, session.getExpiresAt().toString());
+        payload.put(TURNS_KEY, serializedTurns);
+        return payload;
+    }
+
+    private Map<String, Object> serializeTurn(ChatTurn turn) {
+        Map<String, Object> payload = new HashMap<>();
+        payload.put(QUESTION_KEY, turn.getQuestion());
+        payload.put(ANSWER_KEY, turn.getAnswer());
+        payload.put(TIMESTAMP_KEY, turn.getTimestamp().toString());
+        payload.put(WAS_CLARIFICATION_KEY, turn.isWasClarification());
+        return payload;
+    }
+
+    private ChatSession deserializeSession(Map<?, ?> payload) {
+        Object sessionIdValue = payload.get(SESSION_ID_KEY);
+        Object expiresAtValue = payload.get(EXPIRES_AT_KEY);
+        Object turnsValue = payload.get(TURNS_KEY);
+        Object projectExternalIdValue = payload.get(PROJECT_EXTERNAL_ID_KEY);
+
+        if (!(sessionIdValue instanceof String sessionId) || !(expiresAtValue instanceof String expiresAtRaw)) {
+            return null;
+        }
+
+        List<ChatTurn> turns = deserializeTurns(turnsValue);
+        if (turns == null) {
+            return null;
+        }
+
+        try {
+            return ChatSession.builder()
+                    .sessionId(sessionId)
+                    .projectExternalId(projectExternalIdValue instanceof String projectExternalId ? projectExternalId : null)
+                    .expiresAt(Instant.parse(expiresAtRaw))
+                    .turns(turns)
+                    .build();
+        } catch (Exception ignored) {
+            return null;
+        }
+    }
+
+    private List<ChatTurn> deserializeTurns(Object turnsValue) {
+        if (!(turnsValue instanceof List<?> turnsRaw)) {
+            return null;
+        }
+
+        List<ChatTurn> turns = new ArrayList<>();
+        for (Object turnRaw : turnsRaw) {
+            if (!(turnRaw instanceof Map<?, ?> turnPayload)) {
+                return null;
+            }
+            ChatTurn turn = deserializeTurn(turnPayload);
+            if (turn == null) {
+                return null;
+            }
+            turns.add(turn);
+        }
+        return turns;
+    }
+
+    private ChatTurn deserializeTurn(Map<?, ?> payload) {
+        Object questionValue = payload.get(QUESTION_KEY);
+        Object answerValue = payload.get(ANSWER_KEY);
+        Object timestampValue = payload.get(TIMESTAMP_KEY);
+        Object wasClarificationValue = payload.get(WAS_CLARIFICATION_KEY);
+
+        if (!(questionValue instanceof String question)
+                || !(answerValue instanceof String answer)
+                || !(timestampValue instanceof String timestampRaw)
+                || !(wasClarificationValue instanceof Boolean wasClarification)) {
+            return null;
+        }
+
+        try {
+            return ChatTurn.builder()
+                    .question(question)
+                    .answer(answer)
+                    .timestamp(Instant.parse(timestampRaw))
+                    .wasClarification(wasClarification)
+                    .build();
+        } catch (Exception ignored) {
+            return null;
+        }
     }
 
     /**
