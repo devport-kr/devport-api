@@ -1,6 +1,10 @@
 package kr.devport.api.domain.common.cache;
 
 import kr.devport.api.domain.llm.enums.BenchmarkType;
+import org.springframework.aot.hint.MemberCategory;
+import org.springframework.aot.hint.RuntimeHints;
+import org.springframework.aot.hint.RuntimeHintsRegistrar;
+import org.springframework.context.annotation.ImportRuntimeHints;
 import org.springframework.stereotype.Component;
 
 import java.math.BigDecimal;
@@ -15,7 +19,15 @@ import java.util.stream.Collectors;
  * lookups that fail in GraalVM native images.
  */
 @Component
+@ImportRuntimeHints(CacheKeyFactory.CacheKeyFactoryRuntimeHints.class)
 public class CacheKeyFactory {
+
+    public static class CacheKeyFactoryRuntimeHints implements RuntimeHintsRegistrar {
+        @Override
+        public void registerHints(RuntimeHints hints, ClassLoader classLoader) {
+            hints.reflection().registerType(CacheKeyFactory.class, MemberCategory.INVOKE_PUBLIC_METHODS);
+        }
+    }
 
     // ========== Article Domain Keys ==========
 

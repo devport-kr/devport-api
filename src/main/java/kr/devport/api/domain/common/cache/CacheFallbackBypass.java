@@ -2,6 +2,10 @@ package kr.devport.api.domain.common.cache;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.aot.hint.MemberCategory;
+import org.springframework.aot.hint.RuntimeHints;
+import org.springframework.aot.hint.RuntimeHintsRegistrar;
+import org.springframework.context.annotation.ImportRuntimeHints;
 import org.springframework.stereotype.Component;
 
 /**
@@ -26,7 +30,15 @@ import org.springframework.stereotype.Component;
 @Component("cacheFallbackBypass")
 @RequiredArgsConstructor
 @Slf4j
+@ImportRuntimeHints(CacheFallbackBypass.CacheFallbackBypassRuntimeHints.class)
 public class CacheFallbackBypass {
+    
+    public static class CacheFallbackBypassRuntimeHints implements RuntimeHintsRegistrar {
+        @Override
+        public void registerHints(RuntimeHints hints, ClassLoader classLoader) {
+            hints.reflection().registerType(CacheFallbackBypass.class, MemberCategory.INVOKE_PUBLIC_METHODS);
+        }
+    }
     
     private final CacheFallbackStateStore stateStore;
     
