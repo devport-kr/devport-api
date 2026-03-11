@@ -5,8 +5,10 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.serializer.SerializationException;
 
 import java.time.Duration;
 import java.time.Instant;
@@ -17,12 +19,14 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
  * Redis-backed session store for wiki chat turns.
  * Sessions expire via Redis TTL and remain available across restarts and nodes.
  * Keeps storage bounded by storing only recent turns per session.
  */
+@Slf4j
 @Component
 @RequiredArgsConstructor
 public class WikiChatSessionStore {
@@ -185,9 +189,16 @@ public class WikiChatSessionStore {
 
     /**
      * Load a session from Redis, returning null if missing or deserialized to an unexpected type.
+     * SerializationException is treated as a cache miss (stale data from a prior deployment).
      */
     private ChatSession fetchSession(String key) {
-        Object raw = redisTemplate.opsForValue().get(key);
+        Object raw;
+        try {
+            raw = redisTemplate.opsForValue().get(key);
+        } catch (SerializationException ex) {
+            log.warn("wiki-session: deserialization failed for key={}, treating as cache miss: {}", key, ex.getMessage());
+            return null;
+        }
         if (raw instanceof ChatSession session) {
             return session;
         }
@@ -207,7 +218,7 @@ public class WikiChatSessionStore {
     private Map<String, Object> serializeSession(ChatSession session) {
         List<Map<String, Object>> serializedTurns = session.getTurns().stream()
                 .map(this::serializeTurn)
-                .toList();
+                .collect(Collectors.toCollection(ArrayList::new));
 
         Map<String, Object> payload = new HashMap<>();
         payload.put(SESSION_ID_KEY, session.getSessionId());
