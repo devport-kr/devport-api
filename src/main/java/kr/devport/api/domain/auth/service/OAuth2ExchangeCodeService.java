@@ -16,6 +16,7 @@ import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
 import java.time.Duration;
 import java.util.Base64;
+import java.util.HashMap;
 import java.util.Map;
 
 @Service
@@ -35,10 +36,9 @@ public class OAuth2ExchangeCodeService {
 
     public String createExchangeCode(User user, HttpServletRequest request) {
         String code = generateCode();
-        Map<String, Object> payload = Map.of(
-            USER_ID_KEY, user.getId(),
-            USER_AGENT_HASH_KEY, hash(normalizeUserAgent(request.getHeader("User-Agent")))
-        );
+        Map<String, Object> payload = new HashMap<>();
+        payload.put(USER_ID_KEY, user.getId());
+        payload.put(USER_AGENT_HASH_KEY, hash(normalizeUserAgent(request.getHeader("User-Agent"))));
 
         ValueOperations<String, Object> valueOperations = redisTemplate.opsForValue();
         valueOperations.set(buildKey(code), payload, Duration.ofSeconds(exchangeCodeTtlSeconds));
