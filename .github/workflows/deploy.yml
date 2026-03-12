@@ -14,6 +14,7 @@ jobs:
     runs-on: ubuntu-24.04
     permissions:
       contents: read
+      packages: read
 
     steps:
       - name: Configure AWS credentials
@@ -108,7 +109,7 @@ jobs:
           import json
           script = open('/tmp/deploy.sh').read()
           # Inject GHCR credentials as env vars so they never touch disk
-          script = 'export GHCR_PAT=${{ secrets.GHCR_PAT }}\nexport GHCR_USER=${{ secrets.GHCR_USER }}\n' + script
+          script = 'export GHCR_PAT=${{ secrets.GITHUB_TOKEN }}\nexport GHCR_USER=${{ github.actor }}\n' + script
           payload = {
               'InstanceIds': ['${{ secrets.EC2_INSTANCE_ID }}'],
               'DocumentName': 'AWS-RunShellScript',
