@@ -21,7 +21,6 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(DuplicateUsernameException.class)
     public ResponseEntity<ErrorResponse> handleDuplicateUsername(DuplicateUsernameException ex) {
-        log.warn("Duplicate username: {}", ex.getMessage());
         ErrorResponse error = ErrorResponse.builder()
             .timestamp(LocalDateTime.now())
             .status(HttpStatus.CONFLICT.value())
@@ -33,7 +32,6 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(DuplicateEmailException.class)
     public ResponseEntity<ErrorResponse> handleDuplicateEmail(DuplicateEmailException ex) {
-        log.warn("Duplicate email: {}", ex.getMessage());
         ErrorResponse error = ErrorResponse.builder()
             .timestamp(LocalDateTime.now())
             .status(HttpStatus.CONFLICT.value())
@@ -45,7 +43,6 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(InvalidCredentialsException.class)
     public ResponseEntity<ErrorResponse> handleInvalidCredentials(InvalidCredentialsException ex) {
-        log.warn("Invalid credentials: {}", ex.getMessage());
         ErrorResponse error = ErrorResponse.builder()
             .timestamp(LocalDateTime.now())
             .status(HttpStatus.UNAUTHORIZED.value())
@@ -57,7 +54,6 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(EmailVerificationRequiredException.class)
     public ResponseEntity<ErrorResponse> handleEmailVerificationRequired(EmailVerificationRequiredException ex) {
-        log.warn("Email verification required: {}", ex.getMessage());
         ErrorResponse error = ErrorResponse.builder()
             .timestamp(LocalDateTime.now())
             .status(HttpStatus.FORBIDDEN.value())
@@ -69,7 +65,6 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(OAuth2AccountException.class)
     public ResponseEntity<ErrorResponse> handleOAuth2Account(OAuth2AccountException ex) {
-        log.warn("OAuth2 account error: {}", ex.getMessage());
         ErrorResponse error = ErrorResponse.builder()
             .timestamp(LocalDateTime.now())
             .status(HttpStatus.BAD_REQUEST.value())
@@ -81,7 +76,6 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(TokenExpiredException.class)
     public ResponseEntity<ErrorResponse> handleTokenExpired(TokenExpiredException ex) {
-        log.warn("Token expired: {}", ex.getMessage());
         ErrorResponse error = ErrorResponse.builder()
             .timestamp(LocalDateTime.now())
             .status(HttpStatus.BAD_REQUEST.value())
@@ -93,7 +87,6 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(TokenNotFoundException.class)
     public ResponseEntity<ErrorResponse> handleTokenNotFound(TokenNotFoundException ex) {
-        log.warn("Token not found: {}", ex.getMessage());
         ErrorResponse error = ErrorResponse.builder()
             .timestamp(LocalDateTime.now())
             .status(HttpStatus.NOT_FOUND.value())
@@ -105,7 +98,6 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(InvalidTokenException.class)
     public ResponseEntity<ErrorResponse> handleInvalidToken(InvalidTokenException ex) {
-        log.warn("Invalid token: {}", ex.getMessage());
         ErrorResponse error = ErrorResponse.builder()
             .timestamp(LocalDateTime.now())
             .status(HttpStatus.UNAUTHORIZED.value())
@@ -117,7 +109,6 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(UsernameNotFoundException.class)
     public ResponseEntity<ErrorResponse> handleUsernameNotFound(UsernameNotFoundException ex) {
-        log.warn("User not found: {}", ex.getMessage());
         ErrorResponse error = ErrorResponse.builder()
             .timestamp(LocalDateTime.now())
             .status(HttpStatus.NOT_FOUND.value())
@@ -129,7 +120,6 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(LLMProcessingException.class)
     public ResponseEntity<ErrorResponse> handleLLMProcessing(LLMProcessingException ex) {
-        log.error("LLM processing error: {}", ex.getMessage());
         ErrorResponse error = ErrorResponse.builder()
             .timestamp(LocalDateTime.now())
             .status(HttpStatus.SERVICE_UNAVAILABLE.value())
@@ -141,7 +131,6 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(WikiSessionNotFoundException.class)
     public ResponseEntity<ErrorResponse> handleWikiSessionNotFound(WikiSessionNotFoundException ex) {
-        log.warn("Wiki session not found: {}", ex.getMessage());
         ErrorResponse error = ErrorResponse.builder()
             .timestamp(LocalDateTime.now())
             .status(HttpStatus.NOT_FOUND.value())
@@ -153,7 +142,6 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(WikiChatRateLimitExceededException.class)
     public ResponseEntity<ErrorResponse> handleWikiChatRateLimit(WikiChatRateLimitExceededException ex) {
-        log.warn("Wiki chat rate limit exceeded: {}", ex.getMessage());
         ErrorResponse error = ErrorResponse.builder()
             .timestamp(LocalDateTime.now())
             .status(HttpStatus.TOO_MANY_REQUESTS.value())
@@ -180,6 +168,18 @@ public class GlobalExceptionHandler {
             .validationErrors(errors)
             .build();
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(error);
+    }
+
+    @ExceptionHandler(Exception.class)
+    public ResponseEntity<ErrorResponse> handleUnexpectedException(Exception ex) {
+        log.error("Unhandled API exception", ex);
+        ErrorResponse error = ErrorResponse.builder()
+            .timestamp(LocalDateTime.now())
+            .status(HttpStatus.INTERNAL_SERVER_ERROR.value())
+            .error("Internal Server Error")
+            .message("서비스 처리 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.")
+            .build();
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(error);
     }
 
     @lombok.Data

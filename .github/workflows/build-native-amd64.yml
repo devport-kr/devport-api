@@ -3,7 +3,7 @@ name: Build and Push Native Image (amd64)
 on:
   push:
     branches:
-      - main
+      - dev
     tags:
       - 'v*'
   workflow_dispatch:
@@ -55,7 +55,7 @@ jobs:
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}
             type=sha,prefix={{branch}}-
-            type=raw,value=latest,enable={{is_default_branch}}
+            type=raw,value=latest
 
       - name: Build and push native image with Cloud Native Buildpacks
         run: |

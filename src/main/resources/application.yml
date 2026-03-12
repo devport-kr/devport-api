@@ -140,6 +140,8 @@ logging:
     org.springframework.jdbc.core: DEBUG
     org.springframework.cache: TRACE
     org.springframework.data.redis: DEBUG
+  pattern:
+    console: "%d{HH:mm:ss.SSS} [%thread] %-5level %logger{36} [requestId=%X{requestId:-none}] - %msg%n"
 
 springdoc:
   api-docs:

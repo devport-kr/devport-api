@@ -42,14 +42,19 @@ public class CacheAdminController {
     @GetMapping("/fallback/status")
     public ResponseEntity<Map<String, ScopeStatus>> getFallbackStatus() {
         Map<String, ScopeStatus> status = new HashMap<>();
+        int uncertainScopeCount = 0;
         
         for (CacheScope scope : CacheScope.values()) {
             boolean uncertain = stateStore.isUncertain(scope);
             String jobId = stateStore.getUncertainJobId(scope);
+            if (uncertain) {
+                uncertainScopeCount++;
+            }
             status.put(scope.name(), new ScopeStatus(uncertain, jobId));
         }
         
-        log.info("Admin queried fallback status: {}", status);
+        log.debug("Admin queried fallback status for {} scopes (uncertainScopes={})",
+            status.size(), uncertainScopeCount);
         return ResponseEntity.ok(status);
     }
     
@@ -81,7 +86,7 @@ public class CacheAdminController {
                 jobId
             );
             
-            log.info("Admin queried fallback status for scope={}: uncertain={}, jobId={}", 
+            log.debug("Admin queried fallback status for scope={}: uncertain={}, jobId={}",
                 scope, uncertain, jobId);
             
             return ResponseEntity.ok(detail);
@@ -128,7 +133,7 @@ public class CacheAdminController {
                 jobId
             );
             
-            log.warn("Admin manually marked scope={} as uncertain with jobId={}", scope, jobId);
+            log.info("Admin manually marked scope={} as uncertain with jobId={}", scope, jobId);
             
             return ResponseEntity.ok(result);
         } catch (IllegalArgumentException e) {

@@ -283,8 +283,7 @@ public class ArticleLLMService {
 
             return new LLMArticleResult(isTechnical, titleKo, summaryKo, category, tags, url);
         } catch (JsonProcessingException e) {
-            log.error("Failed to parse LLM response as JSON: {}", e.getMessage());
-            log.error("Response content (first 500 chars): {}", content.substring(0, Math.min(500, content.length())));
+            log.error("Failed to parse LLM response as JSON for url={}", originalUrl, e);
             throw new LLMProcessingException("Failed to parse LLM response", e);
         }
     }

@@ -51,3 +51,5 @@ logging:
     kr.devport.api: INFO
     org.springframework.cache: DEBUG  # Cache operations visible for debugging
     org.springframework.data.redis: DEBUG
+  pattern:
+    console: "%d{HH:mm:ss.SSS} [%thread] %-5level %logger{36} [requestId=%X{requestId:-none}] - %msg%n"

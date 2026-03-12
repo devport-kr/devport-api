@@ -57,7 +57,7 @@ public class EmailVerificationService {
         // Delete the token after successful verification
         tokenRepository.delete(verificationToken);
 
-        log.info("Email verified for user: {}", user.getUsername());
+        log.info("Email verified for userId={}", user.getId());
     }
 
     @Transactional
@@ -72,7 +72,7 @@ public class EmailVerificationService {
         EmailVerificationToken token = createVerificationToken(user);
         emailService.sendVerificationEmail(user, token.getToken());
 
-        log.info("Verification email resent to: {}", user.getEmail());
+        log.info("Verification email reissued for userId={}", user.getId());
     }
 
     @Transactional
@@ -84,13 +84,13 @@ public class EmailVerificationService {
 
             EmailVerificationToken token = createVerificationToken(user);
             emailService.sendVerificationEmail(user, token.getToken());
-            log.info("Verification email resent to eligible user: {}", user.getEmail());
+            log.debug("Verification email reissued for eligible local account");
         });
     }
 
     @Transactional
     public void deleteExpiredTokens() {
         tokenRepository.deleteByExpiresAtBefore(LocalDateTime.now());
-        log.info("Expired email verification tokens deleted");
+        log.debug("Expired email verification tokens deleted");
     }
 }

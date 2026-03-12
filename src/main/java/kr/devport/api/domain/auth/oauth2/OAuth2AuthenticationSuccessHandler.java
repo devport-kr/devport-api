@@ -7,6 +7,7 @@ import kr.devport.api.domain.auth.repository.UserRepository;
 import kr.devport.api.domain.common.security.CustomUserDetails;
 import kr.devport.api.domain.auth.service.OAuth2ExchangeCodeService;
 import kr.devport.api.domain.auth.service.TurnstileService;
+import kr.devport.api.domain.common.logging.LogSanitizer;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -54,7 +55,7 @@ public class OAuth2AuthenticationSuccessHandler extends SimpleUrlAuthenticationS
         String turnstileToken = CustomOAuth2AuthorizationRequestResolver.extractTurnstileTokenFromState(state);
 
         if (turnstileToken == null || turnstileToken.isEmpty()) {
-            log.warn("Turnstile token not found in OAuth2 state parameter. Redirecting to login with error.");
+            log.debug("Missing Turnstile token in OAuth2 state");
             return buildFailureRedirectUrl("Turnstile token is missing");
         }
 
@@ -62,11 +63,11 @@ public class OAuth2AuthenticationSuccessHandler extends SimpleUrlAuthenticationS
         boolean isValid = turnstileService.validateToken(turnstileToken, clientIp);
 
         if (!isValid) {
-            log.warn("Turnstile token validation failed for IP: {}. Redirecting to login with error.", clientIp);
+            log.warn("Turnstile validation failed for OAuth2 login, clientIp={}", LogSanitizer.maskIp(clientIp));
             return buildFailureRedirectUrl("Bot verification failed");
         }
 
-        log.info("Turnstile token validated successfully. Proceeding with OAuth2 login.");
+        log.debug("Turnstile validation succeeded for OAuth2 login");
 
         CustomUserDetails userDetails = (CustomUserDetails) authentication.getPrincipal();
         User user = userRepository.findById(userDetails.getId())

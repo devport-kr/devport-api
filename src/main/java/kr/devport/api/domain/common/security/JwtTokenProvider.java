@@ -65,7 +65,7 @@ public class JwtTokenProvider {
             parseAndValidateClaims(token);
             return true;
         } catch (IllegalArgumentException ex) {
-            log.error(ex.getMessage());
+            log.debug("Rejected JWT token: {}", ex.getMessage());
         }
         return false;
     }

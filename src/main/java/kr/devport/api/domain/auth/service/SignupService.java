@@ -57,7 +57,7 @@ public class SignupService {
             .build();
 
         user = userRepository.save(user);
-        log.info("User created with username: {}", user.getUsername());
+        log.info("User signup completed for userId={}", user.getId());
 
         // Generate email verification token
         String token = UUID.randomUUID().toString();

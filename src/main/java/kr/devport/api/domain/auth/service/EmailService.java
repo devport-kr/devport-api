@@ -1,6 +1,7 @@
 package kr.devport.api.domain.auth.service;
 
 import kr.devport.api.domain.auth.entity.User;
+import kr.devport.api.domain.common.logging.LogSanitizer;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -44,9 +45,9 @@ public class EmailService {
             );
 
             mailSender.send(message);
-            log.info("Verification email sent to: {}", user.getEmail());
+            log.debug("Verification email sent to {}", LogSanitizer.maskEmail(user.getEmail()));
         } catch (Exception e) {
-            log.error("Failed to send verification email to: {}", user.getEmail(), e);
+            log.error("Failed to send verification email to {}", LogSanitizer.maskEmail(user.getEmail()), e);
             throw new RuntimeException("Failed to send verification email", e);
         }
     }
@@ -70,9 +71,9 @@ public class EmailService {
             );
 
             mailSender.send(message);
-            log.info("Password reset email sent to: {}", user.getEmail());
+            log.debug("Password reset email sent to {}", LogSanitizer.maskEmail(user.getEmail()));
         } catch (Exception e) {
-            log.error("Failed to send password reset email to: {}", user.getEmail(), e);
+            log.error("Failed to send password reset email to {}", LogSanitizer.maskEmail(user.getEmail()), e);
             throw new RuntimeException("Failed to send password reset email", e);
         }
     }

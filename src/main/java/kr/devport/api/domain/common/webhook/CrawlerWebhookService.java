@@ -40,7 +40,7 @@ public class CrawlerWebhookService {
      */
     public boolean validateSignature(String payload, String signature) {
         if (webhookSecret == null || webhookSecret.isBlank()) {
-            log.warn("CRAWLER_WEBHOOK_SECRET not configured - webhook authentication disabled");
+            log.error("CRAWLER_WEBHOOK_SECRET is not configured; rejecting crawler webhook");
             return false;
         }
         
@@ -56,10 +56,9 @@ public class CrawlerWebhookService {
             String computedSignature = HexFormat.of().formatHex(hmacBytes);
             
             boolean isValid = computedSignature.equalsIgnoreCase(signature);
-            
+
             if (!isValid) {
-                log.warn("Invalid webhook signature. Expected: {}, Got: {}", 
-                    computedSignature, signature);
+                log.warn("Rejected crawler webhook because signature validation failed");
             }
             
             return isValid;
