@@ -64,6 +64,9 @@ jobs:
 
           log "=== Deploy started ==="
 
+          # Login to GHCR
+          echo "$GHCR_PAT" | docker login ghcr.io -u "$GHCR_USER" --password-stdin
+
           # 1. Pull & start green
           docker compose --profile green pull devport-api-green
           docker compose --profile green up -d devport-api-green
@@ -104,6 +107,8 @@ jobs:
           python3 -c "
           import json
           script = open('/tmp/deploy.sh').read()
+          # Inject GHCR credentials as env vars so they never touch disk
+          script = 'export GHCR_PAT=${{ secrets.GHCR_PAT }}\nexport GHCR_USER=${{ secrets.GHCR_USER }}\n' + script
           payload = {
               'InstanceIds': ['${{ secrets.EC2_INSTANCE_ID }}'],
               'DocumentName': 'AWS-RunShellScript',
