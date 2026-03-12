@@ -6,13 +6,16 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import kr.devport.api.domain.auth.entity.User;
 import kr.devport.api.domain.auth.repository.UserRepository;
+import kr.devport.api.domain.common.logging.LoggingContext;
 import kr.devport.api.domain.common.security.CustomUserDetails;
 import kr.devport.api.domain.wiki.dto.request.WikiGlobalChatRequest;
 import kr.devport.api.domain.wiki.dto.response.WikiGlobalChatResponse;
+import kr.devport.api.domain.wiki.exception.WikiChatRateLimitExceededException;
 import kr.devport.api.domain.wiki.service.WikiAnonRateLimiter;
 import kr.devport.api.domain.wiki.service.WikiChatRateLimiter;
 import kr.devport.api.domain.wiki.service.WikiGlobalChatService;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -31,6 +34,7 @@ import java.util.concurrent.Executors;
 @RestController
 @RequestMapping("/api/wiki/chat")
 @RequiredArgsConstructor
+@Slf4j
 public class WikiGlobalChatController {
 
     private static final long STREAM_TIMEOUT_MILLIS = 120_000L;
@@ -69,7 +73,7 @@ public class WikiGlobalChatController {
         SseEmitter emitter = new SseEmitter(STREAM_TIMEOUT_MILLIS);
         emitter.onTimeout(emitter::complete);
 
-        streamExecutor.execute(() -> {
+        streamExecutor.execute(LoggingContext.wrap(() -> {
             try {
                 User user;
                 if (clientIp != null) {
@@ -93,7 +97,7 @@ public class WikiGlobalChatController {
             } catch (Exception ex) {
                 handleStreamFailure(emitter, ex);
             }
-        });
+        }));
 
         return emitter;
     }
@@ -134,8 +138,9 @@ public class WikiGlobalChatController {
     }
 
     private void handleStreamFailure(SseEmitter emitter, Exception ex) {
+        log.error("Wiki global chat stream failed", ex);
         try {
-            String message = (ex.getMessage() != null && !ex.getMessage().isBlank())
+            String message = ex instanceof WikiChatRateLimitExceededException
                     ? ex.getMessage()
                     : STREAM_ERROR_MESSAGE;
             emitter.send(SseEmitter.event()

@@ -66,10 +66,10 @@ public class ProfileService {
         if (emailChanged) {
             EmailVerificationToken token = emailVerificationService.createVerificationToken(user);
             emailService.sendVerificationEmail(user, token.getToken());
-            log.info("Email changed for user: {}, verification email sent", user.getUsername());
+            log.info("Email updated and reverification triggered for userId={}", user.getId());
         }
 
-        log.info("Profile updated for user: {}", user.getUsername());
+        log.debug("Profile updated for userId={}", user.getId());
         return user;
     }
 
@@ -96,7 +96,7 @@ public class ProfileService {
         userRepository.save(user);
         refreshTokenService.deleteByUser(user);
 
-        log.info("Password changed for user: {}", user.getUsername());
+        log.info("Password changed for userId={}", user.getId());
     }
 
     @Transactional
@@ -115,7 +115,7 @@ public class ProfileService {
         user.setUpdatedAt(LocalDateTime.now());
         userRepository.save(user);
 
-        log.info("Email removed for user: {}", user.getId());
+        log.info("Email removed for userId={}", user.getId());
     }
 
     @Transactional
@@ -128,7 +128,7 @@ public class ProfileService {
         user.setUpdatedAt(LocalDateTime.now());
 
         user = userRepository.save(user);
-        log.info("Flair updated for user: {}", user.getUsername());
+        log.debug("Flair updated for userId={}", user.getId());
         return user;
     }
 }

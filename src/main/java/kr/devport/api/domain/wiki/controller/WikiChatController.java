@@ -6,6 +6,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import kr.devport.api.domain.auth.entity.User;
 import kr.devport.api.domain.auth.repository.UserRepository;
+import kr.devport.api.domain.common.logging.LoggingContext;
 import kr.devport.api.domain.common.security.CustomUserDetails;
 import kr.devport.api.domain.wiki.dto.request.WikiChatRequest;
 import kr.devport.api.domain.wiki.dto.response.WikiChatResponse;
@@ -118,7 +119,7 @@ public class WikiChatController {
         SseEmitter emitter = new SseEmitter(STREAM_TIMEOUT_MILLIS);
         emitter.onTimeout(emitter::complete);
 
-        streamExecutor.execute(() -> {
+        streamExecutor.execute(LoggingContext.wrap(() -> {
             try {
                 // Rate limit check inside executor so exceptions become SSE error events
                 // (avoids Spring content-negotiation 500 on produces=text/event-stream endpoints)
@@ -154,7 +155,7 @@ public class WikiChatController {
             } catch (Exception ex) {
                 handleStreamFailure(emitter, ex);
             }
-        });
+        }));
 
         return emitter;
     }

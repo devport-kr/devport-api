@@ -50,7 +50,7 @@ public class LoginService {
         user.setLastLoginAt(LocalDateTime.now());
         userRepository.save(user);
 
-        log.info("User logged in: {}", user.getUsername());
+        log.debug("User login completed for userId={}", user.getId());
 
         // Generate JWT tokens
         String accessToken = jwtTokenProvider.createAccessToken(user.getId());

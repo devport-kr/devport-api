@@ -50,7 +50,7 @@ public class CustomOAuth2AuthorizationRequestResolver implements OAuth2Authoriza
         }
 
         if (turnstileToken == null || turnstileToken.isEmpty()) {
-            log.warn("Turnstile token not found in query parameter or cookies during OAuth2 authorization request");
+            log.debug("Turnstile token not found during OAuth2 authorization request");
             return authorizationRequest;
         }
 
@@ -97,7 +97,7 @@ public class CustomOAuth2AuthorizationRequestResolver implements OAuth2Authoriza
             return new String(decodedBytes);
 
         } catch (Exception e) {
-            log.error("Failed to extract Turnstile token from state parameter", e);
+            log.warn("Failed to extract Turnstile token from OAuth2 state parameter", e);
             return null;
         }
     }

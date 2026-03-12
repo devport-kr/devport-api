@@ -58,7 +58,7 @@ public class WikiChatTitleService {
                 });
             }
         } catch (Exception e) {
-            log.error("wiki-title: Failed to generate title for session={}: {}", sessionExternalId, e.getMessage());
+            log.warn("wiki-title: Failed to generate title for session={}", sessionExternalId, e);
         }
     }
 }

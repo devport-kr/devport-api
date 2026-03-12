@@ -77,7 +77,7 @@ public class CacheFallbackStateStore {
         // Auto-clear stale uncertainty (assume TTL has handled it)
         long ageMs = Instant.now().toEpochMilli() - state.markedAt.toEpochMilli();
         if (ageMs > MAX_UNCERTAINTY_AGE_MS) {
-            log.info("Auto-clearing stale uncertainty for scope={} (age: {}ms)", scope, ageMs);
+            log.debug("Auto-clearing stale uncertainty for scope={} (age: {}ms)", scope, ageMs);
             uncertaintyMap.remove(scope);
             return false;
         }

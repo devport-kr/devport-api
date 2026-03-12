@@ -27,7 +27,7 @@ public class TurnstileService {
 
     public boolean validateToken(String token, String remoteIp) {
         if (token == null || token.trim().isEmpty()) {
-            log.warn("Turnstile token validation failed: Token is null or empty");
+            log.debug("Turnstile token validation skipped because token is empty");
             return false;
         }
 
@@ -63,9 +63,9 @@ public class TurnstileService {
             Object errorCodes = validationResponse.get("error-codes");
 
             if (success) {
-                log.info("Turnstile token validated successfully for hostname: {}", hostname);
+                log.debug("Turnstile token validated successfully for hostname={}", hostname);
             } else {
-                log.warn("Turnstile token validation failed. Error codes: {}", errorCodes);
+                log.debug("Turnstile token validation failed with errorCodes={}", errorCodes);
             }
 
             return success;

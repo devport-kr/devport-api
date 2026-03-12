@@ -3,6 +3,7 @@ package kr.devport.api.domain.auth.service;
 import kr.devport.api.domain.auth.entity.PasswordResetToken;
 import kr.devport.api.domain.auth.entity.User;
 import kr.devport.api.domain.auth.enums.AuthProvider;
+import kr.devport.api.domain.common.logging.LogSanitizer;
 import kr.devport.api.domain.common.exception.TokenExpiredException;
 import kr.devport.api.domain.common.exception.TokenNotFoundException;
 import kr.devport.api.domain.auth.repository.PasswordResetTokenRepository;
@@ -31,13 +32,13 @@ public class PasswordResetService {
     public void createResetToken(String email) {
         User user = userRepository.findByEmail(email).orElse(null);
         if (user == null) {
-            log.info("Password reset requested for non-existent email");
+            log.debug("Password reset requested for unknown email");
             return;
         }
 
         // Only LOCAL users can reset password
         if (user.getAuthProvider() != AuthProvider.local) {
-            log.info("Password reset requested for non-local account: {}", user.getEmail());
+            log.debug("Password reset requested for non-local account: {}", LogSanitizer.maskEmail(user.getEmail()));
             return;
         }
 
@@ -57,7 +58,7 @@ public class PasswordResetService {
         tokenRepository.save(resetToken);
         emailService.sendPasswordResetEmail(user, token);
 
-        log.info("Password reset token created for user: {}", user.getEmail());
+        log.info("Password reset token issued for userId={}", user.getId());
     }
 
     @Transactional
@@ -81,12 +82,12 @@ public class PasswordResetService {
         resetToken.setUsed(true);
         tokenRepository.save(resetToken);
 
-        log.info("Password reset successfully for user: {}", user.getUsername());
+        log.info("Password reset completed for userId={}", user.getId());
     }
 
     @Transactional
     public void deleteExpiredTokens() {
         tokenRepository.deleteByExpiresAtBefore(LocalDateTime.now());
-        log.info("Expired password reset tokens deleted");
+        log.debug("Expired password reset tokens deleted");
     }
 }
