@@ -201,7 +201,7 @@ public class WikiChatController {
                     .data(Map.of("message", message), MediaType.APPLICATION_JSON));
         } catch (IOException ignored) {
         }
-        emitter.completeWithError(ex);
+        emitter.complete();
     }
 
     private record StreamDonePayload(
