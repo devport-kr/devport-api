@@ -11,14 +11,19 @@ import kr.devport.api.domain.llm.dto.response.LLMLeaderboardEntryResponse;
 import kr.devport.api.domain.wiki.dto.response.WikiProjectListResponse;
 import kr.devport.api.domain.wiki.dto.response.WikiProjectPageResponse;
 import kr.devport.api.domain.wiki.store.WikiChatSessionStore;
+import org.springframework.aot.hint.MemberCategory;
+import org.springframework.aot.hint.RuntimeHints;
+import org.springframework.aot.hint.RuntimeHintsRegistrar;
 import org.springframework.aot.hint.annotation.RegisterReflectionForBinding;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.ImportRuntimeHints;
 
 /**
  * Registers all DTO classes that need Jackson reflection for native image serialization.
  * Covers Redis @Cacheable return types and their nested classes.
  */
 @Configuration
+@ImportRuntimeHints(NativeImageReflectionConfig.HibernateNativeHints.class)
 @RegisterReflectionForBinding({
         // Article cache DTOs
         ArticlePageResponse.class,
@@ -45,4 +50,13 @@ import org.springframework.context.annotation.Configuration;
         WikiChatSessionStore.ChatTurn.class,
 })
 public class NativeImageReflectionConfig {
+
+    static class HibernateNativeHints implements RuntimeHintsRegistrar {
+        @Override
+        public void registerHints(RuntimeHints hints, ClassLoader classLoader) {
+            hints.reflection().registerTypeIfPresent(classLoader,
+                    "org.hibernate.bytecode.internal.bytebuddy.BytecodeProviderImpl",
+                    MemberCategory.INVOKE_PUBLIC_CONSTRUCTORS);
+        }
+    }
 }

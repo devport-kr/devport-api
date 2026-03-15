@@ -48,7 +48,7 @@ public class LLMModel {
     @Column(length = 100)
     private String provider;
 
-    @ManyToOne(fetch = FetchType.LAZY)
+    @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "model_creator_id")
     private ModelCreator modelCreator;
 
