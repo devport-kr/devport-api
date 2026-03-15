@@ -1514,16 +1514,10 @@
       ]
     },
     {
-      "type": "com.zaxxer.hikari.pool.HikariProxyPreparedStatement"
-    },
-    {
       "type": "com.zaxxer.hikari.pool.PoolBase"
     },
     {
       "type": "com.zaxxer.hikari.pool.PoolEntry"
-    },
-    {
-      "type": "com.zaxxer.hikari.pool.ProxyPreparedStatement"
     },
     {
       "type": "double[]"
@@ -3399,6 +3393,9 @@
       "type": "java.lang.reflect.AnnotatedElement"
     },
     {
+      "type": "java.lang.reflect.AnnotatedParameterizedType"
+    },
+    {
       "type": "java.lang.reflect.AnnotatedType"
     },
     {
@@ -3437,6 +3434,10 @@
       "type": "java.lang.reflect.Parameter",
       "methods": [
         {
+          "name": "getModifiers",
+          "parameterTypes": []
+        },
+        {
           "name": "getName",
           "parameterTypes": []
         },
@@ -3467,21 +3468,7 @@
       "type": "java.lang.reflect.Proxy"
     },
     {
-      "type": "java.lang.reflect.RecordComponent",
-      "methods": [
-        {
-          "name": "getAccessor",
-          "parameterTypes": []
-        },
-        {
-          "name": "getName",
-          "parameterTypes": []
-        },
-        {
-          "name": "getType",
-          "parameterTypes": []
-        }
-      ]
+      "type": "java.lang.reflect.RecordComponent"
     },
     {
       "type": "java.lang.reflect.ReflectPermission",
@@ -3588,12 +3575,6 @@
       "type": "java.security.interfaces.ECPublicKey"
     },
     {
-      "type": "java.security.interfaces.RSAPrivateKey"
-    },
-    {
-      "type": "java.security.interfaces.RSAPublicKey"
-    },
-    {
       "type": "java.sql.Blob"
     },
     {
@@ -3610,9 +3591,6 @@
     },
     {
       "type": "java.sql.NClob"
-    },
-    {
-      "type": "java.sql.SQLException"
     },
     {
       "type": "java.sql.Statement[]"
@@ -3863,9 +3841,6 @@
       "type": "java.util.ImmutableCollections$Map1"
     },
     {
-      "type": "java.util.ImmutableCollections$MapN"
-    },
-    {
       "type": "java.util.Iterator"
     },
     {
@@ -4044,9 +4019,6 @@
     },
     {
       "type": "jdk.internal.misc.Unsafe"
-    },
-    {
-      "type": "jdk.internal.reflect.DirectMethodHandleAccessor"
     },
     {
       "type": "jdk.jfr.Event"
@@ -4740,13 +4712,55 @@
       "type": "kr.devport.api.domain.article.entity.Article",
       "fields": [
         {
+          "name": "category"
+        },
+        {
+          "name": "createdAt"
+        },
+        {
+          "name": "createdAtSource"
+        },
+        {
+          "name": "externalId"
+        },
+        {
           "name": "id"
+        },
+        {
+          "name": "itemType"
         },
         {
           "name": "metadata"
         },
         {
+          "name": "score"
+        },
+        {
+          "name": "source"
+        },
+        {
+          "name": "summaryKoBody"
+        },
+        {
+          "name": "summaryKoTitle"
+        },
+        {
           "name": "tags"
+        },
+        {
+          "name": "titleEn"
+        },
+        {
+          "name": "updatedAt"
+        },
+        {
+          "name": "url"
+        }
+      ],
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
         }
       ]
     },
@@ -4754,22 +4768,10 @@
       "type": "kr.devport.api.domain.article.entity.Article$ArticleBuilder"
     },
     {
-      "type": "kr.devport.api.domain.article.entity.Article$HibernateAccessOptimizer5category5createdAt5createdAtSource5externalId5itemType5metadata5score5source5summaryKoBody5summaryKoTitle5tags5titleEn5updatedAt5url",
-      "methods": [
-        {
-          "name": "<init>",
-          "parameterTypes": []
-        }
-      ]
+      "type": "kr.devport.api.domain.article.entity.Article$HibernateInstantiator"
     },
     {
-      "type": "kr.devport.api.domain.article.entity.Article$HibernateInstantiator",
-      "methods": [
-        {
-          "name": "<init>",
-          "parameterTypes": []
-        }
-      ]
+      "type": "kr.devport.api.domain.article.entity.Article$HibernateProxy"
     },
     {
       "type": "kr.devport.api.domain.article.entity.ArticleComment",
@@ -4777,28 +4779,22 @@
         {
           "name": "id"
         }
+      ],
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
       ]
     },
     {
       "type": "kr.devport.api.domain.article.entity.ArticleComment$ArticleCommentBuilder"
     },
     {
-      "type": "kr.devport.api.domain.article.entity.ArticleComment$HibernateAccessOptimizer5article5content5createdAt5deleted5externalId5parentComment5updatedAt5user",
-      "methods": [
-        {
-          "name": "<init>",
-          "parameterTypes": []
-        }
-      ]
+      "type": "kr.devport.api.domain.article.entity.ArticleComment$HibernateInstantiator"
     },
     {
-      "type": "kr.devport.api.domain.article.entity.ArticleComment$HibernateInstantiator",
-      "methods": [
-        {
-          "name": "<init>",
-          "parameterTypes": []
-        }
-      ]
+      "type": "kr.devport.api.domain.article.entity.ArticleComment$HibernateProxy"
     },
     {
       "type": "kr.devport.api.domain.article.entity.ArticleComment_"
@@ -5011,24 +5007,9 @@
           ]
         },
         {
-          "name": "exchangeOAuth2Code",
-          "parameterTypes": [
-            "kr.devport.api.domain.auth.dto.request.OAuth2ExchangeRequest",
-            "jakarta.servlet.http.HttpServletRequest",
-            "jakarta.servlet.http.HttpServletResponse"
-          ]
-        },
-        {
           "name": "getCurrentUser",
           "parameterTypes": [
             "kr.devport.api.domain.common.security.CustomUserDetails"
-          ]
-        },
-        {
-          "name": "logout",
-          "parameterTypes": [
-            "kr.devport.api.domain.common.security.CustomUserDetails",
-            "jakarta.servlet.http.HttpServletResponse"
           ]
         },
         {
@@ -5058,22 +5039,6 @@
           "name": "<init>",
           "parameterTypes": [
             "kr.devport.api.domain.auth.service.admin.UserAdminService"
-          ]
-        }
-      ]
-    },
-    {
-      "type": "kr.devport.api.domain.auth.dto.request.OAuth2ExchangeRequest",
-      "fields": [
-        {
-          "name": "code"
-        }
-      ],
-      "methods": [
-        {
-          "name": "<init>",
-          "parameterTypes": [
-            "java.lang.String"
           ]
         }
       ]
@@ -5164,28 +5129,22 @@
         {
           "name": "id"
         }
+      ],
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
       ]
     },
     {
       "type": "kr.devport.api.domain.auth.entity.EmailVerificationToken$EmailVerificationTokenBuilder"
     },
     {
-      "type": "kr.devport.api.domain.auth.entity.EmailVerificationToken$HibernateAccessOptimizer5createdAt5expiresAt5token5user",
-      "methods": [
-        {
-          "name": "<init>",
-          "parameterTypes": []
-        }
-      ]
+      "type": "kr.devport.api.domain.auth.entity.EmailVerificationToken$HibernateInstantiator"
     },
     {
-      "type": "kr.devport.api.domain.auth.entity.EmailVerificationToken$HibernateInstantiator",
-      "methods": [
-        {
-          "name": "<init>",
-          "parameterTypes": []
-        }
-      ]
+      "type": "kr.devport.api.domain.auth.entity.EmailVerificationToken$HibernateProxy"
     },
     {
       "type": "kr.devport.api.domain.auth.entity.EmailVerificationToken_"
@@ -5199,10 +5158,7 @@
         {
           "name": "id"
         }
-      ]
-    },
-    {
-      "type": "kr.devport.api.domain.auth.entity.PasswordResetToken$HibernateAccessOptimizer5createdAt5expiresAt5token5used5user",
+      ],
       "methods": [
         {
           "name": "<init>",
@@ -5211,13 +5167,10 @@
       ]
     },
     {
-      "type": "kr.devport.api.domain.auth.entity.PasswordResetToken$HibernateInstantiator",
-      "methods": [
-        {
-          "name": "<init>",
-          "parameterTypes": []
-        }
-      ]
+      "type": "kr.devport.api.domain.auth.entity.PasswordResetToken$HibernateInstantiator"
+    },
+    {
+      "type": "kr.devport.api.domain.auth.entity.PasswordResetToken$HibernateProxy"
     },
     {
       "type": "kr.devport.api.domain.auth.entity.PasswordResetToken$PasswordResetTokenBuilder"
@@ -5232,15 +5185,24 @@
       "type": "kr.devport.api.domain.auth.entity.RefreshToken",
       "fields": [
         {
+          "name": "createdAt"
+        },
+        {
+          "name": "expiresAt"
+        },
+        {
           "name": "id"
+        },
+        {
+          "name": "revokedAt"
+        },
+        {
+          "name": "token"
         },
         {
           "name": "user"
         }
-      ]
-    },
-    {
-      "type": "kr.devport.api.domain.auth.entity.RefreshToken$HibernateAccessOptimizer5createdAt5expiresAt5revokedAt5token5user",
+      ],
       "methods": [
         {
           "name": "<init>",
@@ -5249,13 +5211,10 @@
       ]
     },
     {
-      "type": "kr.devport.api.domain.auth.entity.RefreshToken$HibernateInstantiator",
-      "methods": [
-        {
-          "name": "<init>",
-          "parameterTypes": []
-        }
-      ]
+      "type": "kr.devport.api.domain.auth.entity.RefreshToken$HibernateInstantiator"
+    },
+    {
+      "type": "kr.devport.api.domain.auth.entity.RefreshToken$HibernateProxy"
     },
     {
       "type": "kr.devport.api.domain.auth.entity.RefreshToken$RefreshTokenBuilder"
@@ -5270,12 +5229,54 @@
       "type": "kr.devport.api.domain.auth.entity.User",
       "fields": [
         {
+          "name": "authProvider"
+        },
+        {
+          "name": "createdAt"
+        },
+        {
+          "name": "email"
+        },
+        {
+          "name": "emailAddedAt"
+        },
+        {
+          "name": "emailVerified"
+        },
+        {
+          "name": "flair"
+        },
+        {
+          "name": "flairColor"
+        },
+        {
           "name": "id"
+        },
+        {
+          "name": "lastLoginAt"
+        },
+        {
+          "name": "name"
+        },
+        {
+          "name": "password"
+        },
+        {
+          "name": "profileImageUrl"
+        },
+        {
+          "name": "providerId"
+        },
+        {
+          "name": "role"
+        },
+        {
+          "name": "updatedAt"
+        },
+        {
+          "name": "username"
         }
-      ]
-    },
-    {
-      "type": "kr.devport.api.domain.auth.entity.User$HibernateAccessOptimizer5authProvider5createdAt5email5emailAddedAt5emailVerified5flair5flairColor5lastLoginAt5name5password5profileImageUrl5providerId5role5updatedAt5username",
+      ],
       "methods": [
         {
           "name": "<init>",
@@ -5284,13 +5285,10 @@
       ]
     },
     {
-      "type": "kr.devport.api.domain.auth.entity.User$HibernateInstantiator",
-      "methods": [
-        {
-          "name": "<init>",
-          "parameterTypes": []
-        }
-      ]
+      "type": "kr.devport.api.domain.auth.entity.User$HibernateInstantiator"
+    },
+    {
+      "type": "kr.devport.api.domain.auth.entity.User$HibernateProxy"
     },
     {
       "type": "kr.devport.api.domain.auth.entity.User$UserBuilder"
@@ -5381,20 +5379,7 @@
           ]
         },
         {
-          "name": "exchangeOAuth2Code",
-          "parameterTypes": [
-            "java.lang.String",
-            "jakarta.servlet.http.HttpServletRequest"
-          ]
-        },
-        {
           "name": "getCurrentUser",
-          "parameterTypes": [
-            "java.lang.Long"
-          ]
-        },
-        {
-          "name": "logout",
           "parameterTypes": [
             "java.lang.Long"
           ]
@@ -5599,18 +5584,6 @@
           "name": "<init>",
           "parameterTypes": [
             "kr.devport.api.domain.auth.repository.RefreshTokenRepository"
-          ]
-        },
-        {
-          "name": "createRefreshToken",
-          "parameterTypes": [
-            "kr.devport.api.domain.auth.entity.User"
-          ]
-        },
-        {
-          "name": "deleteByUser",
-          "parameterTypes": [
-            "kr.devport.api.domain.auth.entity.User"
           ]
         },
         {
@@ -6214,18 +6187,6 @@
           "parameterTypes": []
         },
         {
-          "name": "handleInvalidToken",
-          "parameterTypes": [
-            "kr.devport.api.domain.common.exception.InvalidTokenException"
-          ]
-        },
-        {
-          "name": "handleUnexpectedException",
-          "parameterTypes": [
-            "java.lang.Exception"
-          ]
-        },
-        {
           "name": "handleWikiSessionNotFound",
           "parameterTypes": [
             "kr.devport.api.domain.wiki.exception.WikiSessionNotFoundException"
@@ -6595,7 +6556,52 @@
       "type": "kr.devport.api.domain.gitrepo.entity.GitRepo",
       "fields": [
         {
+          "name": "category"
+        },
+        {
+          "name": "createdAt"
+        },
+        {
+          "name": "description"
+        },
+        {
+          "name": "forks"
+        },
+        {
+          "name": "fullName"
+        },
+        {
           "name": "id"
+        },
+        {
+          "name": "language"
+        },
+        {
+          "name": "score"
+        },
+        {
+          "name": "stars"
+        },
+        {
+          "name": "starsThisWeek"
+        },
+        {
+          "name": "summaryKoBody"
+        },
+        {
+          "name": "summaryKoTitle"
+        },
+        {
+          "name": "updatedAt"
+        },
+        {
+          "name": "url"
+        }
+      ],
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
         }
       ]
     },
@@ -6603,22 +6609,10 @@
       "type": "kr.devport.api.domain.gitrepo.entity.GitRepo$GitRepoBuilder"
     },
     {
-      "type": "kr.devport.api.domain.gitrepo.entity.GitRepo$HibernateAccessOptimizer5category5createdAt5description5forks5fullName5language5score5stars5starsThisWeek5summaryKoBody5summaryKoTitle5updatedAt5url",
-      "methods": [
-        {
-          "name": "<init>",
-          "parameterTypes": []
-        }
-      ]
+      "type": "kr.devport.api.domain.gitrepo.entity.GitRepo$HibernateInstantiator"
     },
     {
-      "type": "kr.devport.api.domain.gitrepo.entity.GitRepo$HibernateInstantiator",
-      "methods": [
-        {
-          "name": "<init>",
-          "parameterTypes": []
-        }
-      ]
+      "type": "kr.devport.api.domain.gitrepo.entity.GitRepo$HibernateProxy"
     },
     {
       "type": "kr.devport.api.domain.gitrepo.entity.GitRepo_"
@@ -7299,12 +7293,42 @@
       "type": "kr.devport.api.domain.llm.entity.ImageEditingModel",
       "fields": [
         {
+          "name": "appearances"
+        },
+        {
+          "name": "ci95"
+        },
+        {
+          "name": "createdAt"
+        },
+        {
+          "name": "elo"
+        },
+        {
+          "name": "externalId"
+        },
+        {
           "name": "id"
+        },
+        {
+          "name": "modelCreator"
+        },
+        {
+          "name": "name"
+        },
+        {
+          "name": "rank"
+        },
+        {
+          "name": "releaseDate"
+        },
+        {
+          "name": "slug"
+        },
+        {
+          "name": "updatedAt"
         }
-      ]
-    },
-    {
-      "type": "kr.devport.api.domain.llm.entity.ImageEditingModel$HibernateAccessOptimizer5appearances5ci955createdAt5elo5externalId5modelCreator5name5rank5releaseDate5slug5updatedAt",
+      ],
       "methods": [
         {
           "name": "<init>",
@@ -7313,13 +7337,10 @@
       ]
     },
     {
-      "type": "kr.devport.api.domain.llm.entity.ImageEditingModel$HibernateInstantiator",
-      "methods": [
-        {
-          "name": "<init>",
-          "parameterTypes": []
-        }
-      ]
+      "type": "kr.devport.api.domain.llm.entity.ImageEditingModel$HibernateInstantiator"
+    },
+    {
+      "type": "kr.devport.api.domain.llm.entity.ImageEditingModel$HibernateProxy"
     },
     {
       "type": "kr.devport.api.domain.llm.entity.ImageEditingModel$ImageEditingModelBuilder"
@@ -7334,12 +7355,30 @@
       "type": "kr.devport.api.domain.llm.entity.ImageToVideoCategory",
       "fields": [
         {
+          "name": "appearances"
+        },
+        {
+          "name": "ci95"
+        },
+        {
+          "name": "elo"
+        },
+        {
+          "name": "formatCategory"
+        },
+        {
           "name": "id"
+        },
+        {
+          "name": "model"
+        },
+        {
+          "name": "styleCategory"
+        },
+        {
+          "name": "subjectMatterCategory"
         }
-      ]
-    },
-    {
-      "type": "kr.devport.api.domain.llm.entity.ImageToVideoCategory$HibernateAccessOptimizer5appearances5ci955elo5formatCategory5model5styleCategory5subjectMatterCategory",
+      ],
       "methods": [
         {
           "name": "<init>",
@@ -7348,13 +7387,10 @@
       ]
     },
     {
-      "type": "kr.devport.api.domain.llm.entity.ImageToVideoCategory$HibernateInstantiator",
-      "methods": [
-        {
-          "name": "<init>",
-          "parameterTypes": []
-        }
-      ]
+      "type": "kr.devport.api.domain.llm.entity.ImageToVideoCategory$HibernateInstantiator"
+    },
+    {
+      "type": "kr.devport.api.domain.llm.entity.ImageToVideoCategory$HibernateProxy"
     },
     {
       "type": "kr.devport.api.domain.llm.entity.ImageToVideoCategory$ImageToVideoCategoryBuilder"
@@ -7369,12 +7405,45 @@
       "type": "kr.devport.api.domain.llm.entity.ImageToVideoModel",
       "fields": [
         {
+          "name": "appearances"
+        },
+        {
+          "name": "categories"
+        },
+        {
+          "name": "ci95"
+        },
+        {
+          "name": "createdAt"
+        },
+        {
+          "name": "elo"
+        },
+        {
+          "name": "externalId"
+        },
+        {
           "name": "id"
+        },
+        {
+          "name": "modelCreator"
+        },
+        {
+          "name": "name"
+        },
+        {
+          "name": "rank"
+        },
+        {
+          "name": "releaseDate"
+        },
+        {
+          "name": "slug"
+        },
+        {
+          "name": "updatedAt"
         }
-      ]
-    },
-    {
-      "type": "kr.devport.api.domain.llm.entity.ImageToVideoModel$HibernateAccessOptimizer5appearances5categories5ci955createdAt5elo5externalId5modelCreator5name5rank5releaseDate5slug5updatedAt",
+      ],
       "methods": [
         {
           "name": "<init>",
@@ -7383,13 +7452,10 @@
       ]
     },
     {
-      "type": "kr.devport.api.domain.llm.entity.ImageToVideoModel$HibernateInstantiator",
-      "methods": [
-        {
-          "name": "<init>",
-          "parameterTypes": []
-        }
-      ]
+      "type": "kr.devport.api.domain.llm.entity.ImageToVideoModel$HibernateInstantiator"
+    },
+    {
+      "type": "kr.devport.api.domain.llm.entity.ImageToVideoModel$HibernateProxy"
     },
     {
       "type": "kr.devport.api.domain.llm.entity.ImageToVideoModel$ImageToVideoModelBuilder"
@@ -7405,11 +7471,26 @@
       "fields": [
         {
           "name": "benchmarkType"
+        },
+        {
+          "name": "categoryGroup"
+        },
+        {
+          "name": "createdAt"
+        },
+        {
+          "name": "description"
+        },
+        {
+          "name": "displayName"
+        },
+        {
+          "name": "explanation"
+        },
+        {
+          "name": "sortOrder"
         }
-      ]
-    },
-    {
-      "type": "kr.devport.api.domain.llm.entity.LLMBenchmark$HibernateAccessOptimizer5categoryGroup5createdAt5description5displayName5explanation5sortOrder",
+      ],
       "methods": [
         {
           "name": "<init>",
@@ -7418,13 +7499,10 @@
       ]
     },
     {
-      "type": "kr.devport.api.domain.llm.entity.LLMBenchmark$HibernateInstantiator",
-      "methods": [
-        {
-          "name": "<init>",
-          "parameterTypes": []
-        }
-      ]
+      "type": "kr.devport.api.domain.llm.entity.LLMBenchmark$HibernateInstantiator"
+    },
+    {
+      "type": "kr.devport.api.domain.llm.entity.LLMBenchmark$HibernateProxy"
     },
     {
       "type": "kr.devport.api.domain.llm.entity.LLMBenchmark$LLMBenchmarkBuilder"
@@ -7439,12 +7517,108 @@
       "type": "kr.devport.api.domain.llm.entity.LLMModel",
       "fields": [
         {
+          "name": "contextWindow"
+        },
+        {
+          "name": "createdAt"
+        },
+        {
+          "name": "description"
+        },
+        {
+          "name": "externalId"
+        },
+        {
           "name": "id"
+        },
+        {
+          "name": "latencyTtft"
+        },
+        {
+          "name": "license"
+        },
+        {
+          "name": "medianTimeToFirstAnswerToken"
+        },
+        {
+          "name": "modelCreator"
+        },
+        {
+          "name": "modelId"
+        },
+        {
+          "name": "modelName"
+        },
+        {
+          "name": "outputSpeedMedian"
+        },
+        {
+          "name": "priceBlended"
+        },
+        {
+          "name": "priceInput"
+        },
+        {
+          "name": "priceOutput"
+        },
+        {
+          "name": "provider"
+        },
+        {
+          "name": "releaseDate"
+        },
+        {
+          "name": "scoreAaCodingIndex"
+        },
+        {
+          "name": "scoreAaIntelligenceIndex"
+        },
+        {
+          "name": "scoreAaLcr"
+        },
+        {
+          "name": "scoreAaMathIndex"
+        },
+        {
+          "name": "scoreAime"
+        },
+        {
+          "name": "scoreAime2025"
+        },
+        {
+          "name": "scoreGpqaDiamond"
+        },
+        {
+          "name": "scoreHumanitysLastExam"
+        },
+        {
+          "name": "scoreIfbench"
+        },
+        {
+          "name": "scoreLivecodeBench"
+        },
+        {
+          "name": "scoreMath500"
+        },
+        {
+          "name": "scoreMmluPro"
+        },
+        {
+          "name": "scoreScicode"
+        },
+        {
+          "name": "scoreTauBenchTelecom"
+        },
+        {
+          "name": "scoreTerminalBenchHard"
+        },
+        {
+          "name": "slug"
+        },
+        {
+          "name": "updatedAt"
         }
-      ]
-    },
-    {
-      "type": "kr.devport.api.domain.llm.entity.LLMModel$HibernateAccessOptimizer5contextWindow5createdAt5description5externalId5latencyTtft5license5medianTimeToFirstAnswerToken5modelCreator5modelId5modelName5outputSpeedMedian5priceBlended5priceInput5priceOutput5provider5releaseDate5scoreAaCodingIndex5scoreAaIntelligenceIndex5scoreAaLcr5scoreAaMathIndex5scoreAime5scoreAime20255scoreGpqaDiamond5scoreHumanitysLastExam5scoreIfbench5scoreLivecodeBench5scoreMath5005scoreMmluPro5scoreScicode5scoreTauBenchTelecom5scoreTerminalBenchHard5slug5updatedAt",
+      ],
       "methods": [
         {
           "name": "<init>",
@@ -7453,13 +7627,10 @@
       ]
     },
     {
-      "type": "kr.devport.api.domain.llm.entity.LLMModel$HibernateInstantiator",
-      "methods": [
-        {
-          "name": "<init>",
-          "parameterTypes": []
-        }
-      ]
+      "type": "kr.devport.api.domain.llm.entity.LLMModel$HibernateInstantiator"
+    },
+    {
+      "type": "kr.devport.api.domain.llm.entity.LLMModel$HibernateProxy"
     },
     {
       "type": "kr.devport.api.domain.llm.entity.LLMModel$LLMModelBuilder"
@@ -7474,12 +7645,24 @@
       "type": "kr.devport.api.domain.llm.entity.ModelCreator",
       "fields": [
         {
+          "name": "createdAt"
+        },
+        {
+          "name": "externalId"
+        },
+        {
           "name": "id"
+        },
+        {
+          "name": "name"
+        },
+        {
+          "name": "slug"
+        },
+        {
+          "name": "updatedAt"
         }
-      ]
-    },
-    {
-      "type": "kr.devport.api.domain.llm.entity.ModelCreator$HibernateAccessOptimizer5createdAt5externalId5name5slug5updatedAt",
+      ],
       "methods": [
         {
           "name": "<init>",
@@ -7488,13 +7671,10 @@
       ]
     },
     {
-      "type": "kr.devport.api.domain.llm.entity.ModelCreator$HibernateInstantiator",
-      "methods": [
-        {
-          "name": "<init>",
-          "parameterTypes": []
-        }
-      ]
+      "type": "kr.devport.api.domain.llm.entity.ModelCreator$HibernateInstantiator"
+    },
+    {
+      "type": "kr.devport.api.domain.llm.entity.ModelCreator$HibernateProxy"
     },
     {
       "type": "kr.devport.api.domain.llm.entity.ModelCreator$ModelCreatorBuilder"
@@ -7509,12 +7689,27 @@
       "type": "kr.devport.api.domain.llm.entity.TextToImageCategory",
       "fields": [
         {
+          "name": "appearances"
+        },
+        {
+          "name": "ci95"
+        },
+        {
+          "name": "elo"
+        },
+        {
           "name": "id"
+        },
+        {
+          "name": "model"
+        },
+        {
+          "name": "styleCategory"
+        },
+        {
+          "name": "subjectMatterCategory"
         }
-      ]
-    },
-    {
-      "type": "kr.devport.api.domain.llm.entity.TextToImageCategory$HibernateAccessOptimizer5appearances5ci955elo5model5styleCategory5subjectMatterCategory",
+      ],
       "methods": [
         {
           "name": "<init>",
@@ -7523,13 +7718,10 @@
       ]
     },
     {
-      "type": "kr.devport.api.domain.llm.entity.TextToImageCategory$HibernateInstantiator",
-      "methods": [
-        {
-          "name": "<init>",
-          "parameterTypes": []
-        }
-      ]
+      "type": "kr.devport.api.domain.llm.entity.TextToImageCategory$HibernateInstantiator"
+    },
+    {
+      "type": "kr.devport.api.domain.llm.entity.TextToImageCategory$HibernateProxy"
     },
     {
       "type": "kr.devport.api.domain.llm.entity.TextToImageCategory$TextToImageCategoryBuilder"
@@ -7544,12 +7736,45 @@
       "type": "kr.devport.api.domain.llm.entity.TextToImageModel",
       "fields": [
         {
+          "name": "appearances"
+        },
+        {
+          "name": "categories"
+        },
+        {
+          "name": "ci95"
+        },
+        {
+          "name": "createdAt"
+        },
+        {
+          "name": "elo"
+        },
+        {
+          "name": "externalId"
+        },
+        {
           "name": "id"
+        },
+        {
+          "name": "modelCreator"
+        },
+        {
+          "name": "name"
+        },
+        {
+          "name": "rank"
+        },
+        {
+          "name": "releaseDate"
+        },
+        {
+          "name": "slug"
+        },
+        {
+          "name": "updatedAt"
         }
-      ]
-    },
-    {
-      "type": "kr.devport.api.domain.llm.entity.TextToImageModel$HibernateAccessOptimizer5appearances5categories5ci955createdAt5elo5externalId5modelCreator5name5rank5releaseDate5slug5updatedAt",
+      ],
       "methods": [
         {
           "name": "<init>",
@@ -7558,13 +7783,10 @@
       ]
     },
     {
-      "type": "kr.devport.api.domain.llm.entity.TextToImageModel$HibernateInstantiator",
-      "methods": [
-        {
-          "name": "<init>",
-          "parameterTypes": []
-        }
-      ]
+      "type": "kr.devport.api.domain.llm.entity.TextToImageModel$HibernateInstantiator"
+    },
+    {
+      "type": "kr.devport.api.domain.llm.entity.TextToImageModel$HibernateProxy"
     },
     {
       "type": "kr.devport.api.domain.llm.entity.TextToImageModel$TextToImageModelBuilder"
@@ -7579,12 +7801,42 @@
       "type": "kr.devport.api.domain.llm.entity.TextToSpeechModel",
       "fields": [
         {
+          "name": "appearances"
+        },
+        {
+          "name": "ci95"
+        },
+        {
+          "name": "createdAt"
+        },
+        {
+          "name": "elo"
+        },
+        {
+          "name": "externalId"
+        },
+        {
           "name": "id"
+        },
+        {
+          "name": "modelCreator"
+        },
+        {
+          "name": "name"
+        },
+        {
+          "name": "rank"
+        },
+        {
+          "name": "releaseDate"
+        },
+        {
+          "name": "slug"
+        },
+        {
+          "name": "updatedAt"
         }
-      ]
-    },
-    {
-      "type": "kr.devport.api.domain.llm.entity.TextToSpeechModel$HibernateAccessOptimizer5appearances5ci955createdAt5elo5externalId5modelCreator5name5rank5releaseDate5slug5updatedAt",
+      ],
       "methods": [
         {
           "name": "<init>",
@@ -7593,13 +7845,10 @@
       ]
     },
     {
-      "type": "kr.devport.api.domain.llm.entity.TextToSpeechModel$HibernateInstantiator",
-      "methods": [
-        {
-          "name": "<init>",
-          "parameterTypes": []
-        }
-      ]
+      "type": "kr.devport.api.domain.llm.entity.TextToSpeechModel$HibernateInstantiator"
+    },
+    {
+      "type": "kr.devport.api.domain.llm.entity.TextToSpeechModel$HibernateProxy"
     },
     {
       "type": "kr.devport.api.domain.llm.entity.TextToSpeechModel$TextToSpeechModelBuilder"
@@ -7614,12 +7863,30 @@
       "type": "kr.devport.api.domain.llm.entity.TextToVideoCategory",
       "fields": [
         {
+          "name": "appearances"
+        },
+        {
+          "name": "ci95"
+        },
+        {
+          "name": "elo"
+        },
+        {
+          "name": "formatCategory"
+        },
+        {
           "name": "id"
+        },
+        {
+          "name": "model"
+        },
+        {
+          "name": "styleCategory"
+        },
+        {
+          "name": "subjectMatterCategory"
         }
-      ]
-    },
-    {
-      "type": "kr.devport.api.domain.llm.entity.TextToVideoCategory$HibernateAccessOptimizer5appearances5ci955elo5formatCategory5model5styleCategory5subjectMatterCategory",
+      ],
       "methods": [
         {
           "name": "<init>",
@@ -7628,13 +7895,10 @@
       ]
     },
     {
-      "type": "kr.devport.api.domain.llm.entity.TextToVideoCategory$HibernateInstantiator",
-      "methods": [
-        {
-          "name": "<init>",
-          "parameterTypes": []
-        }
-      ]
+      "type": "kr.devport.api.domain.llm.entity.TextToVideoCategory$HibernateInstantiator"
+    },
+    {
+      "type": "kr.devport.api.domain.llm.entity.TextToVideoCategory$HibernateProxy"
     },
     {
       "type": "kr.devport.api.domain.llm.entity.TextToVideoCategory$TextToVideoCategoryBuilder"
@@ -7649,12 +7913,45 @@
       "type": "kr.devport.api.domain.llm.entity.TextToVideoModel",
       "fields": [
         {
+          "name": "appearances"
+        },
+        {
+          "name": "categories"
+        },
+        {
+          "name": "ci95"
+        },
+        {
+          "name": "createdAt"
+        },
+        {
+          "name": "elo"
+        },
+        {
+          "name": "externalId"
+        },
+        {
           "name": "id"
+        },
+        {
+          "name": "modelCreator"
+        },
+        {
+          "name": "name"
+        },
+        {
+          "name": "rank"
+        },
+        {
+          "name": "releaseDate"
+        },
+        {
+          "name": "slug"
+        },
+        {
+          "name": "updatedAt"
         }
-      ]
-    },
-    {
-      "type": "kr.devport.api.domain.llm.entity.TextToVideoModel$HibernateAccessOptimizer5appearances5categories5ci955createdAt5elo5externalId5modelCreator5name5rank5releaseDate5slug5updatedAt",
+      ],
       "methods": [
         {
           "name": "<init>",
@@ -7663,13 +7960,10 @@
       ]
     },
     {
-      "type": "kr.devport.api.domain.llm.entity.TextToVideoModel$HibernateInstantiator",
-      "methods": [
-        {
-          "name": "<init>",
-          "parameterTypes": []
-        }
-      ]
+      "type": "kr.devport.api.domain.llm.entity.TextToVideoModel$HibernateInstantiator"
+    },
+    {
+      "type": "kr.devport.api.domain.llm.entity.TextToVideoModel$HibernateProxy"
     },
     {
       "type": "kr.devport.api.domain.llm.entity.TextToVideoModel$TextToVideoModelBuilder"
@@ -7934,33 +8228,24 @@
           "name": "id"
         },
         {
+          "name": "readAt"
+        },
+        {
           "name": "user"
         }
       ],
       "methods": [
         {
-          "name": "onCreate",
-          "parameterTypes": []
-        }
-      ]
-    },
-    {
-      "type": "kr.devport.api.domain.mypage.entity.UserReadHistory$HibernateAccessOptimizer5article5readAt5user",
-      "methods": [
-        {
           "name": "<init>",
           "parameterTypes": []
         }
       ]
     },
     {
-      "type": "kr.devport.api.domain.mypage.entity.UserReadHistory$HibernateInstantiator",
-      "methods": [
-        {
-          "name": "<init>",
-          "parameterTypes": []
-        }
-      ]
+      "type": "kr.devport.api.domain.mypage.entity.UserReadHistory$HibernateInstantiator"
+    },
+    {
+      "type": "kr.devport.api.domain.mypage.entity.UserReadHistory$HibernateProxy"
     },
     {
       "type": "kr.devport.api.domain.mypage.entity.UserReadHistory$UserReadHistoryBuilder"
@@ -7977,10 +8262,7 @@
         {
           "name": "id"
         }
-      ]
-    },
-    {
-      "type": "kr.devport.api.domain.mypage.entity.UserSavedArticle$HibernateAccessOptimizer5article5createdAt5user",
+      ],
       "methods": [
         {
           "name": "<init>",
@@ -7989,13 +8271,10 @@
       ]
     },
     {
-      "type": "kr.devport.api.domain.mypage.entity.UserSavedArticle$HibernateInstantiator",
-      "methods": [
-        {
-          "name": "<init>",
-          "parameterTypes": []
-        }
-      ]
+      "type": "kr.devport.api.domain.mypage.entity.UserSavedArticle$HibernateInstantiator"
+    },
+    {
+      "type": "kr.devport.api.domain.mypage.entity.UserSavedArticle$HibernateProxy"
     },
     {
       "type": "kr.devport.api.domain.mypage.entity.UserSavedArticle$UserSavedArticleBuilder"
@@ -8241,12 +8520,63 @@
       "type": "kr.devport.api.domain.port.entity.Project",
       "fields": [
         {
+          "name": "contributors"
+        },
+        {
+          "name": "createdAt"
+        },
+        {
+          "name": "description"
+        },
+        {
+          "name": "externalId"
+        },
+        {
+          "name": "forks"
+        },
+        {
+          "name": "fullName"
+        },
+        {
+          "name": "homepageUrl"
+        },
+        {
           "name": "id"
+        },
+        {
+          "name": "language"
+        },
+        {
+          "name": "languageColor"
+        },
+        {
+          "name": "lastRelease"
+        },
+        {
+          "name": "license"
+        },
+        {
+          "name": "name"
+        },
+        {
+          "name": "releases30d"
+        },
+        {
+          "name": "repoUrl"
+        },
+        {
+          "name": "stars"
+        },
+        {
+          "name": "starsWeekDelta"
+        },
+        {
+          "name": "tags"
+        },
+        {
+          "name": "updatedAt"
         }
-      ]
-    },
-    {
-      "type": "kr.devport.api.domain.port.entity.Project$HibernateAccessOptimizer5contributors5createdAt5description5externalId5forks5fullName5homepageUrl5language5languageColor5lastRelease5license5name5releases30d5repoUrl5stars5starsWeekDelta5tags5updatedAt",
+      ],
       "methods": [
         {
           "name": "<init>",
@@ -8255,13 +8585,10 @@
       ]
     },
     {
-      "type": "kr.devport.api.domain.port.entity.Project$HibernateInstantiator",
-      "methods": [
-        {
-          "name": "<init>",
-          "parameterTypes": []
-        }
-      ]
+      "type": "kr.devport.api.domain.port.entity.Project$HibernateInstantiator"
+    },
+    {
+      "type": "kr.devport.api.domain.port.entity.Project$HibernateProxy"
     },
     {
       "type": "kr.devport.api.domain.port.entity.Project$ProjectBuilder"
@@ -8272,10 +8599,7 @@
         {
           "name": "id"
         }
-      ]
-    },
-    {
-      "type": "kr.devport.api.domain.port.entity.ProjectComment$HibernateAccessOptimizer5content5createdAt5deleted5externalId5parentComment5project5updatedAt5user5voteScore",
+      ],
       "methods": [
         {
           "name": "<init>",
@@ -8284,13 +8608,10 @@
       ]
     },
     {
-      "type": "kr.devport.api.domain.port.entity.ProjectComment$HibernateInstantiator",
-      "methods": [
-        {
-          "name": "<init>",
-          "parameterTypes": []
-        }
-      ]
+      "type": "kr.devport.api.domain.port.entity.ProjectComment$HibernateInstantiator"
+    },
+    {
+      "type": "kr.devport.api.domain.port.entity.ProjectComment$HibernateProxy"
     },
     {
       "type": "kr.devport.api.domain.port.entity.ProjectComment$ProjectCommentBuilder"
@@ -8301,10 +8622,7 @@
         {
           "name": "id"
         }
-      ]
-    },
-    {
-      "type": "kr.devport.api.domain.port.entity.ProjectCommentVote$HibernateAccessOptimizer5comment5createdAt5user5vote",
+      ],
       "methods": [
         {
           "name": "<init>",
@@ -8313,13 +8631,10 @@
       ]
     },
     {
-      "type": "kr.devport.api.domain.port.entity.ProjectCommentVote$HibernateInstantiator",
-      "methods": [
-        {
-          "name": "<init>",
-          "parameterTypes": []
-        }
-      ]
+      "type": "kr.devport.api.domain.port.entity.ProjectCommentVote$HibernateInstantiator"
+    },
+    {
+      "type": "kr.devport.api.domain.port.entity.ProjectCommentVote$HibernateProxy"
     },
     {
       "type": "kr.devport.api.domain.port.entity.ProjectCommentVote$ProjectCommentVoteBuilder"
@@ -8340,12 +8655,48 @@
       "type": "kr.devport.api.domain.port.entity.ProjectEvent",
       "fields": [
         {
+          "name": "bullets"
+        },
+        {
+          "name": "createdAt"
+        },
+        {
+          "name": "eventTypes"
+        },
+        {
+          "name": "externalId"
+        },
+        {
           "name": "id"
+        },
+        {
+          "name": "impactScore"
+        },
+        {
+          "name": "isBreaking"
+        },
+        {
+          "name": "isSecurity"
+        },
+        {
+          "name": "project"
+        },
+        {
+          "name": "rawNotes"
+        },
+        {
+          "name": "releasedAt"
+        },
+        {
+          "name": "sourceUrl"
+        },
+        {
+          "name": "summary"
+        },
+        {
+          "name": "version"
         }
-      ]
-    },
-    {
-      "type": "kr.devport.api.domain.port.entity.ProjectEvent$HibernateAccessOptimizer5bullets5createdAt5eventTypes5externalId5impactScore5isBreaking5isSecurity5project5rawNotes5releasedAt5sourceUrl5summary5version",
+      ],
       "methods": [
         {
           "name": "<init>",
@@ -8354,13 +8705,10 @@
       ]
     },
     {
-      "type": "kr.devport.api.domain.port.entity.ProjectEvent$HibernateInstantiator",
-      "methods": [
-        {
-          "name": "<init>",
-          "parameterTypes": []
-        }
-      ]
+      "type": "kr.devport.api.domain.port.entity.ProjectEvent$HibernateInstantiator"
+    },
+    {
+      "type": "kr.devport.api.domain.port.entity.ProjectEvent$HibernateProxy"
     },
     {
       "type": "kr.devport.api.domain.port.entity.ProjectEvent$ProjectEventBuilder"
@@ -8377,10 +8725,7 @@
         {
           "name": "id"
         }
-      ]
-    },
-    {
-      "type": "kr.devport.api.domain.port.entity.ProjectMetricsDaily$HibernateAccessOptimizer5contributors5date5forks5openIssues5project5stars",
+      ],
       "methods": [
         {
           "name": "<init>",
@@ -8389,13 +8734,10 @@
       ]
     },
     {
-      "type": "kr.devport.api.domain.port.entity.ProjectMetricsDaily$HibernateInstantiator",
-      "methods": [
-        {
-          "name": "<init>",
-          "parameterTypes": []
-        }
-      ]
+      "type": "kr.devport.api.domain.port.entity.ProjectMetricsDaily$HibernateInstantiator"
+    },
+    {
+      "type": "kr.devport.api.domain.port.entity.ProjectMetricsDaily$HibernateProxy"
     },
     {
       "type": "kr.devport.api.domain.port.entity.ProjectMetricsDaily$ProjectMetricsDailyBuilder"
@@ -8582,6 +8924,31 @@
       ]
     },
     {
+      "type": "kr.devport.api.domain.wiki.controller.WikiChatController$StreamDonePayload",
+      "methods": [
+        {
+          "name": "clarificationOptions",
+          "parameterTypes": []
+        },
+        {
+          "name": "isClarification",
+          "parameterTypes": []
+        },
+        {
+          "name": "sessionId",
+          "parameterTypes": []
+        },
+        {
+          "name": "sessionReset",
+          "parameterTypes": []
+        },
+        {
+          "name": "suggestedNextQuestions",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
       "type": "kr.devport.api.domain.wiki.controller.WikiController",
       "methods": [
         {
@@ -8636,23 +9003,6 @@
           "parameterTypes": [
             "kr.devport.api.domain.wiki.service.WikiChatSessionPersistenceService",
             "kr.devport.api.domain.auth.repository.UserRepository"
-          ]
-        },
-        {
-          "name": "getGlobalSessions",
-          "parameterTypes": [
-            "kr.devport.api.domain.common.security.CustomUserDetails",
-            "int",
-            "int"
-          ]
-        },
-        {
-          "name": "getProjectSessions",
-          "parameterTypes": [
-            "kr.devport.api.domain.common.security.CustomUserDetails",
-            "java.lang.String",
-            "int",
-            "int"
           ]
         },
         {
@@ -8749,6 +9099,27 @@
         },
         {
           "name": "sessionId",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "kr.devport.api.domain.wiki.dto.response.WikiMessageResponse",
+      "methods": [
+        {
+          "name": "content",
+          "parameterTypes": []
+        },
+        {
+          "name": "createdAt",
+          "parameterTypes": []
+        },
+        {
+          "name": "isClarification",
+          "parameterTypes": []
+        },
+        {
+          "name": "role",
           "parameterTypes": []
         }
       ]
@@ -9085,41 +9456,22 @@
       ]
     },
     {
-      "type": "kr.devport.api.domain.wiki.dto.response.WikiSessionListResponse",
-      "methods": [
-        {
-          "name": "page",
-          "parameterTypes": []
-        },
-        {
-          "name": "sessions",
-          "parameterTypes": []
-        },
-        {
-          "name": "size",
-          "parameterTypes": []
-        },
-        {
-          "name": "totalElements",
-          "parameterTypes": []
-        },
-        {
-          "name": "totalPages",
-          "parameterTypes": []
-        }
-      ]
-    },
-    {
-      "type": "kr.devport.api.domain.wiki.dto.response.WikiSessionResponse"
-    },
-    {
-      "type": "kr.devport.api.domain.wiki.dto.response.WikiSessionResponse[]"
-    },
-    {
       "type": "kr.devport.api.domain.wiki.entity.WikiChatMessage",
       "fields": [
         {
+          "name": "content"
+        },
+        {
+          "name": "createdAt"
+        },
+        {
           "name": "id"
+        },
+        {
+          "name": "isClarification"
+        },
+        {
+          "name": "role"
         },
         {
           "name": "session"
@@ -9127,28 +9479,20 @@
       ],
       "methods": [
         {
+          "name": "<init>",
+          "parameterTypes": []
+        },
+        {
           "name": "onCreate",
           "parameterTypes": []
         }
       ]
     },
     {
-      "type": "kr.devport.api.domain.wiki.entity.WikiChatMessage$HibernateAccessOptimizer5content5createdAt5isClarification5role5session",
-      "methods": [
-        {
-          "name": "<init>",
-          "parameterTypes": []
-        }
-      ]
+      "type": "kr.devport.api.domain.wiki.entity.WikiChatMessage$HibernateInstantiator"
     },
     {
-      "type": "kr.devport.api.domain.wiki.entity.WikiChatMessage$HibernateInstantiator",
-      "methods": [
-        {
-          "name": "<init>",
-          "parameterTypes": []
-        }
-      ]
+      "type": "kr.devport.api.domain.wiki.entity.WikiChatMessage$HibernateProxy"
     },
     {
       "type": "kr.devport.api.domain.wiki.entity.WikiChatMessage$WikiChatMessageBuilder"
@@ -9163,13 +9507,41 @@
       "type": "kr.devport.api.domain.wiki.entity.WikiChatSession",
       "fields": [
         {
+          "name": "createdAt"
+        },
+        {
+          "name": "expiresAt"
+        },
+        {
+          "name": "externalId"
+        },
+        {
           "name": "id"
+        },
+        {
+          "name": "lastMessageAt"
+        },
+        {
+          "name": "projectExternalId"
+        },
+        {
+          "name": "sessionType"
+        },
+        {
+          "name": "title"
+        },
+        {
+          "name": "updatedAt"
         },
         {
           "name": "user"
         }
       ],
       "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        },
         {
           "name": "onCreate",
           "parameterTypes": []
@@ -9181,22 +9553,10 @@
       ]
     },
     {
-      "type": "kr.devport.api.domain.wiki.entity.WikiChatSession$HibernateAccessOptimizer5createdAt5expiresAt5externalId5lastMessageAt5projectExternalId5sessionType5title5updatedAt5user",
-      "methods": [
-        {
-          "name": "<init>",
-          "parameterTypes": []
-        }
-      ]
+      "type": "kr.devport.api.domain.wiki.entity.WikiChatSession$HibernateInstantiator"
     },
     {
-      "type": "kr.devport.api.domain.wiki.entity.WikiChatSession$HibernateInstantiator",
-      "methods": [
-        {
-          "name": "<init>",
-          "parameterTypes": []
-        }
-      ]
+      "type": "kr.devport.api.domain.wiki.entity.WikiChatSession$HibernateProxy"
     },
     {
       "type": "kr.devport.api.domain.wiki.entity.WikiChatSession$WikiChatSessionBuilder"
@@ -9211,12 +9571,42 @@
       "type": "kr.devport.api.domain.wiki.entity.WikiSectionChunk",
       "fields": [
         {
+          "name": "chunkType"
+        },
+        {
+          "name": "commitSha"
+        },
+        {
+          "name": "content"
+        },
+        {
+          "name": "createdAt"
+        },
+        {
+          "name": "embedding"
+        },
+        {
           "name": "id"
+        },
+        {
+          "name": "metadata"
+        },
+        {
+          "name": "projectExternalId"
+        },
+        {
+          "name": "sectionId"
+        },
+        {
+          "name": "subsectionId"
+        },
+        {
+          "name": "tokenCount"
+        },
+        {
+          "name": "updatedAt"
         }
-      ]
-    },
-    {
-      "type": "kr.devport.api.domain.wiki.entity.WikiSectionChunk$HibernateAccessOptimizer5chunkType5commitSha5content5createdAt5embedding5metadata5projectExternalId5sectionId5subsectionId5tokenCount5updatedAt",
+      ],
       "methods": [
         {
           "name": "<init>",
@@ -9225,13 +9615,10 @@
       ]
     },
     {
-      "type": "kr.devport.api.domain.wiki.entity.WikiSectionChunk$HibernateInstantiator",
-      "methods": [
-        {
-          "name": "<init>",
-          "parameterTypes": []
-        }
-      ]
+      "type": "kr.devport.api.domain.wiki.entity.WikiSectionChunk$HibernateInstantiator"
+    },
+    {
+      "type": "kr.devport.api.domain.wiki.entity.WikiSectionChunk$HibernateProxy"
     },
     {
       "type": "kr.devport.api.domain.wiki.entity.WikiSectionChunk$WikiSectionChunkBuilder"
@@ -9355,23 +9742,6 @@
             "kr.devport.api.domain.auth.entity.User",
             "java.lang.String",
             "kr.devport.api.domain.wiki.enums.WikiChatSessionType"
-          ]
-        },
-        {
-          "name": "getGlobalSessions",
-          "parameterTypes": [
-            "kr.devport.api.domain.auth.entity.User",
-            "int",
-            "int"
-          ]
-        },
-        {
-          "name": "getProjectSessions",
-          "parameterTypes": [
-            "kr.devport.api.domain.auth.entity.User",
-            "java.lang.String",
-            "int",
-            "int"
           ]
         },
         {
@@ -9546,293 +9916,6 @@
       "type": "long[]"
     },
     {
-      "type": "net.bytebuddy.asm.Advice$AllArguments"
-    },
-    {
-      "type": "net.bytebuddy.asm.Advice$Argument",
-      "methods": [
-        {
-          "name": "optional",
-          "parameterTypes": []
-        },
-        {
-          "name": "readOnly",
-          "parameterTypes": []
-        },
-        {
-          "name": "typing",
-          "parameterTypes": []
-        },
-        {
-          "name": "value",
-          "parameterTypes": []
-        }
-      ]
-    },
-    {
-      "type": "net.bytebuddy.asm.Advice$DynamicConstant"
-    },
-    {
-      "type": "net.bytebuddy.asm.Advice$Enter"
-    },
-    {
-      "type": "net.bytebuddy.asm.Advice$Exit"
-    },
-    {
-      "type": "net.bytebuddy.asm.Advice$FieldGetterHandle"
-    },
-    {
-      "type": "net.bytebuddy.asm.Advice$FieldSetterHandle"
-    },
-    {
-      "type": "net.bytebuddy.asm.Advice$FieldValue",
-      "methods": [
-        {
-          "name": "declaringType",
-          "parameterTypes": []
-        },
-        {
-          "name": "readOnly",
-          "parameterTypes": []
-        },
-        {
-          "name": "typing",
-          "parameterTypes": []
-        },
-        {
-          "name": "value",
-          "parameterTypes": []
-        }
-      ]
-    },
-    {
-      "type": "net.bytebuddy.asm.Advice$Handle"
-    },
-    {
-      "type": "net.bytebuddy.asm.Advice$Local"
-    },
-    {
-      "type": "net.bytebuddy.asm.Advice$OnMethodEnter",
-      "methods": [
-        {
-          "name": "inline",
-          "parameterTypes": []
-        },
-        {
-          "name": "prependLineNumber",
-          "parameterTypes": []
-        },
-        {
-          "name": "skipOn",
-          "parameterTypes": []
-        },
-        {
-          "name": "skipOnIndex",
-          "parameterTypes": []
-        },
-        {
-          "name": "suppress",
-          "parameterTypes": []
-        }
-      ]
-    },
-    {
-      "type": "net.bytebuddy.asm.Advice$OnMethodExit",
-      "methods": [
-        {
-          "name": "backupArguments",
-          "parameterTypes": []
-        },
-        {
-          "name": "inline",
-          "parameterTypes": []
-        },
-        {
-          "name": "onThrowable",
-          "parameterTypes": []
-        },
-        {
-          "name": "repeatOn",
-          "parameterTypes": []
-        },
-        {
-          "name": "repeatOnIndex",
-          "parameterTypes": []
-        },
-        {
-          "name": "suppress",
-          "parameterTypes": []
-        }
-      ]
-    },
-    {
-      "type": "net.bytebuddy.asm.Advice$Origin"
-    },
-    {
-      "type": "net.bytebuddy.asm.Advice$Return",
-      "methods": [
-        {
-          "name": "readOnly",
-          "parameterTypes": []
-        },
-        {
-          "name": "typing",
-          "parameterTypes": []
-        }
-      ]
-    },
-    {
-      "type": "net.bytebuddy.asm.Advice$SelfCallHandle"
-    },
-    {
-      "type": "net.bytebuddy.asm.Advice$This",
-      "methods": [
-        {
-          "name": "optional",
-          "parameterTypes": []
-        },
-        {
-          "name": "readOnly",
-          "parameterTypes": []
-        },
-        {
-          "name": "typing",
-          "parameterTypes": []
-        }
-      ]
-    },
-    {
-      "type": "net.bytebuddy.asm.Advice$Thrown"
-    },
-    {
-      "type": "net.bytebuddy.description.method.MethodDescription$InDefinedShape$AbstractBase$Executable"
-    },
-    {
-      "type": "net.bytebuddy.description.method.ParameterDescription$ForLoadedParameter$Parameter"
-    },
-    {
-      "type": "net.bytebuddy.description.method.ParameterList$ForLoadedExecutable$Executable"
-    },
-    {
-      "type": "net.bytebuddy.description.type.TypeDefinition",
-      "methods": [
-        {
-          "name": "asErasure",
-          "parameterTypes": []
-        },
-        {
-          "name": "asGenericType",
-          "parameterTypes": []
-        },
-        {
-          "name": "isPrimitive",
-          "parameterTypes": []
-        },
-        {
-          "name": "represents",
-          "parameterTypes": [
-            "java.lang.reflect.Type"
-          ]
-        }
-      ]
-    },
-    {
-      "type": "net.bytebuddy.description.type.TypeDefinition$Sort$AnnotatedType"
-    },
-    {
-      "type": "net.bytebuddy.description.type.TypeDescription$ForLoadedType$Dispatcher"
-    },
-    {
-      "type": "net.bytebuddy.description.type.TypeDescription$Generic$AnnotationReader$Delegator$ForLoadedExecutableParameterType$Dispatcher"
-    },
-    {
-      "type": "net.bytebuddy.description.type.TypeDescription$Generic$AnnotationReader$Delegator$ForLoadedMethodReturnType$Dispatcher"
-    },
-    {
-      "type": "net.bytebuddy.description.type.TypeDescription$Generic$AnnotationReader$ForComponentType$AnnotatedParameterizedType"
-    },
-    {
-      "type": "net.bytebuddy.dynamic.loading.ClassInjector$UsingLookup$MethodHandles"
-    },
-    {
-      "type": "net.bytebuddy.dynamic.loading.ClassInjector$UsingLookup$MethodHandles$Lookup"
-    },
-    {
-      "type": "net.bytebuddy.implementation.bind.annotation.AllArguments"
-    },
-    {
-      "type": "net.bytebuddy.implementation.bind.annotation.Argument"
-    },
-    {
-      "type": "net.bytebuddy.implementation.bind.annotation.BindingPriority"
-    },
-    {
-      "type": "net.bytebuddy.implementation.bind.annotation.Default"
-    },
-    {
-      "type": "net.bytebuddy.implementation.bind.annotation.DefaultCall"
-    },
-    {
-      "type": "net.bytebuddy.implementation.bind.annotation.DefaultCallHandle"
-    },
-    {
-      "type": "net.bytebuddy.implementation.bind.annotation.DefaultMethod"
-    },
-    {
-      "type": "net.bytebuddy.implementation.bind.annotation.DefaultMethodHandle"
-    },
-    {
-      "type": "net.bytebuddy.implementation.bind.annotation.DynamicConstant"
-    },
-    {
-      "type": "net.bytebuddy.implementation.bind.annotation.FieldGetterHandle"
-    },
-    {
-      "type": "net.bytebuddy.implementation.bind.annotation.FieldSetterHandle"
-    },
-    {
-      "type": "net.bytebuddy.implementation.bind.annotation.FieldValue"
-    },
-    {
-      "type": "net.bytebuddy.implementation.bind.annotation.Handle"
-    },
-    {
-      "type": "net.bytebuddy.implementation.bind.annotation.Origin"
-    },
-    {
-      "type": "net.bytebuddy.implementation.bind.annotation.Super"
-    },
-    {
-      "type": "net.bytebuddy.implementation.bind.annotation.SuperCall"
-    },
-    {
-      "type": "net.bytebuddy.implementation.bind.annotation.SuperCallHandle"
-    },
-    {
-      "type": "net.bytebuddy.implementation.bind.annotation.SuperMethod"
-    },
-    {
-      "type": "net.bytebuddy.implementation.bind.annotation.SuperMethodHandle"
-    },
-    {
-      "type": "net.bytebuddy.implementation.bind.annotation.This"
-    },
-    {
-      "type": "net.bytebuddy.jar.asmjdkbridge.JdkClassReader"
-    },
-    {
-      "type": "net.bytebuddy.utility.Invoker"
-    },
-    {
-      "type": "net.bytebuddy.utility.Invoker$Dispatcher",
-      "methods": [
-        {
-          "name": "<init>",
-          "parameterTypes": []
-        }
-      ]
-    },
-    {
       "type": "net.sf.jsqlparser.parser.JSqlParser"
     },
     {
@@ -9875,28 +9958,7 @@
       "type": "org.apache.catalina.Manager"
     },
     {
-      "type": "org.apache.catalina.authenticator.AuthenticatorBase"
-    },
-    {
-      "type": "org.apache.catalina.connector.CoyoteAdapter"
-    },
-    {
       "type": "org.apache.catalina.core.ApplicationContextFacade"
-    },
-    {
-      "type": "org.apache.catalina.core.ApplicationFilterChain"
-    },
-    {
-      "type": "org.apache.catalina.core.StandardContextValve"
-    },
-    {
-      "type": "org.apache.catalina.core.StandardEngineValve"
-    },
-    {
-      "type": "org.apache.catalina.core.StandardHostValve"
-    },
-    {
-      "type": "org.apache.catalina.core.StandardWrapperValve"
     },
     {
       "type": "org.apache.catalina.loader.JdbcLeakPrevention",
@@ -9922,9 +9984,6 @@
           "parameterTypes": []
         }
       ]
-    },
-    {
-      "type": "org.apache.catalina.valves.ErrorReportValve"
     },
     {
       "type": "org.apache.commons.dbcp2.BasicDataSource"
@@ -9955,9 +10014,6 @@
     },
     {
       "type": "org.apache.commons.pool2.impl.GenericObjectPool"
-    },
-    {
-      "type": "org.apache.coyote.AbstractProcessorLight"
     },
     {
       "type": "org.apache.coyote.AbstractProtocol",
@@ -9992,9 +10048,6 @@
       ]
     },
     {
-      "type": "org.apache.coyote.AbstractProtocol$ConnectionHandler"
-    },
-    {
       "type": "org.apache.coyote.UpgradeProtocol"
     },
     {
@@ -10008,9 +10061,6 @@
     },
     {
       "type": "org.apache.coyote.http11.Http11NioProtocol"
-    },
-    {
-      "type": "org.apache.coyote.http11.Http11Processor"
     },
     {
       "type": "org.apache.derby.jdbc.EmbeddedDriver"
@@ -10064,21 +10114,6 @@
     },
     {
       "type": "org.apache.tomcat.util.net.NioEndpoint"
-    },
-    {
-      "type": "org.apache.tomcat.util.net.NioEndpoint$SocketProcessor"
-    },
-    {
-      "type": "org.apache.tomcat.util.net.SocketProcessorBase"
-    },
-    {
-      "type": "org.apache.tomcat.util.threads.TaskThread$WrappingRunnable"
-    },
-    {
-      "type": "org.apache.tomcat.util.threads.ThreadPoolExecutor"
-    },
-    {
-      "type": "org.apache.tomcat.util.threads.ThreadPoolExecutor$Worker"
     },
     {
       "type": "org.apache.tomcat.websocket.server.WsFilter"
@@ -10136,9 +10171,6 @@
     },
     {
       "type": "org.hibernate.Incubating"
-    },
-    {
-      "type": "org.hibernate.Internal"
     },
     {
       "type": "org.hibernate.Session",
@@ -10236,9 +10268,6 @@
           "parameterTypes": []
         }
       ]
-    },
-    {
-      "type": "org.hibernate.action.internal.EntityIdentityInsertAction"
     },
     {
       "type": "org.hibernate.annotations.Any"
@@ -12068,18 +12097,6 @@
       ]
     },
     {
-      "type": "org.hibernate.boot.models.annotations.internal.TransientJpaAnnotation",
-      "methods": [
-        {
-          "name": "<init>",
-          "parameterTypes": [
-            "jakarta.persistence.Transient",
-            "org.hibernate.models.spi.ModelsContext"
-          ]
-        }
-      ]
-    },
-    {
       "type": "org.hibernate.boot.models.annotations.internal.UniqueConstraintJpaAnnotation",
       "methods": [
         {
@@ -12092,73 +12109,21 @@
       ]
     },
     {
-      "type": "org.hibernate.bytecode.enhance.internal.bytebuddy.CodeTemplates$AreFieldsDirty"
-    },
-    {
-      "type": "org.hibernate.bytecode.enhance.internal.bytebuddy.CodeTemplates$AreFieldsDirtyWithoutCollections"
-    },
-    {
-      "type": "org.hibernate.bytecode.enhance.internal.bytebuddy.CodeTemplates$ClearDirtyAttributes"
-    },
-    {
-      "type": "org.hibernate.bytecode.enhance.internal.bytebuddy.CodeTemplates$ClearDirtyAttributesWithoutCollections"
-    },
-    {
-      "type": "org.hibernate.bytecode.enhance.internal.bytebuddy.CodeTemplates$ClearOwner"
-    },
-    {
-      "type": "org.hibernate.bytecode.enhance.internal.bytebuddy.CodeTemplates$GetCollectionTrackerWithoutCollections"
-    },
-    {
-      "type": "org.hibernate.bytecode.enhance.internal.bytebuddy.CodeTemplates$GetDirtyAttributes"
-    },
-    {
-      "type": "org.hibernate.bytecode.enhance.internal.bytebuddy.CodeTemplates$GetDirtyAttributesWithoutCollections"
-    },
-    {
-      "type": "org.hibernate.bytecode.enhance.internal.bytebuddy.CodeTemplates$InitializeLazyAttributeLoadingInterceptor"
-    },
-    {
-      "type": "org.hibernate.bytecode.enhance.internal.bytebuddy.CodeTemplates$SetOwner"
-    },
-    {
-      "type": "org.hibernate.bytecode.enhance.internal.bytebuddy.CodeTemplates$SetPersistenceInfo"
-    },
-    {
-      "type": "org.hibernate.bytecode.enhance.internal.bytebuddy.CodeTemplates$SuspendDirtyTracking"
-    },
-    {
-      "type": "org.hibernate.bytecode.enhance.internal.bytebuddy.CodeTemplates$TrackChange"
-    },
-    {
-      "type": "org.hibernate.bytecode.enhance.internal.tracker.CompositeOwnerTracker"
-    },
-    {
-      "type": "org.hibernate.bytecode.enhance.internal.tracker.DirtyTracker"
-    },
-    {
-      "type": "org.hibernate.bytecode.enhance.spi.CollectionTracker"
-    },
-    {
-      "type": "org.hibernate.bytecode.enhance.spi.EnhancementInfo"
-    },
-    {
-      "type": "org.hibernate.bytecode.enhance.spi.interceptor.AbstractInterceptor"
-    },
-    {
-      "type": "org.hibernate.bytecode.enhance.spi.interceptor.LazyAttributeLoadingInterceptor"
-    },
-    {
-      "type": "org.hibernate.bytecode.internal.bytebuddy.BytecodeProviderImpl",
+      "type": "org.hibernate.bytecode.enhance.spi.interceptor.BytecodeInterceptorLogging_$logger",
       "methods": [
         {
           "name": "<init>",
-          "parameterTypes": []
+          "parameterTypes": [
+            "org.jboss.logging.Logger"
+          ]
         }
       ]
     },
     {
-      "type": "org.hibernate.bytecode.spi.ReflectionOptimizer$AccessOptimizer"
+      "type": "org.hibernate.bytecode.enhance.spi.interceptor.BytecodeInterceptorLogging_$logger_en"
+    },
+    {
+      "type": "org.hibernate.bytecode.enhance.spi.interceptor.BytecodeInterceptorLogging_$logger_en_KR"
     },
     {
       "type": "org.hibernate.bytecode.spi.ReflectionOptimizer$InstantiationOptimizer"
@@ -12347,36 +12312,7 @@
       "type": "org.hibernate.engine.jdbc.internal.JdbcServicesImpl"
     },
     {
-      "type": "org.hibernate.engine.jdbc.internal.ResultSetReturnImpl"
-    },
-    {
-      "type": "org.hibernate.engine.jdbc.mutation.internal.AbstractMutationExecutor"
-    },
-    {
-      "type": "org.hibernate.engine.jdbc.mutation.internal.MutationExecutorSingleNonBatched"
-    },
-    {
       "type": "org.hibernate.engine.jdbc.mutation.internal.StandardMutationExecutorService"
-    },
-    {
-      "type": "org.hibernate.engine.jdbc.spi.SQLExceptionLogging_$logger",
-      "methods": [
-        {
-          "name": "<init>",
-          "parameterTypes": [
-            "org.jboss.logging.Logger"
-          ]
-        }
-      ]
-    },
-    {
-      "type": "org.hibernate.engine.jdbc.spi.SQLExceptionLogging_$logger_en"
-    },
-    {
-      "type": "org.hibernate.engine.jdbc.spi.SQLExceptionLogging_$logger_en_KR"
-    },
-    {
-      "type": "org.hibernate.engine.jdbc.spi.SqlExceptionHelper"
     },
     {
       "type": "org.hibernate.engine.jdbc.spi.SqlStatementLogger"
@@ -12388,43 +12324,10 @@
       "type": "org.hibernate.engine.query.internal.NativeQueryInterpreterStandardImpl"
     },
     {
-      "type": "org.hibernate.engine.spi.ActionQueue"
-    },
-    {
-      "type": "org.hibernate.engine.spi.CompositeOwner"
-    },
-    {
-      "type": "org.hibernate.engine.spi.CompositeTracker"
-    },
-    {
-      "type": "org.hibernate.engine.spi.EntityEntry"
-    },
-    {
-      "type": "org.hibernate.engine.spi.ExtendedSelfDirtinessTracker"
-    },
-    {
       "type": "org.hibernate.engine.spi.InstanceIdentity"
     },
     {
-      "type": "org.hibernate.engine.spi.Managed"
-    },
-    {
-      "type": "org.hibernate.engine.spi.ManagedComposite"
-    },
-    {
-      "type": "org.hibernate.engine.spi.ManagedEntity"
-    },
-    {
-      "type": "org.hibernate.engine.spi.PersistentAttributeInterceptable"
-    },
-    {
-      "type": "org.hibernate.engine.spi.PersistentAttributeInterceptor"
-    },
-    {
       "type": "org.hibernate.engine.spi.PrimeAmongSecondarySupertypes"
-    },
-    {
-      "type": "org.hibernate.engine.spi.SelfDirtinessTracker"
     },
     {
       "type": "org.hibernate.engine.spi.SessionImplementor"
@@ -12437,15 +12340,6 @@
           "parameterTypes": []
         }
       ]
-    },
-    {
-      "type": "org.hibernate.event.internal.AbstractSaveEventListener"
-    },
-    {
-      "type": "org.hibernate.event.internal.DefaultPersistEventListener"
-    },
-    {
-      "type": "org.hibernate.event.service.internal.EventListenerGroupImpl"
     },
     {
       "type": "org.hibernate.event.spi.AutoFlushEventListener[]"
@@ -12627,16 +12521,7 @@
       "type": "org.hibernate.event.spi.ReplicateEventListener[]"
     },
     {
-      "type": "org.hibernate.exception.internal.SQLStateConversionDelegate"
-    },
-    {
-      "type": "org.hibernate.exception.internal.StandardSQLExceptionConverter"
-    },
-    {
       "type": "org.hibernate.generator.EventType[]"
-    },
-    {
-      "type": "org.hibernate.id.insert.GetGeneratedKeysDelegate"
     },
     {
       "type": "org.hibernate.internal.CoreMessageLogger_$logger",
@@ -12671,9 +12556,6 @@
     },
     {
       "type": "org.hibernate.internal.SessionFactoryRegistryMessageLogger_$logger_en_KR"
-    },
-    {
-      "type": "org.hibernate.internal.SessionImpl"
     },
     {
       "type": "org.hibernate.internal.log.ConnectionInfoLogger_$logger",
@@ -12762,9 +12644,6 @@
       ]
     },
     {
-      "type": "org.hibernate.persister.entity.mutation.InsertCoordinatorStandard"
-    },
-    {
       "type": "org.hibernate.persister.internal.PersisterFactoryImpl"
     },
     {
@@ -12775,6 +12654,9 @@
     },
     {
       "type": "org.hibernate.proxy.HibernateProxy"
+    },
+    {
+      "type": "org.hibernate.proxy.ProxyConfiguration"
     },
     {
       "type": "org.hibernate.proxy.ProxyConfiguration$InterceptorDispatcher"
@@ -13319,12 +13201,6 @@
       "type": "org.postgresql.core.QueryExecutorCloseAction"
     },
     {
-      "type": "org.postgresql.core.v3.QueryExecutorImpl"
-    },
-    {
-      "type": "org.postgresql.jdbc.PgPreparedStatement"
-    },
-    {
       "type": "org.postgresql.jdbc.PgStatement"
     },
     {
@@ -13474,12 +13350,6 @@
       "type": "org.springframework.aop.framework.AopInfrastructureBean"
     },
     {
-      "type": "org.springframework.aop.framework.CglibAopProxy$DynamicAdvisedInterceptor"
-    },
-    {
-      "type": "org.springframework.aop.framework.JdkDynamicAopProxy"
-    },
-    {
       "type": "org.springframework.aop.framework.ProxyConfig",
       "methods": [
         {
@@ -13506,9 +13376,6 @@
       ]
     },
     {
-      "type": "org.springframework.aop.framework.ReflectiveMethodInvocation"
-    },
-    {
       "type": "org.springframework.aop.framework.autoproxy.AbstractAdvisorAutoProxyCreator"
     },
     {
@@ -13525,9 +13392,6 @@
     },
     {
       "type": "org.springframework.aop.support.AbstractPointcutAdvisor"
-    },
-    {
-      "type": "org.springframework.aop.support.AopUtils"
     },
     {
       "type": "org.springframework.aot.hint.annotation.Reflective"
@@ -19020,15 +18884,6 @@
       "type": "org.springframework.dao.annotation.PersistenceExceptionTranslationPostProcessor"
     },
     {
-      "type": "org.springframework.dao.support.ChainedPersistenceExceptionTranslator"
-    },
-    {
-      "type": "org.springframework.dao.support.DataAccessUtils"
-    },
-    {
-      "type": "org.springframework.dao.support.PersistenceExceptionTranslationInterceptor"
-    },
-    {
       "type": "org.springframework.dao.support.PersistenceExceptionTranslator"
     },
     {
@@ -19282,9 +19137,6 @@
       ]
     },
     {
-      "type": "org.springframework.data.jpa.repository.support.CrudMethodMetadataPostProcessor$CrudMethodMetadataPopulatingMethodInterceptor"
-    },
-    {
       "type": "org.springframework.data.jpa.repository.support.DefaultJpaContext"
     },
     {
@@ -19437,9 +19289,6 @@
     },
     {
       "type": "org.springframework.data.mapping.context.MappingContext"
-    },
-    {
-      "type": "org.springframework.data.projection.DefaultMethodInvokingMethodInterceptor"
     },
     {
       "type": "org.springframework.data.querydsl.QuerydslPredicateExecutor"
@@ -19700,12 +19549,6 @@
       "type": "org.springframework.data.repository.core.support.PropertiesBasedNamedQueries"
     },
     {
-      "type": "org.springframework.data.repository.core.support.QueryExecutorMethodInterceptor"
-    },
-    {
-      "type": "org.springframework.data.repository.core.support.RepositoryComposition"
-    },
-    {
       "type": "org.springframework.data.repository.core.support.RepositoryComposition$RepositoryFragments"
     },
     {
@@ -19753,9 +19596,6 @@
       "type": "org.springframework.data.repository.core.support.RepositoryFactoryInformation"
     },
     {
-      "type": "org.springframework.data.repository.core.support.RepositoryFactorySupport$ImplementationMethodExecutionInterceptor"
-    },
-    {
       "type": "org.springframework.data.repository.core.support.RepositoryFragmentsFactoryBean",
       "methods": [
         {
@@ -19768,12 +19608,6 @@
     },
     {
       "type": "org.springframework.data.repository.core.support.RepositoryMethodInvocationListener"
-    },
-    {
-      "type": "org.springframework.data.repository.core.support.RepositoryMethodInvoker"
-    },
-    {
-      "type": "org.springframework.data.repository.core.support.RepositoryMethodInvoker$RepositoryFragmentMethodInvoker"
     },
     {
       "type": "org.springframework.data.repository.core.support.TransactionalRepositoryFactoryBeanSupport",
@@ -20171,9 +20005,6 @@
       "type": "org.springframework.orm.jpa.EntityManagerProxy"
     },
     {
-      "type": "org.springframework.orm.jpa.ExtendedEntityManagerCreator$ExtendedEntityManagerInvocationHandler"
-    },
-    {
       "type": "org.springframework.orm.jpa.JpaTransactionManager"
     },
     {
@@ -20192,12 +20023,6 @@
           ]
         }
       ]
-    },
-    {
-      "type": "org.springframework.orm.jpa.SharedEntityManagerCreator$SharedEntityManagerInvocationHandler"
-    },
-    {
-      "type": "org.springframework.orm.jpa.hibernate.HibernateExceptionTranslator"
     },
     {
       "type": "org.springframework.orm.jpa.persistenceunit.MutablePersistenceUnitInfo",
@@ -20312,9 +20137,6 @@
     },
     {
       "type": "org.springframework.orm.jpa.vendor.AbstractJpaVendorAdapter"
-    },
-    {
-      "type": "org.springframework.orm.jpa.vendor.HibernateJpaDialect"
     },
     {
       "type": "org.springframework.orm.jpa.vendor.HibernateJpaVendorAdapter"
@@ -20937,21 +20759,6 @@
       "type": "org.springframework.security.web.FilterChainProxy"
     },
     {
-      "type": "org.springframework.security.web.ObservationFilterChainDecorator"
-    },
-    {
-      "type": "org.springframework.security.web.ObservationFilterChainDecorator$AroundFilterObservation$SimpleAroundFilterObservation"
-    },
-    {
-      "type": "org.springframework.security.web.ObservationFilterChainDecorator$FilterObservation$SimpleFilterObservation"
-    },
-    {
-      "type": "org.springframework.security.web.ObservationFilterChainDecorator$ObservationFilter"
-    },
-    {
-      "type": "org.springframework.security.web.ObservationFilterChainDecorator$VirtualFilterChain"
-    },
-    {
       "type": "org.springframework.security.web.SecurityFilterChain"
     },
     {
@@ -20974,9 +20781,6 @@
     },
     {
       "type": "org.springframework.security.web.authentication.AbstractAuthenticationTargetUrlRequestHandler"
-    },
-    {
-      "type": "org.springframework.security.web.authentication.AnonymousAuthenticationFilter"
     },
     {
       "type": "org.springframework.security.web.authentication.AuthenticationFailureHandler"
@@ -21021,9 +20825,6 @@
       "type": "org.springframework.security.web.context.SecurityContextHolderFilter"
     },
     {
-      "type": "org.springframework.security.web.context.request.async.WebAsyncManagerIntegrationFilter"
-    },
-    {
       "type": "org.springframework.security.web.header.HeaderWriterFilter"
     },
     {
@@ -21040,9 +20841,6 @@
     },
     {
       "type": "org.springframework.security.web.servletapi.SecurityContextHolderAwareRequestFilter"
-    },
-    {
-      "type": "org.springframework.security.web.session.DisableEncodeUrlFilter"
     },
     {
       "type": "org.springframework.security.web.session.SessionManagementFilter"
@@ -21314,15 +21112,6 @@
       "type": "org.springframework.web.filter.CharacterEncodingFilter"
     },
     {
-      "type": "org.springframework.web.filter.CompositeFilter"
-    },
-    {
-      "type": "org.springframework.web.filter.CompositeFilter$VirtualFilterChain"
-    },
-    {
-      "type": "org.springframework.web.filter.CorsFilter"
-    },
-    {
       "type": "org.springframework.web.filter.DelegatingFilterProxy"
     },
     {
@@ -21357,9 +21146,6 @@
     },
     {
       "type": "org.springframework.web.method.support.HandlerMethodArgumentResolver"
-    },
-    {
-      "type": "org.springframework.web.method.support.InvocableHandlerMethod"
     },
     {
       "type": "org.springframework.web.method.support.UriComponentsContributor"
@@ -21611,9 +21397,6 @@
     },
     {
       "type": "org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerMapping"
-    },
-    {
-      "type": "org.springframework.web.servlet.mvc.method.annotation.ServletInvocableHandlerMethod"
     },
     {
       "type": "org.springframework.web.servlet.resource.ResourceUrlProvider"
@@ -21881,24 +21664,6 @@
       ]
     },
     {
-      "type": "sun.security.provider.JavaKeyStore$DualFormatJKS",
-      "methods": [
-        {
-          "name": "<init>",
-          "parameterTypes": []
-        }
-      ]
-    },
-    {
-      "type": "sun.security.provider.JavaKeyStore$JKS",
-      "methods": [
-        {
-          "name": "<init>",
-          "parameterTypes": []
-        }
-      ]
-    },
-    {
       "type": "sun.security.provider.NativePRNG",
       "methods": [
         {
@@ -22010,15 +21775,6 @@
     },
     {
       "type": "sun.security.rsa.RSASignature$SHA224withRSA",
-      "methods": [
-        {
-          "name": "<init>",
-          "parameterTypes": []
-        }
-      ]
-    },
-    {
-      "type": "sun.security.rsa.RSASignature$SHA256withRSA",
       "methods": [
         {
           "name": "<init>",
@@ -22590,90 +22346,6 @@
           "org.springframework.transaction.interceptor.TransactionalProxy",
           "org.springframework.aop.framework.Advised",
           "org.springframework.core.DecoratingProxy"
-        ]
-      }
-    },
-    {
-      "type": {
-        "proxy": [
-          "net.bytebuddy.description.method.MethodDescription$InDefinedShape$AbstractBase$Executable"
-        ]
-      }
-    },
-    {
-      "type": {
-        "proxy": [
-          "net.bytebuddy.description.method.ParameterDescription$ForLoadedParameter$Parameter"
-        ]
-      }
-    },
-    {
-      "type": {
-        "proxy": [
-          "net.bytebuddy.description.method.ParameterList$ForLoadedExecutable$Executable"
-        ]
-      }
-    },
-    {
-      "type": {
-        "proxy": [
-          "net.bytebuddy.description.type.TypeDefinition$Sort$AnnotatedType"
-        ]
-      }
-    },
-    {
-      "type": {
-        "proxy": [
-          "net.bytebuddy.description.type.TypeDescription"
-        ]
-      }
-    },
-    {
-      "type": {
-        "proxy": [
-          "net.bytebuddy.description.type.TypeDescription$ForLoadedType$Dispatcher"
-        ]
-      }
-    },
-    {
-      "type": {
-        "proxy": [
-          "net.bytebuddy.description.type.TypeDescription$Generic"
-        ]
-      }
-    },
-    {
-      "type": {
-        "proxy": [
-          "net.bytebuddy.description.type.TypeDescription$Generic$AnnotationReader$Delegator$ForLoadedExecutableParameterType$Dispatcher"
-        ]
-      }
-    },
-    {
-      "type": {
-        "proxy": [
-          "net.bytebuddy.description.type.TypeDescription$Generic$AnnotationReader$Delegator$ForLoadedMethodReturnType$Dispatcher"
-        ]
-      }
-    },
-    {
-      "type": {
-        "proxy": [
-          "net.bytebuddy.description.type.TypeDescription$Generic$AnnotationReader$ForComponentType$AnnotatedParameterizedType"
-        ]
-      }
-    },
-    {
-      "type": {
-        "proxy": [
-          "net.bytebuddy.dynamic.loading.ClassInjector$UsingLookup$MethodHandles"
-        ]
-      }
-    },
-    {
-      "type": {
-        "proxy": [
-          "net.bytebuddy.dynamic.loading.ClassInjector$UsingLookup$MethodHandles$Lookup"
         ]
       }
     },
@@ -23645,6 +23317,9 @@
       "glob": "kr/devport/api/domain/wiki/controller/WikiAdminProjectController.class"
     },
     {
+      "glob": "kr/devport/api/domain/wiki/controller/WikiChatController$StreamDonePayload.class"
+    },
+    {
       "glob": "kr/devport/api/domain/wiki/controller/WikiChatController.class"
     },
     {
@@ -23882,75 +23557,6 @@
       "glob": "org/apache/tomcat/websocket/server/LocalStrings.properties"
     },
     {
-      "glob": "org/hibernate/bytecode/enhance/internal/bytebuddy/CodeTemplates$AreFieldsDirty.class"
-    },
-    {
-      "glob": "org/hibernate/bytecode/enhance/internal/bytebuddy/CodeTemplates$AreFieldsDirtyWithoutCollections.class"
-    },
-    {
-      "glob": "org/hibernate/bytecode/enhance/internal/bytebuddy/CodeTemplates$ClearDirtyAttributes.class"
-    },
-    {
-      "glob": "org/hibernate/bytecode/enhance/internal/bytebuddy/CodeTemplates$ClearDirtyAttributesWithoutCollections.class"
-    },
-    {
-      "glob": "org/hibernate/bytecode/enhance/internal/bytebuddy/CodeTemplates$ClearOwner.class"
-    },
-    {
-      "glob": "org/hibernate/bytecode/enhance/internal/bytebuddy/CodeTemplates$GetCollectionTrackerWithoutCollections.class"
-    },
-    {
-      "glob": "org/hibernate/bytecode/enhance/internal/bytebuddy/CodeTemplates$GetDirtyAttributes.class"
-    },
-    {
-      "glob": "org/hibernate/bytecode/enhance/internal/bytebuddy/CodeTemplates$GetDirtyAttributesWithoutCollections.class"
-    },
-    {
-      "glob": "org/hibernate/bytecode/enhance/internal/bytebuddy/CodeTemplates$InitializeLazyAttributeLoadingInterceptor.class"
-    },
-    {
-      "glob": "org/hibernate/bytecode/enhance/internal/bytebuddy/CodeTemplates$SetOwner.class"
-    },
-    {
-      "glob": "org/hibernate/bytecode/enhance/internal/bytebuddy/CodeTemplates$SetPersistenceInfo.class"
-    },
-    {
-      "glob": "org/hibernate/bytecode/enhance/internal/bytebuddy/CodeTemplates$SuspendDirtyTracking.class"
-    },
-    {
-      "glob": "org/hibernate/bytecode/enhance/internal/bytebuddy/CodeTemplates$TrackChange.class"
-    },
-    {
-      "glob": "org/hibernate/engine/spi/CompositeOwner.class"
-    },
-    {
-      "glob": "org/hibernate/engine/spi/CompositeTracker.class"
-    },
-    {
-      "glob": "org/hibernate/engine/spi/ExtendedSelfDirtinessTracker.class"
-    },
-    {
-      "glob": "org/hibernate/engine/spi/InstanceIdentity.class"
-    },
-    {
-      "glob": "org/hibernate/engine/spi/Managed.class"
-    },
-    {
-      "glob": "org/hibernate/engine/spi/ManagedComposite.class"
-    },
-    {
-      "glob": "org/hibernate/engine/spi/ManagedEntity.class"
-    },
-    {
-      "glob": "org/hibernate/engine/spi/PersistentAttributeInterceptable.class"
-    },
-    {
-      "glob": "org/hibernate/engine/spi/PrimeAmongSecondarySupertypes.class"
-    },
-    {
-      "glob": "org/hibernate/engine/spi/SelfDirtinessTracker.class"
-    },
-    {
       "glob": "org/hibernate/hibernate-configuration-3.0.dtd"
     },
     {
@@ -23958,15 +23564,6 @@
     },
     {
       "glob": "org/postgresql/driverconfig.properties"
-    },
-    {
-      "glob": "org/postgresql/translation/messages.properties"
-    },
-    {
-      "glob": "org/postgresql/translation/messages_en.properties"
-    },
-    {
-      "glob": "org/postgresql/translation/messages_en_KR.properties"
     },
     {
       "glob": "org/publicsuffix/list/effective_tld_names.dat"
@@ -25524,9 +25121,6 @@
     },
     {
       "bundle": "org.apache.tomcat.websocket.server.LocalStrings"
-    },
-    {
-      "bundle": "org.postgresql.translation.messages"
     }
   ]
 }
