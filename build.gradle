@@ -24,6 +24,11 @@ configurations {
 	compileOnly {
 		extendsFrom annotationProcessor
 	}
+	// ByteBuddy defines classes at runtime — impossible in GraalVM native images.
+	// Excluding it prevents Hibernate's ServiceLoader from loading BytecodeProviderImpl.
+	runtimeClasspath {
+		exclude group: 'net.bytebuddy'
+	}
 }
 
 repositories {

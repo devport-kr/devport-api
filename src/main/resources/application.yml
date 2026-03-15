@@ -21,6 +21,8 @@ spring:
     properties:
       hibernate:
         format_sql: true
+        bytecode:
+          provider: none
         jdbc:
           lob:
             non_contextual_creation: true
