@@ -28,7 +28,7 @@ public class WikiChatSession {
     @Column(name = "external_id", nullable = false, unique = true, length = 100)
     private String externalId;
 
-    @ManyToOne(fetch = FetchType.LAZY)
+    @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "user_id")
     private User user;
 

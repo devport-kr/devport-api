@@ -148,6 +148,6 @@ public class WikiGlobalChatController {
                     .data(Map.of("message", message), MediaType.APPLICATION_JSON));
         } catch (IOException ignored) {
         }
-        emitter.completeWithError(ex);
+        emitter.complete();
     }
 }

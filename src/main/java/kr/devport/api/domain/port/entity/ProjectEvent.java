@@ -50,7 +50,7 @@ public class ProjectEvent {
     @Column(name = "external_id", unique = true, nullable = false, length = 100)
     private String externalId;
 
-    @ManyToOne(fetch = FetchType.LAZY)
+    @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "project_id", nullable = false)
     private Project project;
 
