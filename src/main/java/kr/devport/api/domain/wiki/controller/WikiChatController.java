@@ -190,6 +190,15 @@ public class WikiChatController {
         }
     }
 
+    private record StreamDonePayload(
+            String sessionId,
+            boolean isClarification,
+            List<String> clarificationOptions,
+            List<String> suggestedNextQuestions,
+            boolean sessionReset
+    ) {
+    }
+
     private void handleStreamFailure(SseEmitter emitter, Exception ex) {
         log.error("Wiki chat stream failed", ex);
         try {
@@ -202,14 +211,5 @@ public class WikiChatController {
         } catch (IOException ignored) {
         }
         emitter.complete();
-    }
-
-    private record StreamDonePayload(
-            String sessionId,
-            boolean isClarification,
-            List<String> clarificationOptions,
-            List<String> suggestedNextQuestions,
-            boolean sessionReset
-    ) {
     }
 }

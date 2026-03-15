@@ -37,7 +37,7 @@ public class TextToVideoModel {
     @Column(nullable = false, length = 200)
     private String name;
 
-    @ManyToOne(fetch = FetchType.EAGER)
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "model_creator_id")
     private ModelCreator modelCreator;
 
