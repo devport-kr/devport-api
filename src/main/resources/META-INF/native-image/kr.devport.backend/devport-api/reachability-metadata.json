@@ -12149,7 +12149,13 @@
       "type": "org.hibernate.bytecode.enhance.spi.interceptor.LazyAttributeLoadingInterceptor"
     },
     {
-      "type": "org.hibernate.bytecode.internal.bytebuddy.BytecodeProviderImpl"
+      "type": "org.hibernate.bytecode.internal.bytebuddy.BytecodeProviderImpl",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
     },
     {
       "type": "org.hibernate.bytecode.spi.ReflectionOptimizer$AccessOptimizer"
