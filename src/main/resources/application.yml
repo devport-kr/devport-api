@@ -162,6 +162,7 @@ app:
     failure-redirect-uri: http://localhost:5173/login
 
   auth:
+    current-terms-version: ${APP_CURRENT_TERMS_VERSION:2026-03-24}
     refresh-cookie-name: devport_refresh_token
     refresh-cookie-path: /api/auth
     refresh-cookie-domain:

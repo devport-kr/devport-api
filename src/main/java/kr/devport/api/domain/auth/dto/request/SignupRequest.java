@@ -39,4 +39,9 @@ public class SignupRequest {
     @Schema(description = "Display name (optional)", example = "John Doe")
     @Size(max = 100, message = "Name must be less than 100 characters")
     private String name;
+
+    @Schema(description = "Agreed terms version in YYYY-MM-DD format", example = "2026-03-24")
+    @NotBlank(message = "Terms agreement is required")
+    @Pattern(regexp = "^\\d{4}-\\d{2}-\\d{2}$", message = "Terms version must be in YYYY-MM-DD format")
+    private String agreedTermsVersion;
 }

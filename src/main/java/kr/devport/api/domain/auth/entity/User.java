@@ -83,4 +83,10 @@ public class User {
 
     @Column(length = 7, name = "flair_color")
     private String flairColor;
+
+    @Column(name = "agreed_terms_version", length = 20)
+    private String agreedTermsVersion;
+
+    @Column(name = "agreed_at")
+    private LocalDateTime agreedAt;
 }
