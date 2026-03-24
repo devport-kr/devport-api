@@ -5,7 +5,6 @@ import kr.devport.api.domain.auth.oauth2.CustomOAuth2AuthorizationRequestResolve
 import kr.devport.api.domain.auth.oauth2.CustomOAuth2UserService;
 import kr.devport.api.domain.auth.oauth2.OAuth2AuthenticationFailureHandler;
 import kr.devport.api.domain.auth.oauth2.OAuth2AuthenticationSuccessHandler;
-import kr.devport.api.domain.common.logging.RequestCorrelationFilter;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -31,7 +30,6 @@ public class SecurityConfig {
     private final OAuth2AuthenticationFailureHandler oAuth2AuthenticationFailureHandler;
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
     private final ClientRegistrationRepository clientRegistrationRepository;
-    private final RequestCorrelationFilter requestCorrelationFilter;
 
     @Bean
     public PasswordEncoder passwordEncoder() {
@@ -139,7 +137,6 @@ public class SecurityConfig {
                 .successHandler(oAuth2AuthenticationSuccessHandler)
                 .failureHandler(oAuth2AuthenticationFailureHandler)
             )
-            .addFilterBefore(requestCorrelationFilter, JwtAuthenticationFilter.class)
             .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
             .headers(headers -> headers
                 .frameOptions(frameOptions -> frameOptions.disable())
