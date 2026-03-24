@@ -66,7 +66,7 @@ jobs:
           FIRST_TAG=$(echo "$TAGS" | head -n 1)
 
           # Build native image (--no-build-cache prevents stale AOT outputs from Gradle build cache)
-          ./gradlew bootBuildImage \
+          ./gradlew clean bootBuildImage \
             --imageName="$FIRST_TAG" \
             -Pspring-boot.build-image.imageName="$FIRST_TAG" \
             --no-build-cache \
