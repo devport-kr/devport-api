@@ -12,6 +12,7 @@ import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.ResponseEntity;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.oauth2.client.userinfo.DefaultOAuth2UserService;
 import org.springframework.security.oauth2.client.userinfo.OAuth2UserRequest;
 import org.springframework.security.oauth2.core.OAuth2AuthenticationException;
@@ -32,6 +33,9 @@ import lombok.extern.slf4j.Slf4j;
 public class CustomOAuth2UserService extends DefaultOAuth2UserService {
 
     private final UserRepository userRepository;
+
+    @Value("${app.auth.current-terms-version}")
+    private String currentTermsVersion;
 
     @Override
     public OAuth2User loadUser(OAuth2UserRequest userRequest) throws OAuth2AuthenticationException {
@@ -145,6 +149,8 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
             .createdAt(LocalDateTime.now())
             .updatedAt(LocalDateTime.now())
             .lastLoginAt(LocalDateTime.now())
+            .agreedTermsVersion(currentTermsVersion)
+            .agreedAt(LocalDateTime.now())
             .build();
 
         return userRepository.save(user);
