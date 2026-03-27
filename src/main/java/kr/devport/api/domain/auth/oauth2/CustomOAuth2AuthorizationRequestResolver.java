@@ -1,5 +1,8 @@
 package kr.devport.api.domain.auth.oauth2;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
@@ -8,16 +11,21 @@ import org.springframework.security.oauth2.client.web.DefaultOAuth2Authorization
 import org.springframework.security.oauth2.client.web.OAuth2AuthorizationRequestResolver;
 import org.springframework.security.oauth2.core.endpoint.OAuth2AuthorizationRequest;
 
+import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.Base64;
 
-/** OAuth2 state 파라미터에 Turnstile 토큰을 실어 보내는 커스텀 resolver. */
+/**
+ * OAuth2 state 파라미터에 Turnstile 토큰, intent, 약관 동의 버전을 실어 보내는 커스텀 resolver.
+ * state 형식: originalState~base64Url(JSON{"t":"turnstile","i":"intent","v":"agreedTermsVersion"})
+ */
 @Slf4j
 public class CustomOAuth2AuthorizationRequestResolver implements OAuth2AuthorizationRequestResolver {
 
     private final OAuth2AuthorizationRequestResolver defaultResolver;
     private static final String TURNSTILE_COOKIE_NAME = "turnstile_token";
     private static final String STATE_DELIMITER = "~";
+    private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
     public CustomOAuth2AuthorizationRequestResolver(ClientRegistrationRepository repo) {
         this.defaultResolver = new DefaultOAuth2AuthorizationRequestResolver(repo, "/oauth2/authorization");
@@ -44,27 +52,45 @@ public class CustomOAuth2AuthorizationRequestResolver implements OAuth2Authoriza
         }
 
         String turnstileToken = request.getParameter("turnstile_token");
-
         if (turnstileToken == null || turnstileToken.isEmpty()) {
             turnstileToken = extractTurnstileTokenFromCookie(request);
         }
+
+        String intent = request.getParameter("intent");
+        String agreedTermsVersion = request.getParameter("agreed_terms_version");
 
         if (turnstileToken == null || turnstileToken.isEmpty()) {
             log.debug("Turnstile token not found during OAuth2 authorization request");
             return authorizationRequest;
         }
 
-        // state 형식: originalState~base64Url(turnstileToken)
-        // URL-safe Base64 encoding과 tilde 구분자를 사용하여 URL에서 문제가 되는 문자 방지
-        String originalState = authorizationRequest.getState();
-        String encodedTurnstileToken = Base64.getUrlEncoder().withoutPadding().encodeToString(turnstileToken.getBytes());
-        String newState = originalState + STATE_DELIMITER + encodedTurnstileToken;
+        try {
+            ObjectNode payload = OBJECT_MAPPER.createObjectNode();
+            payload.put("t", turnstileToken);
+            if (intent != null && !intent.isEmpty()) {
+                payload.put("i", intent);
+            }
+            if (agreedTermsVersion != null && !agreedTermsVersion.isEmpty()) {
+                payload.put("v", agreedTermsVersion);
+            }
 
-        log.debug("Appending Turnstile token to OAuth2 state parameter");
+            String json = OBJECT_MAPPER.writeValueAsString(payload);
+            String encoded = Base64.getUrlEncoder().withoutPadding()
+                    .encodeToString(json.getBytes(StandardCharsets.UTF_8));
 
-        return OAuth2AuthorizationRequest.from(authorizationRequest)
-                .state(newState)
-                .build();
+            String originalState = authorizationRequest.getState();
+            String newState = originalState + STATE_DELIMITER + encoded;
+
+            log.debug("Appending OAuth2 state payload (intent={}, hasTermsVersion={})",
+                    intent, agreedTermsVersion != null);
+
+            return OAuth2AuthorizationRequest.from(authorizationRequest)
+                    .state(newState)
+                    .build();
+        } catch (Exception e) {
+            log.warn("Failed to encode OAuth2 state payload", e);
+            return authorizationRequest;
+        }
     }
 
     private String extractTurnstileTokenFromCookie(HttpServletRequest request) {
@@ -80,25 +106,42 @@ public class CustomOAuth2AuthorizationRequestResolver implements OAuth2Authoriza
                 .orElse(null);
     }
 
-    /** state 파라미터에 인코딩된 Turnstile 토큰을 복원한다. */
-    public static String extractTurnstileTokenFromState(String state) {
+    // ── State payload extraction ─────────────────────────────────────
+
+    private static JsonNode decodePayload(String state) {
         if (state == null || !state.contains(STATE_DELIMITER)) {
             return null;
         }
-
         try {
-            String[] parts = state.split("\\" + STATE_DELIMITER);
+            String[] parts = state.split("\\" + STATE_DELIMITER, 2);
             if (parts.length < 2) {
                 return null;
             }
-
-            String encodedToken = parts[1];
-            byte[] decodedBytes = Base64.getUrlDecoder().decode(encodedToken);
-            return new String(decodedBytes);
-
+            String json = new String(
+                    Base64.getUrlDecoder().decode(parts[1]),
+                    StandardCharsets.UTF_8);
+            return OBJECT_MAPPER.readTree(json);
         } catch (Exception e) {
-            log.warn("Failed to extract Turnstile token from OAuth2 state parameter", e);
+            log.warn("Failed to decode OAuth2 state payload", e);
             return null;
         }
+    }
+
+    /** state 파라미터에서 Turnstile 토큰을 복원한다. */
+    public static String extractTurnstileTokenFromState(String state) {
+        JsonNode node = decodePayload(state);
+        return node != null && node.has("t") ? node.get("t").asText() : null;
+    }
+
+    /** state 파라미터에서 intent(login/signup)를 복원한다. */
+    public static String extractIntentFromState(String state) {
+        JsonNode node = decodePayload(state);
+        return node != null && node.has("i") ? node.get("i").asText() : null;
+    }
+
+    /** state 파라미터에서 약관 동의 버전을 복원한다. */
+    public static String extractTermsVersionFromState(String state) {
+        JsonNode node = decodePayload(state);
+        return node != null && node.has("v") ? node.get("v").asText() : null;
     }
 }
