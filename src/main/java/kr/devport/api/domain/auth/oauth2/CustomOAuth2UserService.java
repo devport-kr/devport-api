@@ -1,5 +1,6 @@
 package kr.devport.api.domain.auth.oauth2;
 
+import jakarta.servlet.http.HttpServletRequest;
 import kr.devport.api.domain.auth.entity.User;
 import kr.devport.api.domain.auth.enums.AuthProvider;
 import kr.devport.api.domain.auth.enums.UserRole;
@@ -19,6 +20,8 @@ import org.springframework.security.oauth2.core.OAuth2AuthenticationException;
 import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
+import org.springframework.web.context.request.RequestContextHolder;
+import org.springframework.web.context.request.ServletRequestAttributes;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -131,6 +134,23 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
                     existing.getAuthProvider());
                 throw new OAuth2AuthenticationException("같은 정보의 계정이 이미 존재합니다");
             }
+
+            // intent 검증: signup이 아니면 신규 가입 차단
+            String intent = extractIntentFromCurrentRequest();
+            if (!"signup".equals(intent)) {
+                log.info("OAuth2 login blocked for unregistered user, provider={}, intent={}",
+                    authProvider, intent);
+                throw new OAuth2AuthenticationException("signup_required");
+            }
+
+            // 약관 동의 버전 검증
+            String agreedTermsVersion = extractTermsVersionFromCurrentRequest();
+            if (agreedTermsVersion == null || !currentTermsVersion.equals(agreedTermsVersion)) {
+                log.warn("OAuth2 signup rejected: terms version mismatch (expected={}, got={})",
+                    currentTermsVersion, agreedTermsVersion);
+                throw new OAuth2AuthenticationException("약관 동의가 필요합니다");
+            }
+
             user = registerNewUser(authProvider, oAuth2UserInfo);
             log.info("Registered new OAuth2 user with provider={}, userId={}", authProvider, user.getId());
         }
@@ -163,5 +183,25 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
         existingUser.setLastLoginAt(LocalDateTime.now());
 
         return userRepository.save(existingUser);
+    }
+
+    private String getStateFromCurrentRequest() {
+        ServletRequestAttributes attrs =
+                (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
+        if (attrs == null) {
+            return null;
+        }
+        HttpServletRequest request = attrs.getRequest();
+        return request.getParameter("state");
+    }
+
+    private String extractIntentFromCurrentRequest() {
+        return CustomOAuth2AuthorizationRequestResolver.extractIntentFromState(
+                getStateFromCurrentRequest());
+    }
+
+    private String extractTermsVersionFromCurrentRequest() {
+        return CustomOAuth2AuthorizationRequestResolver.extractTermsVersionFromState(
+                getStateFromCurrentRequest());
     }
 }
