@@ -9083,6 +9083,67 @@
       "type": "kr.devport.api.domain.wiki.dto.response.RelatedProjectResponse[]"
     },
     {
+      "type": "kr.devport.api.domain.wiki.dto.response.WikiSessionListResponse",
+      "methods": [
+        {
+          "name": "sessions",
+          "parameterTypes": []
+        },
+        {
+          "name": "totalPages",
+          "parameterTypes": []
+        },
+        {
+          "name": "totalElements",
+          "parameterTypes": []
+        },
+        {
+          "name": "page",
+          "parameterTypes": []
+        },
+        {
+          "name": "size",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "kr.devport.api.domain.wiki.dto.response.WikiSessionResponse",
+      "methods": [
+        {
+          "name": "sessionId",
+          "parameterTypes": []
+        },
+        {
+          "name": "title",
+          "parameterTypes": []
+        },
+        {
+          "name": "sessionType",
+          "parameterTypes": []
+        },
+        {
+          "name": "projectExternalId",
+          "parameterTypes": []
+        },
+        {
+          "name": "createdAt",
+          "parameterTypes": []
+        },
+        {
+          "name": "lastMessageAt",
+          "parameterTypes": []
+        },
+        {
+          "name": "messageCount",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "kr.devport.api.domain.wiki.dto.response.WikiSessionResponse[]"
+    },
+    {
       "type": "kr.devport.api.domain.wiki.dto.response.WikiGlobalChatResponse",
       "methods": [
         {
@@ -9196,6 +9257,9 @@
       ]
     },
     {
+      "type": "kr.devport.api.domain.wiki.dto.response.WikiProjectListResponse$ProjectSummary[]"
+    },
+    {
       "type": "kr.devport.api.domain.wiki.dto.response.WikiProjectListResponse$WikiProjectListResponseBuilder"
     },
     {
@@ -9289,6 +9353,9 @@
           "parameterTypes": []
         }
       ]
+    },
+    {
+      "type": "kr.devport.api.domain.wiki.dto.response.WikiProjectPageResponse$AnchorItem[]"
     },
     {
       "type": "kr.devport.api.domain.wiki.dto.response.WikiProjectPageResponse$CurrentCounters",
@@ -9454,6 +9521,9 @@
           "parameterTypes": []
         }
       ]
+    },
+    {
+      "type": "kr.devport.api.domain.wiki.dto.response.WikiProjectPageResponse$WikiSection[]"
     },
     {
       "type": "kr.devport.api.domain.wiki.entity.WikiChatMessage",
