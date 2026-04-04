@@ -16,7 +16,7 @@ import java.time.LocalDateTime;
 public class TrendingTickerResponse {
 
     private Long id;
+    private String externalId;
     private String summaryKoTitle;
-    private String url;
     private LocalDateTime createdAtSource;
 }
