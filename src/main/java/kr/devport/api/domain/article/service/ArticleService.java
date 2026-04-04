@@ -143,8 +143,8 @@ public class ArticleService {
     private TrendingTickerResponse convertToTrendingTickerResponse(Article article) {
         return TrendingTickerResponse.builder()
             .id(article.getId())
+            .externalId(article.getExternalId())
             .summaryKoTitle(article.getSummaryKoTitle())
-            .url(article.getUrl())
             .createdAtSource(article.getCreatedAtSource())
             .build();
     }

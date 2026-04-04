@@ -4679,7 +4679,7 @@
           "parameterTypes": []
         },
         {
-          "name": "getUrl",
+          "name": "getExternalId",
           "parameterTypes": []
         },
         {
@@ -4701,7 +4701,7 @@
           ]
         },
         {
-          "name": "setUrl",
+          "name": "setExternalId",
           "parameterTypes": [
             "java.lang.String"
           ]

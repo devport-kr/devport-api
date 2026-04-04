@@ -4,6 +4,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.AuthenticationException;
+import org.springframework.security.oauth2.core.OAuth2AuthenticationException;
 import org.springframework.security.web.authentication.SimpleUrlAuthenticationFailureHandler;
 import org.springframework.stereotype.Component;
 import org.springframework.web.util.UriComponentsBuilder;
@@ -23,6 +24,9 @@ public class OAuth2AuthenticationFailureHandler extends SimpleUrlAuthenticationF
         String errorMessage = exception.getLocalizedMessage();
         if (errorMessage == null || errorMessage.isBlank()) {
             errorMessage = exception.getMessage();
+        }
+        if ((errorMessage == null || errorMessage.isBlank()) && exception instanceof OAuth2AuthenticationException oauthEx) {
+            errorMessage = oauthEx.getError().getErrorCode();
         }
         if (errorMessage == null || errorMessage.isBlank()) {
             errorMessage = exception.getClass().getSimpleName();
