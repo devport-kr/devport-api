@@ -8,6 +8,14 @@ plugins {
 // native image 빌드시에만 GraalVM 적용
 if (!project.hasProperty('buildJvm')) {
 	apply plugin: 'org.graalvm.buildtools.native'
+
+	graalvmNative {
+		binaries {
+			main {
+				buildArgs.add('-H:+SharedArenaSupport')
+			}
+		}
+	}
 }
 
 group = 'kr.devport.backend'
@@ -81,11 +89,16 @@ dependencies {
 }
 
 tasks.named('bootBuildImage') {
+	builder = "paketobuildpacks/builder-noble-java-tiny:0.0.124"
 	def baseBuildpack = project.hasProperty('buildJvm')
 		? "urn:cnb:builder:paketo-buildpacks/java"
 		: "urn:cnb:builder:paketo-buildpacks/java-native-image"
 	buildpacks = [baseBuildpack, "docker.io/paketobuildpacks/health-checker"]
-	environment = ["BP_HEALTH_CHECKER_ENABLED": "true"]
+	def env = ["BP_HEALTH_CHECKER_ENABLED": "true"]
+	if (!project.hasProperty('buildJvm')) {
+		env["BP_NATIVE_IMAGE_BUILD_ARGUMENTS"] = "-H:+UnlockExperimentalVMOptions -H:+SharedArenaSupport"
+	}
+	environment = env
 }
 
 tasks.named('test') {
