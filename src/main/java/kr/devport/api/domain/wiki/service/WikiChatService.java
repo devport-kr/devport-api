@@ -72,6 +72,10 @@ public class WikiChatService {
         return chatResult(sessionId, projectExternalId, userQuestion, null).answer();
     }
 
+    public WikiChatResult chatResult(String sessionId, String projectExternalId, String userQuestion) {
+        return chatResult(sessionId, projectExternalId, userQuestion, null);
+    }
+
     public WikiChatResult chatResult(String sessionId, String projectExternalId, String userQuestion, User user) {
         ChatRequestContext chatRequest = prepareChatRequest(sessionId, projectExternalId, userQuestion, user);
         List<ChatCompletionMessageParam> messages = buildMessages(
@@ -111,6 +115,15 @@ public class WikiChatService {
         sessionStore.saveTurn(sessionId, projectExternalId, userQuestion, result.answer(), result.isClarification());
 
         return result;
+    }
+
+    public WikiChatResult streamChatResult(
+            String sessionId,
+            String projectExternalId,
+            String userQuestion,
+            Consumer<String> tokenConsumer
+    ) {
+        return streamChatResult(sessionId, projectExternalId, userQuestion, tokenConsumer, null);
     }
 
     public WikiChatResult streamChatResult(

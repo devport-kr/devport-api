@@ -8902,10 +8902,7 @@
         {
           "name": "<init>",
           "parameterTypes": [
-            "kr.devport.api.domain.wiki.service.WikiChatService",
-            "kr.devport.api.domain.wiki.service.WikiChatRateLimiter",
-            "kr.devport.api.domain.wiki.service.WikiAnonRateLimiter",
-            "kr.devport.api.domain.auth.repository.UserRepository"
+            "kr.devport.api.domain.wiki.service.WikiChatApplicationService"
           ]
         },
         {
@@ -8975,10 +8972,7 @@
         {
           "name": "<init>",
           "parameterTypes": [
-            "kr.devport.api.domain.wiki.service.WikiGlobalChatService",
-            "kr.devport.api.domain.wiki.service.WikiChatRateLimiter",
-            "kr.devport.api.domain.wiki.service.WikiAnonRateLimiter",
-            "kr.devport.api.domain.auth.repository.UserRepository"
+            "kr.devport.api.domain.wiki.service.WikiChatApplicationService"
           ]
         },
         {
@@ -9142,6 +9136,9 @@
     },
     {
       "type": "kr.devport.api.domain.wiki.dto.response.WikiSessionResponse[]"
+    },
+    {
+      "type": "kr.devport.api.domain.wiki.dto.response.WikiChatResponse"
     },
     {
       "type": "kr.devport.api.domain.wiki.dto.response.WikiGlobalChatResponse",
@@ -9776,6 +9773,21 @@
           "name": "<init>",
           "parameterTypes": [
             "org.springframework.data.redis.core.RedisTemplate"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "kr.devport.api.domain.wiki.service.WikiChatApplicationService",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": [
+            "kr.devport.api.domain.wiki.service.WikiChatService",
+            "kr.devport.api.domain.wiki.service.WikiGlobalChatService",
+            "kr.devport.api.domain.wiki.service.WikiChatRateLimiter",
+            "kr.devport.api.domain.wiki.service.WikiAnonRateLimiter",
+            "kr.devport.api.domain.auth.repository.UserRepository"
           ]
         }
       ]
@@ -23418,6 +23430,9 @@
     },
     {
       "glob": "kr/devport/api/domain/wiki/service/WikiAdminProjectQueryService.class"
+    },
+    {
+      "glob": "kr/devport/api/domain/wiki/service/WikiChatApplicationService.class"
     },
     {
       "glob": "kr/devport/api/domain/wiki/service/WikiAnonRateLimiter.class"
