@@ -4,16 +4,12 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.annotation.PreDestroy;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
-import kr.devport.api.domain.auth.entity.User;
-import kr.devport.api.domain.auth.repository.UserRepository;
 import kr.devport.api.domain.common.logging.LoggingContext;
 import kr.devport.api.domain.common.security.CustomUserDetails;
 import kr.devport.api.domain.wiki.dto.request.WikiGlobalChatRequest;
 import kr.devport.api.domain.wiki.dto.response.WikiGlobalChatResponse;
 import kr.devport.api.domain.wiki.exception.WikiChatRateLimitExceededException;
-import kr.devport.api.domain.wiki.service.WikiAnonRateLimiter;
-import kr.devport.api.domain.wiki.service.WikiChatRateLimiter;
-import kr.devport.api.domain.wiki.service.WikiGlobalChatService;
+import kr.devport.api.domain.wiki.service.WikiChatApplicationService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.MediaType;
@@ -39,11 +35,9 @@ public class WikiGlobalChatController {
 
     private static final long STREAM_TIMEOUT_MILLIS = 120_000L;
     private static final String STREAM_ERROR_MESSAGE = "처리 중 오류가 발생했습니다.";
+    private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
-    private final WikiGlobalChatService globalChatService;
-    private final WikiChatRateLimiter rateLimiter;
-    private final WikiAnonRateLimiter anonRateLimiter;
-    private final UserRepository userRepository;
+    private final WikiChatApplicationService chatApplicationService;
     private final ExecutorService streamExecutor = Executors.newVirtualThreadPerTaskExecutor();
 
     @PostMapping
@@ -52,13 +46,11 @@ public class WikiGlobalChatController {
             @AuthenticationPrincipal CustomUserDetails userDetails,
             HttpServletRequest httpRequest
     ) {
-        User user = applyRateLimitAndResolveUser(userDetails, httpRequest);
-        WikiGlobalChatResponse response = globalChatService.chatResult(
-                request.getSessionId(),
-                request.getQuestion(),
-                user
-        );
-        return ResponseEntity.ok(response);
+        return ResponseEntity.ok(chatApplicationService.chatGlobal(
+                request,
+                extractUserId(userDetails),
+                extractClientIp(userDetails, httpRequest)
+        ));
     }
 
     @PostMapping(value = "/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
@@ -67,28 +59,19 @@ public class WikiGlobalChatController {
             @AuthenticationPrincipal CustomUserDetails userDetails,
             HttpServletRequest httpRequest
     ) {
-        final String clientIp = userDetails == null ? extractIp(httpRequest) : null;
-        final Long userId = userDetails != null ? userDetails.getId() : null;
+        final Long userId = extractUserId(userDetails);
+        final String clientIp = extractClientIp(userDetails, httpRequest);
 
         SseEmitter emitter = new SseEmitter(STREAM_TIMEOUT_MILLIS);
         emitter.onTimeout(emitter::complete);
 
         streamExecutor.execute(LoggingContext.wrap(() -> {
             try {
-                User user;
-                if (clientIp != null) {
-                    anonRateLimiter.checkAndIncrement(clientIp);
-                    user = null;
-                } else {
-                    rateLimiter.check(userId.toString());
-                    user = userRepository.findById(userId).orElse(null);
-                }
-
-                WikiGlobalChatResponse response = globalChatService.streamChatResult(
-                        request.getSessionId(),
-                        request.getQuestion(),
-                        token -> sendToken(emitter, token),
-                        user
+                WikiGlobalChatResponse response = chatApplicationService.streamGlobal(
+                        request,
+                        userId,
+                        clientIp,
+                        token -> sendToken(emitter, token)
                 );
                 emitter.send(SseEmitter.event()
                         .name("done")
@@ -107,14 +90,12 @@ public class WikiGlobalChatController {
         streamExecutor.close();
     }
 
-    private User applyRateLimitAndResolveUser(CustomUserDetails userDetails, HttpServletRequest httpRequest) {
-        if (userDetails == null) {
-            String ip = extractIp(httpRequest);
-            anonRateLimiter.checkAndIncrement(ip);
-            return null;
-        }
-        rateLimiter.check(userDetails.getId().toString());
-        return userRepository.findById(userDetails.getId()).orElse(null);
+    private Long extractUserId(CustomUserDetails userDetails) {
+        return userDetails != null ? userDetails.getId() : null;
+    }
+
+    private String extractClientIp(CustomUserDetails userDetails, HttpServletRequest request) {
+        return userDetails == null ? extractIp(request) : null;
     }
 
     private String extractIp(HttpServletRequest request) {
@@ -128,8 +109,7 @@ public class WikiGlobalChatController {
     private void sendToken(SseEmitter emitter, String token) {
         try {
             if (token != null) {
-                ObjectMapper mapper = new ObjectMapper();
-                String jsonToken = mapper.writeValueAsString(token);
+                String jsonToken = OBJECT_MAPPER.writeValueAsString(token);
                 emitter.send(SseEmitter.event().name("token").data(jsonToken, MediaType.APPLICATION_JSON));
             }
         } catch (IOException e) {

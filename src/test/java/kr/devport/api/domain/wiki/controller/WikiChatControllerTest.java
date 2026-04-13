@@ -4,8 +4,7 @@ import kr.devport.api.domain.common.security.CustomUserDetails;
 import kr.devport.api.domain.wiki.dto.request.WikiChatRequest;
 import kr.devport.api.domain.wiki.dto.internal.WikiChatResult;
 import kr.devport.api.domain.wiki.dto.response.WikiChatResponse;
-import kr.devport.api.domain.wiki.service.WikiChatRateLimiter;
-import kr.devport.api.domain.wiki.service.WikiChatService;
+import kr.devport.api.domain.wiki.service.WikiChatApplicationService;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -14,6 +13,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.mock.web.MockHttpServletRequest;
 
 import java.util.Arrays;
 import java.util.List;
@@ -25,10 +25,7 @@ import static org.mockito.Mockito.*;
 class WikiChatControllerTest {
 
     @Mock
-    private WikiChatService wikiChatService;
-
-    @Mock
-    private WikiChatRateLimiter rateLimiter;
+    private WikiChatApplicationService chatApplicationService;
 
     @InjectMocks
     private WikiChatController wikiChatController;
@@ -60,22 +57,27 @@ class WikiChatControllerTest {
                 false
         );
 
-        when(wikiChatService.chatResult("session-123", projectExternalId, "How does auth work?"))
-                .thenReturn(serviceResult);
+        when(chatApplicationService.chatProject(eq(projectExternalId), any(), eq(42L), isNull()))
+                .thenReturn(WikiChatResponse.from(serviceResult, "session-123"));
 
         WikiChatRequest request = WikiChatRequest.builder()
                 .question("How does auth work?")
                 .sessionId("session-123")
                 .build();
 
-        ResponseEntity<WikiChatResponse> response = wikiChatController.chat(projectExternalId, request, testUser());
+        ResponseEntity<WikiChatResponse> response = wikiChatController.chat(
+                projectExternalId,
+                request,
+                testUser(),
+                new MockHttpServletRequest()
+        );
 
         assertThat(response.getBody()).isNotNull();
         assertThat(response.getBody().getAnswer()).isEqualTo(serviceResult.answer());
         assertThat(response.getBody().getSessionId()).isEqualTo("session-123");
         assertThat(response.getBody().isClarification()).isTrue();
 
-        verify(wikiChatService).chatResult("session-123", projectExternalId, "How does auth work?");
+        verify(chatApplicationService).chatProject(eq(projectExternalId), eq(request), eq(42L), isNull());
     }
 
     @Test
@@ -90,22 +92,27 @@ class WikiChatControllerTest {
                 false
         );
 
-        when(wikiChatService.chatResult("session-123", "github:12345", "배포는 어디서 봐?"))
-                .thenReturn(serviceResult);
+        when(chatApplicationService.chatProject(eq("github:12345"), any(), eq(42L), isNull()))
+                .thenReturn(WikiChatResponse.from(serviceResult, "session-123"));
 
         WikiChatRequest request = WikiChatRequest.builder()
                 .question("배포는 어디서 봐?")
                 .sessionId("session-123")
                 .build();
 
-        ResponseEntity<WikiChatResponse> response = wikiChatController.chatByQueryId("github:12345", request, testUser());
+        ResponseEntity<WikiChatResponse> response = wikiChatController.chatByQueryId(
+                "github:12345",
+                request,
+                testUser(),
+                new MockHttpServletRequest()
+        );
 
         assertThat(response.getBody()).isNotNull();
         assertThat(response.getBody().getAnswer()).isEqualTo(serviceResult.answer());
         assertThat(response.getBody().isClarification()).isFalse();
         assertThat(response.getBody().getSessionId()).isEqualTo("session-123");
 
-        verify(wikiChatService).chatResult("session-123", "github:12345", "배포는 어디서 봐?");
+        verify(chatApplicationService).chatProject(eq("github:12345"), eq(request), eq(42L), isNull());
     }
 
     @Test
@@ -120,6 +127,6 @@ class WikiChatControllerTest {
 
         // Then
         assertThat(response.getStatusCode().is2xxSuccessful()).isTrue();
-        verify(wikiChatService).clearSession(sessionId);
+        verify(chatApplicationService).clearProjectSession(sessionId);
     }
 }
