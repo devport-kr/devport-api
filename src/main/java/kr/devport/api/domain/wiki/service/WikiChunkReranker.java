@@ -42,7 +42,7 @@ public class WikiChunkReranker {
 
         ChatCompletion completion = openAIClient.chat().completions().create(
                 ChatCompletionCreateParams.builder()
-                        .model(ChatModel.GPT_4O_MINI)
+                        .model(ChatModel.GPT_5_MINI)
                         .messages(buildMessages(question, cappedCandidates))
                         .responseFormat(buildResponseFormat())
                         .build()

@@ -25,6 +25,8 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -152,6 +154,34 @@ class WikiRetrievalServiceTest {
         assertThat(result.chunks()).singleElement().extracting(chunkResult -> chunkResult.heading())
                 .isEqualTo("인증 흐름");
         assertThat(result.suggestedNextQuestions()).hasSizeBetween(2, 3);
+    }
+
+    @Test
+    @DisplayName("retrieveContext skips reranker when top match is already clearly strong")
+    void retrieveContext_skipsRerankerWhenTopMatchIsClear() {
+        WikiSectionChunk auth = chunk(1L, "architecture", "auth", "body", "Authentication flow details", "Authentication Flow", "src/main/java/AuthFlow.java");
+        WikiSectionChunk api = chunk(2L, "api", null, "summary", "API entrypoints", "Public API", "src/main/java/WikiChatController.java");
+
+        when(chunkRepository.findByProjectExternalId("github:12345"))
+                .thenReturn(List.of(auth, api));
+        when(chunkRepository.findSimilarChunksWithScore("github:12345", "[0.12,0.24,0.36]", 30))
+                .thenReturn(List.of(
+                        new ScoredChunkRow(auth, 0.92d),
+                        new ScoredChunkRow(api, 0.79d)
+                ));
+        when(chunkRepository.findLexicalCandidates("github:12345", "How is auth wired?", 30))
+                .thenReturn(List.of(
+                        new ScoredChunkRow(auth, 0.61d),
+                        new ScoredChunkRow(api, 0.20d)
+                ));
+
+        WikiRetrievalContext result = wikiRetrievalService.retrieveContext("github:12345", "How is auth wired?");
+
+        assertThat(result.hasGrounding()).isTrue();
+        assertThat(result.weakGrounding()).isFalse();
+        verify(chunkReranker, never()).rerank(any(), anyList());
+        assertThat(result.chunks().getFirst().heading()).isEqualTo("Authentication Flow");
+        assertThat(result.chunks().getFirst().rerankScore()).isNull();
     }
 
     private WikiSectionChunk chunk(
