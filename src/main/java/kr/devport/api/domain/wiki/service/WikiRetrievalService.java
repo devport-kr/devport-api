@@ -39,6 +39,8 @@ public class WikiRetrievalService {
     private static final int MAX_CONTEXT_CHUNKS = 4;
     private static final int MAX_CONTEXT_TOKENS = 3000;
     private static final double MIN_USEFUL_SIMILARITY = 0.30d;
+    private static final double STRONG_MATCH_SIMILARITY = 0.80d;
+    private static final double CLEAR_WIN_SIMILARITY_GAP = 0.08d;
     private static final double DIVERSITY_BONUS = 0.35d;
     private static final double SUMMARY_FAQ_BONUS = 0.5d;
     private static final int RRF_K = 60;
@@ -136,6 +138,9 @@ public class WikiRetrievalService {
         List<HybridCandidate> rerankInput = IntStream.range(0, Math.min(MAX_RERANK_CANDIDATES, fusedCandidates.size()))
                 .mapToObj(index -> fusedCandidates.get(index).withRerankIndex(index))
                 .toList();
+        if (shouldSkipRerank(rerankInput)) {
+            return rerankInput;
+        }
         List<WikiChunkReranker.ScoredChunk> reranked = safeRerank(question, rerankInput);
         if (reranked.isEmpty()) {
             return rerankInput;
@@ -154,6 +159,20 @@ public class WikiRetrievalService {
                         .reversed()
                         .thenComparing(Comparator.comparingDouble(HybridCandidate::fusionScore).reversed()))
                 .toList();
+    }
+
+    private boolean shouldSkipRerank(List<HybridCandidate> candidates) {
+        if (candidates.size() <= 1) {
+            return true;
+        }
+
+        HybridCandidate first = candidates.getFirst();
+        HybridCandidate second = candidates.get(1);
+        boolean strongTopMatch = first.similarityScore() >= STRONG_MATCH_SIMILARITY;
+        boolean clearVectorGap = (first.similarityScore() - second.similarityScore()) >= CLEAR_WIN_SIMILARITY_GAP;
+        boolean lexicalDoesNotDisagree = first.lexicalScore() <= 0.0d || first.lexicalScore() >= second.lexicalScore();
+
+        return strongTopMatch && clearVectorGap && lexicalDoesNotDisagree;
     }
 
     private List<WikiChunkReranker.ScoredChunk> safeRerank(String question, List<HybridCandidate> candidates) {
