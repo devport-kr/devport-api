@@ -1,65 +1,71 @@
 package kr.devport.api.domain.wiki.service;
 
 import com.openai.client.OpenAIClient;
-import com.openai.models.embeddings.EmbeddingCreateParams;
 import com.openai.models.embeddings.CreateEmbeddingResponse;
+import com.openai.models.embeddings.EmbeddingCreateParams;
 import kr.devport.api.domain.wiki.dto.internal.WikiRetrievalContext;
 import kr.devport.api.domain.wiki.dto.internal.WikiRetrievedChunk;
 import kr.devport.api.domain.wiki.entity.WikiSectionChunk;
 import kr.devport.api.domain.wiki.repository.WikiSectionChunkRepository;
+import kr.devport.api.domain.wiki.repository.WikiSectionChunkRepositoryCustom.ScoredChunkRow;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.CompletableFuture;
+import java.util.stream.IntStream;
 import java.util.regex.Pattern;
 
 /**
- * Wiki chat retrieval service using vector similarity search over wiki_section_chunks.
+ * Wiki chat retrieval service using hybrid retrieval over wiki_section_chunks.
  */
 @Slf4j
 @Service
 @RequiredArgsConstructor
 public class WikiRetrievalService {
 
-    private static final int CANDIDATE_LIMIT = 8;
-    private static final int FAQ_CANDIDATE_LIMIT = 16;
+    private static final int CANDIDATE_LIMIT = 30;
+    private static final int FAQ_CANDIDATE_LIMIT = 40;
+    private static final int LEXICAL_CANDIDATE_LIMIT = 30;
+    private static final int MAX_RERANK_CANDIDATES = 20;
     private static final int MAX_CONTEXT_CHUNKS = 4;
     private static final int MAX_CONTEXT_TOKENS = 3000;
+    private static final double MIN_USEFUL_SIMILARITY = 0.30d;
+    private static final double DIVERSITY_BONUS = 0.35d;
+    private static final double SUMMARY_FAQ_BONUS = 0.5d;
+    private static final int RRF_K = 60;
     private static final Pattern TOKEN_SPLIT = Pattern.compile("[^a-z0-9가-힣]+");
 
-    // FAQ question patterns — matched in order; first match wins
-    private static final Pattern FAQ_PROBLEM    = Pattern.compile(
+    private static final Pattern FAQ_PROBLEM = Pattern.compile(
             "문제.*해결|해결.*문제|왜 만들|어떤.*목적|what.*problem|solve|why.*built",
             Pattern.CASE_INSENSITIVE);
-    private static final Pattern FAQ_ARCH       = Pattern.compile(
+    private static final Pattern FAQ_ARCH = Pattern.compile(
             "아키텍처|구조|설계|architecture|design|어떻게.*동작|동작.*원리|how.*work|내부.*구조",
             Pattern.CASE_INSENSITIVE);
-    private static final Pattern FAQ_START      = Pattern.compile(
+    private static final Pattern FAQ_START = Pattern.compile(
             "시작하려면|어떻게.*시작|설치|install|setup|getting.?started|사용.*방법|how.*use|how.*start",
             Pattern.CASE_INSENSITIVE);
-    private static final Pattern FAQ_CHANGES    = Pattern.compile(
+    private static final Pattern FAQ_CHANGES = Pattern.compile(
             "최근.*변경|변경.*사항|changelog|release|업데이트|최근.*업|새로운|recent.*change|what.*new",
             Pattern.CASE_INSENSITIVE);
-    private static final Pattern FAQ_FEATURES   = Pattern.compile(
+    private static final Pattern FAQ_FEATURES = Pattern.compile(
             "주요.*기능|기능.*무엇|특징|feature|capabilities|what.*can|뭘.*할|어떤.*기능",
             Pattern.CASE_INSENSITIVE);
 
     private enum FaqType { PROBLEM_SOLVED, ARCHITECTURE, GETTING_STARTED, RECENT_CHANGES, KEY_FEATURES, NONE }
 
     private final WikiSectionChunkRepository chunkRepository;
+    private final WikiChunkReranker chunkReranker;
     private final OpenAIClient openAIClient;
 
-    /**
-     * Retrieve grounded context for a chat turn via vector similarity search.
-     * Throws if no chunks exist for this project.
-     */
     public WikiRetrievalContext retrieveContext(String projectExternalId, String userQuestion) {
         List<WikiSectionChunk> allChunks = chunkRepository.findByProjectExternalId(projectExternalId);
         if (allChunks.isEmpty()) {
@@ -69,31 +75,116 @@ public class WikiRetrievalService {
         try {
             FaqType faqType = detectFaq(userQuestion);
             int candidateLimit = faqType != FaqType.NONE ? FAQ_CANDIDATE_LIMIT : CANDIDATE_LIMIT;
+            String vectorStr = toVectorString(embedText(userQuestion));
 
-            float[] questionEmbedding = embedText(userQuestion);
-            String vectorStr = toVectorString(questionEmbedding);
-
-            List<WikiSectionChunk> similarChunks = chunkRepository.findSimilarChunks(
-                    projectExternalId, vectorStr, candidateLimit);
-
-            if (similarChunks.isEmpty()) {
+            List<HybridCandidate> hybridCandidates = hybridRetrieve(projectExternalId, userQuestion, vectorStr, candidateLimit);
+            if (hybridCandidates.isEmpty()) {
                 return buildWeakGroundingContext(projectExternalId, allChunks, userQuestion);
             }
 
-            List<ScoredChunk> selectedChunks = selectDiverseChunks(similarChunks, userQuestion, faqType);
-            boolean weakGrounding = selectedChunks.size() < 2;
+            HybridCandidate strongestSignal = hybridCandidates.getFirst();
+            boolean weakGrounding = strongestSignal.similarityScore() < MIN_USEFUL_SIMILARITY
+                    && strongestSignal.lexicalScore() <= 0.0d;
+            if (weakGrounding) {
+                return buildWeakGroundingContext(projectExternalId, allChunks, userQuestion);
+            }
 
+            List<ScoredChunk> selectedChunks = selectDiverseChunks(hybridCandidates, userQuestion, faqType);
             return new WikiRetrievalContext(
                     projectExternalId,
                     buildGroundedContext(selectedChunks),
                     !selectedChunks.isEmpty(),
-                    weakGrounding,
+                    false,
                     toRetrievedChunks(selectedChunks),
-                    weakGrounding ? suggestNextQuestions(userQuestion, selectedChunks) : List.of()
+                    List.of()
             );
         } catch (Exception e) {
-            log.warn("Vector search failed for project {}: {}", projectExternalId, e.getMessage());
+            log.warn("wiki-retrieval: retrieval failed for project {}: {}", projectExternalId, e.getMessage());
             return buildWeakGroundingContext(projectExternalId, allChunks, userQuestion);
+        }
+    }
+
+    private List<HybridCandidate> hybridRetrieve(
+            String projectExternalId,
+            String question,
+            String queryEmbedding,
+            int vectorCandidateLimit
+    ) {
+        CompletableFuture<List<ScoredChunkRow>> vectorFuture = CompletableFuture.supplyAsync(
+                () -> chunkRepository.findSimilarChunksWithScore(projectExternalId, queryEmbedding, vectorCandidateLimit)
+        );
+        CompletableFuture<List<ScoredChunkRow>> lexicalFuture = CompletableFuture.supplyAsync(
+                () -> chunkRepository.findLexicalCandidates(projectExternalId, question, LEXICAL_CANDIDATE_LIMIT)
+        );
+
+        List<ScoredChunkRow> vectorCandidates = vectorFuture.join();
+        List<ScoredChunkRow> lexicalCandidates = lexicalFuture.join();
+
+        Map<String, HybridAccumulator> fused = new LinkedHashMap<>();
+        mergeCandidates(fused, vectorCandidates, true);
+        mergeCandidates(fused, lexicalCandidates, false);
+
+        List<HybridCandidate> fusedCandidates = fused.values().stream()
+                .map(HybridAccumulator::toCandidate)
+                .sorted(Comparator.comparingDouble(HybridCandidate::fusionScore).reversed())
+                .toList();
+
+        if (fusedCandidates.isEmpty()) {
+            return List.of();
+        }
+
+        List<HybridCandidate> rerankInput = IntStream.range(0, Math.min(MAX_RERANK_CANDIDATES, fusedCandidates.size()))
+                .mapToObj(index -> fusedCandidates.get(index).withRerankIndex(index))
+                .toList();
+        List<WikiChunkReranker.ScoredChunk> reranked = safeRerank(question, rerankInput);
+        if (reranked.isEmpty()) {
+            return rerankInput;
+        }
+
+        Map<Integer, Double> rerankScores = reranked.stream()
+                .collect(java.util.stream.Collectors.toMap(
+                        WikiChunkReranker.ScoredChunk::index,
+                        WikiChunkReranker.ScoredChunk::score,
+                        Math::max
+                ));
+
+        return rerankInput.stream()
+                .map(candidate -> candidate.withRerankScore(rerankScores.get(candidate.rerankIndex())))
+                .sorted(Comparator.comparingDouble(HybridCandidate::effectiveRankingScore)
+                        .reversed()
+                        .thenComparing(Comparator.comparingDouble(HybridCandidate::fusionScore).reversed()))
+                .toList();
+    }
+
+    private List<WikiChunkReranker.ScoredChunk> safeRerank(String question, List<HybridCandidate> candidates) {
+        try {
+            return chunkReranker.rerank(
+                    question,
+                    candidates.stream().map(HybridCandidate::chunk).toList()
+            );
+        } catch (Exception e) {
+            log.warn("wiki-retrieval: reranker failed, falling back to fused order: {}", e.getMessage());
+            return List.of();
+        }
+    }
+
+    private void mergeCandidates(
+            Map<String, HybridAccumulator> fused,
+            List<ScoredChunkRow> candidates,
+            boolean vector
+    ) {
+        for (int i = 0; i < candidates.size(); i++) {
+            ScoredChunkRow row = candidates.get(i);
+            String key = candidateKey(row.chunk());
+            HybridAccumulator accumulator = fused.computeIfAbsent(key, ignored -> new HybridAccumulator(row.chunk()));
+            double rankContribution = 1.0d / (RRF_K + i + 1);
+            if (vector) {
+                accumulator.setVectorScore(row.score());
+                accumulator.addFusionScore(rankContribution);
+            } else {
+                accumulator.setLexicalScore(row.score());
+                accumulator.addFusionScore(rankContribution);
+            }
         }
     }
 
@@ -103,7 +194,6 @@ public class WikiRetrievalService {
             String userQuestion
     ) {
         List<ScoredChunk> fallbackChunks = selectFallbackChunks(allChunks, userQuestion);
-
         return new WikiRetrievalContext(
                 projectExternalId,
                 buildGroundedContext(fallbackChunks),
@@ -115,16 +205,24 @@ public class WikiRetrievalService {
     }
 
     private List<ScoredChunk> selectDiverseChunks(
-            List<WikiSectionChunk> candidates, String userQuestion, FaqType faqType) {
-        List<ScoredChunk> scoredCandidates = new ArrayList<>();
-        for (int i = 0; i < candidates.size(); i++) {
-            WikiSectionChunk chunk = candidates.get(i);
-            double similarityScore = Math.max(0.1d, 1.0d - (i * 0.04d));
-            double headingScore = computeHeadingScore(chunk, userQuestion);
-            double faqBonus = faqChunkBonus(faqType, chunk);
-            double qualityScore = similarityScore + headingScore + faqBonus;
-            scoredCandidates.add(new ScoredChunk(chunk, similarityScore, headingScore, qualityScore));
-        }
+            List<HybridCandidate> candidates,
+            String userQuestion,
+            FaqType faqType
+    ) {
+        List<ScoredChunk> scoredCandidates = candidates.stream()
+                .map(candidate -> {
+                    double headingScore = computeHeadingScore(candidate.chunk(), userQuestion);
+                    double faqBonus = faqChunkBonus(faqType, candidate.chunk());
+                    double baseScore = candidate.effectiveRankingScore();
+                    return new ScoredChunk(
+                            candidate.chunk(),
+                            candidate.similarityScore(),
+                            headingScore,
+                            candidate.rerankScore(),
+                            baseScore + headingScore + faqBonus
+                    );
+                })
+                .toList();
 
         return greedySelect(scoredCandidates);
     }
@@ -135,7 +233,13 @@ public class WikiRetrievalService {
                         .comparingInt((WikiSectionChunk chunk) -> fallbackChunkPriority(chunk.getChunkType()))
                         .thenComparing(WikiSectionChunk::getSectionId)
                         .thenComparing(chunk -> chunk.getSubsectionId() == null ? "" : chunk.getSubsectionId()))
-                .map(chunk -> new ScoredChunk(chunk, 0.35d, computeHeadingScore(chunk, userQuestion), 0.35d))
+                .map(chunk -> new ScoredChunk(
+                        chunk,
+                        0.35d,
+                        computeHeadingScore(chunk, userQuestion),
+                        null,
+                        0.35d
+                ))
                 .toList();
 
         return greedySelect(scored);
@@ -162,7 +266,7 @@ public class WikiRetrievalService {
     }
 
     private double rerankScore(ScoredChunk candidate, Set<String> usedSections) {
-        double diversityBonus = usedSections.contains(candidate.chunk().getSectionId()) ? 0.0d : 0.35d;
+        double diversityBonus = usedSections.contains(candidate.chunk().getSectionId()) ? 0.0d : DIVERSITY_BONUS;
         return candidate.qualityScore() + diversityBonus;
     }
 
@@ -191,10 +295,12 @@ public class WikiRetrievalService {
                 .map(chunk -> new WikiRetrievedChunk(
                         chunk.chunk().getSectionId(),
                         chunk.chunk().getSubsectionId(),
+                        chunk.chunk().getChunkType(),
                         resolveHeading(chunk.chunk()),
                         chunk.chunk().getContent(),
                         chunk.similarityScore(),
                         chunk.headingScore(),
+                        chunk.rerankScore(),
                         resolveSourcePathHint(chunk.chunk())
                 ))
                 .toList();
@@ -251,24 +357,17 @@ public class WikiRetrievalService {
     }
 
     private FaqType detectFaq(String question) {
-        if (FAQ_PROBLEM.matcher(question).find())  return FaqType.PROBLEM_SOLVED;
-        if (FAQ_ARCH.matcher(question).find())     return FaqType.ARCHITECTURE;
-        if (FAQ_START.matcher(question).find())    return FaqType.GETTING_STARTED;
-        if (FAQ_CHANGES.matcher(question).find())  return FaqType.RECENT_CHANGES;
+        if (FAQ_PROBLEM.matcher(question).find()) return FaqType.PROBLEM_SOLVED;
+        if (FAQ_ARCH.matcher(question).find()) return FaqType.ARCHITECTURE;
+        if (FAQ_START.matcher(question).find()) return FaqType.GETTING_STARTED;
+        if (FAQ_CHANGES.matcher(question).find()) return FaqType.RECENT_CHANGES;
         if (FAQ_FEATURES.matcher(question).find()) return FaqType.KEY_FEATURES;
         return FaqType.NONE;
     }
 
-    /**
-     * Returns a bonus score for a chunk based on the detected FAQ type.
-     * Only boosts summary chunks for purpose/feature questions — the only reliable
-     * discriminator given chunk_type has just 3 values and sectionIds are numeric.
-     * Everything else is handled by vector similarity + LLM instruction.
-     */
     private double faqChunkBonus(FaqType faqType, WikiSectionChunk chunk) {
-        String chunkType = chunk.getChunkType();
         return switch (faqType) {
-            case PROBLEM_SOLVED, KEY_FEATURES -> "summary".equals(chunkType) ? 0.5d : 0.0d;
+            case PROBLEM_SOLVED, KEY_FEATURES -> "summary".equals(chunk.getChunkType()) ? SUMMARY_FAQ_BONUS : 0.0d;
             default -> 0.0d;
         };
     }
@@ -300,6 +399,11 @@ public class WikiRetrievalService {
         return suggestions.stream().limit(3).toList();
     }
 
+    private String candidateKey(WikiSectionChunk chunk) {
+        String subsectionId = chunk.getSubsectionId() == null ? "" : chunk.getSubsectionId();
+        return chunk.getProjectExternalId() + "|" + chunk.getSectionId() + "|" + subsectionId + "|" + chunk.getChunkType();
+    }
+
     private float[] embedText(String text) {
         EmbeddingCreateParams params = EmbeddingCreateParams.builder()
                 .model("text-embedding-3-small")
@@ -307,7 +411,6 @@ public class WikiRetrievalService {
                 .build();
 
         CreateEmbeddingResponse response = openAIClient.embeddings().create(params);
-
         List<Float> embeddingFloats = response.data().getFirst().embedding();
         float[] embedding = new float[embeddingFloats.size()];
         for (int i = 0; i < embeddingFloats.size(); i++) {
@@ -319,7 +422,9 @@ public class WikiRetrievalService {
     private String toVectorString(float[] vector) {
         StringBuilder sb = new StringBuilder("[");
         for (int i = 0; i < vector.length; i++) {
-            if (i > 0) sb.append(",");
+            if (i > 0) {
+                sb.append(",");
+            }
             sb.append(vector[i]);
         }
         sb.append("]");
@@ -328,16 +433,76 @@ public class WikiRetrievalService {
 
     private String truncateToTokenLimit(String text, int maxTokens) {
         int maxChars = maxTokens * 4;
-        if (text.length() <= maxChars) {
-            return text;
+        return text.length() <= maxChars ? text : text.substring(0, maxChars) + "...";
+    }
+
+    private static final class HybridAccumulator {
+        private final WikiSectionChunk chunk;
+        private double vectorScore;
+        private double lexicalScore;
+        private double fusionScore;
+
+        private HybridAccumulator(WikiSectionChunk chunk) {
+            this.chunk = chunk;
         }
-        return text.substring(0, maxChars) + "...";
+
+        private void setVectorScore(double vectorScore) {
+            this.vectorScore = vectorScore;
+        }
+
+        private void setLexicalScore(double lexicalScore) {
+            this.lexicalScore = lexicalScore;
+        }
+
+        private void addFusionScore(double contribution) {
+            this.fusionScore += contribution;
+        }
+
+        private HybridCandidate toCandidate() {
+            return new HybridCandidate(chunk, vectorScore, lexicalScore, fusionScore, null, -1);
+        }
+    }
+
+    private record HybridCandidate(
+            WikiSectionChunk chunk,
+            double similarityScore,
+            double lexicalScore,
+            double fusionScore,
+            Double rerankScore,
+            int rerankIndex
+    ) {
+        private HybridCandidate withRerankScore(Double value) {
+            return new HybridCandidate(
+                    chunk,
+                    similarityScore,
+                    lexicalScore,
+                    fusionScore,
+                    value,
+                    rerankIndex
+            );
+        }
+
+        private HybridCandidate withRerankIndex(int value) {
+            return new HybridCandidate(
+                    chunk,
+                    similarityScore,
+                    lexicalScore,
+                    fusionScore,
+                    rerankScore,
+                    value
+            );
+        }
+
+        private double effectiveRankingScore() {
+            return rerankScore != null ? rerankScore : fusionScore;
+        }
     }
 
     private record ScoredChunk(
             WikiSectionChunk chunk,
             double similarityScore,
             double headingScore,
+            Double rerankScore,
             double qualityScore
     ) {
     }

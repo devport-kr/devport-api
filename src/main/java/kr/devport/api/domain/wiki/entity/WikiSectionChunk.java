@@ -74,6 +74,7 @@ public class WikiSectionChunk {
 
     @Builder
     public WikiSectionChunk(
+            Long id,
             String projectExternalId,
             String sectionId,
             String subsectionId,
@@ -84,6 +85,7 @@ public class WikiSectionChunk {
             Map<String, Object> metadata,
             String commitSha
     ) {
+        this.id = id;
         this.projectExternalId = projectExternalId;
         this.sectionId = sectionId;
         this.subsectionId = subsectionId;

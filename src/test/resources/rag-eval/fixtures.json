@@ -1,0 +1,32 @@
+[
+  {
+    "projectExternalId": "github:replace-this-project-1",
+    "question": "이 프로젝트의 핵심 아키텍처를 설명해줘",
+    "expectedSectionIds": ["architecture"],
+    "expectedChunkTypes": ["summary", "body"]
+  },
+  {
+    "projectExternalId": "github:replace-this-project-1",
+    "question": "인증이나 권한 처리는 어디에서 설명돼?",
+    "expectedSectionIds": ["auth", "security"],
+    "expectedChunkTypes": ["summary", "body"]
+  },
+  {
+    "projectExternalId": "github:replace-this-project-2",
+    "question": "설치나 시작 방법은 어디를 보면 돼?",
+    "expectedSectionIds": ["getting-started", "setup"],
+    "expectedChunkTypes": ["summary", "body"]
+  },
+  {
+    "projectExternalId": "github:replace-this-project-2",
+    "question": "배포나 운영 관련 흐름은 어디에 있어?",
+    "expectedSectionIds": ["deployment", "operations"],
+    "expectedChunkTypes": ["summary", "body"]
+  },
+  {
+    "projectExternalId": "github:replace-this-project-3",
+    "question": "주요 기능은 어떤 섹션에서 설명돼?",
+    "expectedSectionIds": ["features", "overview"],
+    "expectedChunkTypes": ["summary", "overview"]
+  }
+]

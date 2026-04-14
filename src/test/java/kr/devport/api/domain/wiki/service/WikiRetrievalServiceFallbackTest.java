@@ -18,10 +18,12 @@ class WikiRetrievalServiceFallbackTest {
         WikiRetrievedChunk chunk = new WikiRetrievedChunk(
                 "architecture",
                 "auth",
+                "body",
                 "Authentication Flow",
                 "JWT filter and refresh handling",
                 0.84,
                 0.62,
+                null,
                 "src/main/java/.../SecurityConfig.java"
         );
         WikiRetrievalContext context = new WikiRetrievalContext(
@@ -57,8 +59,8 @@ class WikiRetrievalServiceFallbackTest {
     @DisplayName("retrieval reranking favors diverse sections over duplicate chunk clusters")
     void retrieveContext_favorsDiverseSectionsOverDuplicateClusters() {
         List<WikiRetrievedChunk> chunks = List.of(
-                new WikiRetrievedChunk("architecture", null, "Architecture", "...", 0.91, 0.80, "a"),
-                new WikiRetrievedChunk("how-it-works", null, "How It Works", "...", 0.89, 0.82, "b")
+                new WikiRetrievedChunk("architecture", null, "summary", "Architecture", "...", 0.91, 0.80, null, "a"),
+                new WikiRetrievedChunk("how-it-works", null, "summary", "How It Works", "...", 0.89, 0.82, null, "b")
         );
 
         assertThat(chunks)
