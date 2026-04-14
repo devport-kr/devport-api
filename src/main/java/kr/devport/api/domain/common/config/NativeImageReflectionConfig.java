@@ -8,6 +8,8 @@ import kr.devport.api.domain.gitrepo.dto.response.GitRepoPageResponse;
 import kr.devport.api.domain.gitrepo.dto.response.GitRepoResponse;
 import kr.devport.api.domain.llm.dto.response.LLMBenchmarkResponse;
 import kr.devport.api.domain.llm.dto.response.LLMLeaderboardEntryResponse;
+import kr.devport.api.domain.wiki.dto.response.WikiChatResponse;
+import kr.devport.api.domain.wiki.dto.response.WikiGlobalChatResponse;
 import kr.devport.api.domain.wiki.dto.response.WikiProjectListResponse;
 import kr.devport.api.domain.wiki.dto.response.WikiProjectPageResponse;
 import kr.devport.api.domain.wiki.store.WikiChatSessionStore;
@@ -32,6 +34,8 @@ import org.springframework.context.annotation.Configuration;
         LLMLeaderboardEntryResponse.class,
         LLMBenchmarkResponse.class,
         // Wiki cache DTOs
+        WikiChatResponse.class,
+        WikiGlobalChatResponse.class,
         WikiProjectListResponse.class,
         WikiProjectListResponse.ProjectSummary.class,
         WikiProjectPageResponse.class,

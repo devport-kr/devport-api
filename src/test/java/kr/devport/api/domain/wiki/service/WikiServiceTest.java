@@ -75,7 +75,7 @@ class WikiServiceTest {
         assertThat(response.getSections().get(0).getSectionId()).isEqualTo("sec-1");
         assertThat(response.getSections().get(0).getHeading()).isEqualTo("섹션 하나");
         assertThat(response.getSections().get(0).getSummary()).isEqualTo("section one summary");
-        assertThat(response.getSections().get(0).getDeepDiveMarkdown()).isEqualTo("body content one");
+        assertThat(response.getSections().get(0).getDeepDiveMarkdown()).isEqualTo("## 섹션 하나 — 세부\n\nbody content one");
         assertThat(response.getAnchors()).hasSize(1);
         assertThat(response.getCurrentCounters()).isNotNull();
         assertThat(response.getCurrentCounters().getStars()).isEqualTo(100);
@@ -103,7 +103,7 @@ class WikiServiceTest {
                 .build();
 
         when(projectRepository.findAll(any(Sort.class))).thenReturn(List.of(project));
-        when(wikiSectionChunkRepository.findByProjectExternalId("github:repo"))
+        when(wikiSectionChunkRepository.findAllSummaryChunks())
                 .thenReturn(List.of(summaryChunk));
 
         WikiProjectListResponse response = wikiService.getProjects();
@@ -125,7 +125,7 @@ class WikiServiceTest {
                 .build();
 
         when(projectRepository.findAll(any(Sort.class))).thenReturn(List.of(project));
-        when(wikiSectionChunkRepository.findByProjectExternalId("github:none"))
+        when(wikiSectionChunkRepository.findAllSummaryChunks())
                 .thenReturn(List.of());
 
         assertThat(wikiService.getProjects().getProjects()).isEmpty();

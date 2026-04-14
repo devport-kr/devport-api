@@ -81,8 +81,9 @@ class OAuth2AuthenticationSuccessHandlerTest {
     }
 
     private String buildState(String turnstileToken) {
+        String payload = "{\"t\":\"" + turnstileToken + "\"}";
         String encoded = Base64.getUrlEncoder().withoutPadding()
-            .encodeToString(turnstileToken.getBytes(StandardCharsets.UTF_8));
+            .encodeToString(payload.getBytes(StandardCharsets.UTF_8));
         return "oauth-state~" + encoded;
     }
 }

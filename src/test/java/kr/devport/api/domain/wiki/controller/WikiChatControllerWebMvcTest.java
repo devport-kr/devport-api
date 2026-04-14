@@ -4,8 +4,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import kr.devport.api.domain.common.security.CustomUserDetails;
 import kr.devport.api.domain.wiki.dto.request.WikiChatRequest;
 import kr.devport.api.domain.wiki.dto.internal.WikiChatResult;
-import kr.devport.api.domain.wiki.service.WikiChatRateLimiter;
-import kr.devport.api.domain.wiki.service.WikiChatService;
+import kr.devport.api.domain.wiki.dto.response.WikiChatResponse;
+import kr.devport.api.domain.wiki.service.WikiChatApplicationService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -24,6 +24,7 @@ import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.validation.beanvalidation.LocalValidatorFactoryBean;
 
 import jakarta.servlet.http.HttpServletResponse;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.function.Consumer;
 import kr.devport.api.domain.common.exception.GlobalExceptionHandler;
@@ -45,10 +46,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 class WikiChatControllerWebMvcTest {
 
     @Mock
-    private WikiChatService wikiChatService;
-
-    @Mock
-    private WikiChatRateLimiter rateLimiter;
+    private WikiChatApplicationService chatApplicationService;
 
     private MockMvc mockMvc;
     private ObjectMapper objectMapper;
@@ -58,7 +56,7 @@ class WikiChatControllerWebMvcTest {
         LocalValidatorFactoryBean validator = new LocalValidatorFactoryBean();
         validator.afterPropertiesSet();
 
-        mockMvc = MockMvcBuilders.standaloneSetup(new WikiChatController(wikiChatService, rateLimiter))
+        mockMvc = MockMvcBuilders.standaloneSetup(new WikiChatController(chatApplicationService))
                 .addFilters(new SecurityContextHolderFilter(new HttpSessionSecurityContextRepository()))
                 .setCustomArgumentResolvers(new AuthenticationPrincipalArgumentResolver())
                 .setControllerAdvice(new GlobalExceptionHandler())
@@ -76,15 +74,15 @@ class WikiChatControllerWebMvcTest {
     @Test
     @DisplayName("path chat endpoint keeps the compact answer-clarification-session contract")
     void chat_keepsCompactContract() throws Exception {
-        when(wikiChatService.chatResult("session-123", "github:repo", "인증 구조가 뭐야?"))
-                .thenReturn(new WikiChatResult(
+        when(chatApplicationService.chatProject(any(), any(), any(), any()))
+                .thenReturn(WikiChatResponse.from(new WikiChatResult(
                         "인증은 JWT 필터 중심으로 동작해요.",
                         true,
                         java.util.List.of("로그인", "인가"),
                         java.util.List.of(),
                         false,
                         false
-                ));
+                ), "session-123"));
 
         WikiChatRequest request = WikiChatRequest.builder()
                 .question("인증 구조가 뭐야?")
@@ -104,15 +102,15 @@ class WikiChatControllerWebMvcTest {
     @Test
     @DisplayName("query-id chat endpoint reuses typed service clarification state")
     void chatByQueryId_reusesTypedServiceClarificationState() throws Exception {
-        when(wikiChatService.chatResult("session-456", "github:repo", "배포는 어디서 봐?"))
-                .thenReturn(new WikiChatResult(
+        when(chatApplicationService.chatProject(any(), any(), any(), any()))
+                .thenReturn(WikiChatResponse.from(new WikiChatResult(
                         "요약하면 배포는 workflow 파일 기준으로 보면 돼요.",
                         false,
                         java.util.List.of(),
                         java.util.List.of("workflow 경로를 알려줘"),
                         false,
                         false
-                ));
+                ), "session-456"));
 
         WikiChatRequest request = WikiChatRequest.builder()
                 .question("배포는 어디서 봐?")
@@ -147,7 +145,7 @@ class WikiChatControllerWebMvcTest {
     @Test
     @DisplayName("unauthenticated chat requests return the compact Korean login message")
     void chat_unauthenticatedRequestReturnsKoreanLoginMessage() throws Exception {
-        MockMvc securedMockMvc = MockMvcBuilders.standaloneSetup(new WikiChatController(wikiChatService, rateLimiter))
+        MockMvc securedMockMvc = MockMvcBuilders.standaloneSetup(new WikiChatController(chatApplicationService))
                 .addFilters(new SecurityContextHolderFilter(new HttpSessionSecurityContextRepository()))
                 .setCustomArgumentResolvers(new AuthenticationPrincipalArgumentResolver())
                 .addFilter((request, response, chain) -> {
@@ -182,11 +180,11 @@ class WikiChatControllerWebMvcTest {
     void streamChat_returnsDoneEventWithSessionId() throws Exception {
         doAnswer(invocation -> {
             @SuppressWarnings("unchecked")
-            Consumer<String> consumer = invocation.getArgument(3);
+            Consumer<String> consumer = invocation.getArgument(4);
             consumer.accept("이");
             consumer.accept(" 프로젝트는");
             return new WikiChatResult("이 프로젝트는", false, java.util.List.of(), java.util.List.of(), false, false);
-        }).when(wikiChatService).streamChatResult(any(), any(), any(), any());
+        }).when(chatApplicationService).streamProject(any(), any(), any(), any(), any());
 
         WikiChatRequest request = WikiChatRequest.builder()
                 .question("인증 구조가 뭐야?")
@@ -209,20 +207,25 @@ class WikiChatControllerWebMvcTest {
     }
 
     @Test
-    @DisplayName("streaming endpoint returns 429 synchronously when rate limit is exceeded before stream starts")
-    void streamChat_rateLimitedBeforeStreamReturns429() throws Exception {
+    @DisplayName("streaming endpoint emits SSE error event when rate limit is exceeded")
+    void streamChat_rateLimitedBeforeStreamEmitsErrorEvent() throws Exception {
         doThrow(new WikiChatRateLimitExceededException("요청이 너무 많습니다."))
-                .when(rateLimiter).check(any());
+                .when(chatApplicationService).streamProject(any(), any(), any(), any(), any());
 
         WikiChatRequest request = WikiChatRequest.builder()
                 .question("인증 구조가 뭐야?")
                 .sessionId("session-123")
                 .build();
 
-        mockMvc.perform(post("/api/wiki/projects/{projectExternalId}/chat/stream", "github:repo")
+        MvcResult mvcResult = mockMvc.perform(post("/api/wiki/projects/{projectExternalId}/chat/stream", "github:repo")
                         .with(authAs())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsBytes(request)))
-                .andExpect(status().isTooManyRequests());
+                .andReturn();
+
+        Thread.sleep(200);
+
+        assertThat(mvcResult.getResponse().getContentType()).contains("text/event-stream");
+        assertThat(mvcResult.getResponse().getContentAsString(StandardCharsets.UTF_8)).contains("요청이 너무 많습니다.");
     }
 }

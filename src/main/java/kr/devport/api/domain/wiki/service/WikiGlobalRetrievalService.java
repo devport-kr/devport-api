@@ -8,6 +8,7 @@ import kr.devport.api.domain.wiki.dto.internal.WikiGlobalRetrievalContext.Scored
 import kr.devport.api.domain.wiki.dto.internal.WikiRetrievedChunk;
 import kr.devport.api.domain.wiki.entity.WikiSectionChunk;
 import kr.devport.api.domain.wiki.repository.WikiSectionChunkRepository;
+import kr.devport.api.domain.wiki.repository.WikiSectionChunkRepositoryCustom.ScoredChunkRow;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -35,30 +36,21 @@ public class WikiGlobalRetrievalService {
     private final WikiSectionChunkRepository chunkRepository;
     private final OpenAIClient openAIClient;
 
-    /**
-     * Retrieve context from the most relevant projects across all wikis.
-     */
     public WikiGlobalRetrievalContext retrieve(String question) {
         try {
-            float[] questionEmbedding = embedText(question);
-            String vectorStr = toVectorString(questionEmbedding);
-
-            List<WikiSectionChunk> topChunks = chunkRepository.findSimilarChunksGlobal(vectorStr, GLOBAL_CANDIDATE_LIMIT);
+            String vectorStr = toVectorString(embedText(question));
+            List<ScoredChunkRow> topChunks = chunkRepository.findSimilarChunksGlobalWithScore(vectorStr, GLOBAL_CANDIDATE_LIMIT);
 
             if (topChunks.isEmpty()) {
                 return new WikiGlobalRetrievalContext("", List.of(), false);
             }
 
-            // Group by project and score (sum of top-2 similarity scores per project)
             Map<String, List<IndexedChunk>> byProject = new LinkedHashMap<>();
-            for (int i = 0; i < topChunks.size(); i++) {
-                WikiSectionChunk chunk = topChunks.get(i);
-                double similarity = Math.max(0.1d, 1.0d - (i * 0.04d));
-                byProject.computeIfAbsent(chunk.getProjectExternalId(), k -> new ArrayList<>())
-                        .add(new IndexedChunk(chunk, similarity));
+            for (ScoredChunkRow row : topChunks) {
+                byProject.computeIfAbsent(row.chunk().getProjectExternalId(), ignored -> new ArrayList<>())
+                        .add(new IndexedChunk(row.chunk(), row.score()));
             }
 
-            // Score each project by sum of top-2 chunk similarities
             List<ScoredProject> scoredProjects = byProject.entrySet().stream()
                     .map(entry -> {
                         List<IndexedChunk> chunks = entry.getValue();
@@ -73,10 +65,12 @@ public class WikiGlobalRetrievalService {
                                 .map(ic -> new WikiRetrievedChunk(
                                         ic.chunk().getSectionId(),
                                         ic.chunk().getSubsectionId(),
+                                        ic.chunk().getChunkType(),
                                         resolveHeading(ic.chunk()),
                                         ic.chunk().getContent(),
                                         ic.similarity(),
-                                        0.0,
+                                        0.0d,
+                                        null,
                                         null
                                 ))
                                 .toList();
@@ -86,12 +80,9 @@ public class WikiGlobalRetrievalService {
                     .limit(MAX_PROJECTS)
                     .toList();
 
-            String context = buildContext(scoredProjects);
-
-            return new WikiGlobalRetrievalContext(context, scoredProjects, !scoredProjects.isEmpty());
-
+            return new WikiGlobalRetrievalContext(buildContext(scoredProjects), scoredProjects, !scoredProjects.isEmpty());
         } catch (Exception e) {
-            log.warn("wiki-global-retrieval: Vector search failed: {}", e.getMessage());
+            log.warn("wiki-global-retrieval: retrieval failed: {}", e.getMessage());
             return new WikiGlobalRetrievalContext("", List.of(), false);
         }
     }
@@ -139,7 +130,9 @@ public class WikiGlobalRetrievalService {
     private String toVectorString(float[] vector) {
         StringBuilder sb = new StringBuilder("[");
         for (int i = 0; i < vector.length; i++) {
-            if (i > 0) sb.append(",");
+            if (i > 0) {
+                sb.append(",");
+            }
             sb.append(vector[i]);
         }
         sb.append("]");

@@ -63,6 +63,15 @@ class WikiChatServiceTest {
                 .thenReturn(strongContext());
         when(sessionStore.loadRecentTurns("session-123", "github:repo"))
                 .thenReturn(List.of(
+                        turn("아주 예전 질문 1", "예전 답변 1", false),
+                        turn("아주 예전 질문 2", "예전 답변 2", false),
+                        turn("아주 예전 질문 3", "예전 답변 3", false),
+                        turn("아주 예전 질문 4", "예전 답변 4", false),
+                        turn("아주 예전 질문 5", "예전 답변 5", false),
+                        turn("아주 예전 질문 6", "예전 답변 6", false),
+                        turn("아주 예전 질문 7", "예전 답변 7", false),
+                        turn("아주 예전 질문 8", "예전 답변 8", false),
+                        turn("아주 예전 질문 9", "예전 답변 9", false),
                         turn("아주 예전 질문", "예전 답변", false),
                         turn("로그인 흐름이 어디서 시작돼?", "SecurityConfig에서 시작돼요.", false),
                         turn("그다음 JWT 검사는?", "JwtAuthenticationFilter가 담당해요.", false)
@@ -78,7 +87,8 @@ class WikiChatServiceTest {
         assertThat(result.isClarification()).isFalse();
         assertThat(messagesText).contains("로그인 흐름이 어디서 시작돼?");
         assertThat(messagesText).contains("그다음 JWT 검사는?");
-        assertThat(messagesText).doesNotContain("아주 예전 질문");
+        assertThat(messagesText).doesNotContain("아주 예전 질문 1");
+        assertThat(messagesText).doesNotContain("아주 예전 질문 2");
     }
 
     @Test
@@ -90,7 +100,7 @@ class WikiChatServiceTest {
                         "# Repository Context\n\n## CI\n.github/workflows/deploy.yml",
                         true,
                         true,
-                        List.of(new WikiRetrievedChunk("ci", null, "CI", ".github/workflows/deploy.yml", 0.4d, 0.2d, ".github/workflows/deploy.yml")),
+                        List.of(new WikiRetrievedChunk("ci", null, "body", "CI", ".github/workflows/deploy.yml", 0.4d, 0.2d, null, ".github/workflows/deploy.yml")),
                         List.of("deploy.yml 기준으로 단계별로 설명해줘", "배포에 쓰는 secret 목록을 알려줘", "실패 시 롤백 흐름을 알려줘")
                 ));
         when(sessionStore.loadRecentTurns("session-123", "github:repo"))
@@ -210,10 +220,12 @@ class WikiChatServiceTest {
                 List.of(new WikiRetrievedChunk(
                         "architecture",
                         "auth",
+                        "body",
                         "인증 흐름",
                         "SecurityConfig -> JwtAuthenticationFilter",
                         0.9d,
                         0.7d,
+                        null,
                         "src/main/java/kr/devport/api/domain/common/config/SecurityConfig.java"
                 )),
                 List.of()

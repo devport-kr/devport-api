@@ -45,7 +45,6 @@ dependencies {
 	implementation 'org.springframework.boot:spring-boot-starter-data-redis'
 	implementation 'org.springframework.boot:spring-boot-starter-security'
 	implementation 'org.springframework.boot:spring-boot-starter-security-oauth2-client'
-	implementation 'org.springframework.boot:spring-boot-starter-security-oauth2-resource-server'
 	implementation 'org.springframework.boot:spring-boot-starter-validation'
 	implementation 'org.springframework.boot:spring-boot-starter-web'
 	implementation 'org.springframework.boot:spring-boot-starter-mail'
@@ -103,4 +102,18 @@ tasks.named('bootBuildImage') {
 
 tasks.named('test') {
 	useJUnitPlatform()
+}
+
+tasks.register('ragEval', Test) {
+	group = 'verification'
+	description = 'Runs the opt-in wiki RAG evaluation harness against a real Postgres database.'
+	useJUnitPlatform {
+		includeTags 'rag-eval'
+	}
+	systemProperty 'rag-eval', 'true'
+	systemProperty 'spring.profiles.active', 'rag-eval'
+	shouldRunAfter tasks.named('test')
+	testClassesDirs = sourceSets.test.output.classesDirs
+	classpath = sourceSets.test.runtimeClasspath
+	include '**/*RagEvalRunner*'
 }

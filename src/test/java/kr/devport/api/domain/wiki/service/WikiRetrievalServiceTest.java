@@ -5,21 +5,28 @@ import com.openai.models.embeddings.EmbeddingCreateParams;
 import kr.devport.api.domain.wiki.dto.internal.WikiRetrievalContext;
 import kr.devport.api.domain.wiki.entity.WikiSectionChunk;
 import kr.devport.api.domain.wiki.repository.WikiSectionChunkRepository;
+import kr.devport.api.domain.wiki.repository.WikiSectionChunkRepositoryCustom.ScoredChunkRow;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.Answers;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
-import org.mockito.Answers;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import java.util.Map;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.IntStream;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -27,6 +34,9 @@ class WikiRetrievalServiceTest {
 
     @Mock
     private WikiSectionChunkRepository chunkRepository;
+
+    @Mock
+    private WikiChunkReranker chunkReranker;
 
     @Mock(answer = Answers.RETURNS_DEEP_STUBS)
     private OpenAIClient openAIClient;
@@ -53,16 +63,40 @@ class WikiRetrievalServiceTest {
     @Test
     @DisplayName("retrieveContext reranks broad candidates to prefer section-diverse grounded chunks")
     void retrieveContext_reranksToPreferSectionDiversity() {
-        WikiSectionChunk architectureSummary = chunk("architecture", null, "summary", "Architecture overview", "Architecture", "src/main/java/Architecture.java");
-        WikiSectionChunk architectureDetails = chunk("architecture", "auth", "body", "Authentication flow details", "Authentication Flow", "src/main/java/AuthFlow.java");
-        WikiSectionChunk architectureCache = chunk("architecture", "cache", "body", "Caching details", "Cache Layer", "src/main/java/CacheConfig.java");
-        WikiSectionChunk howItWorks = chunk("how-it-works", null, "summary", "Runtime request flow", "How It Works", "src/main/java/RuntimeFlow.java");
-        WikiSectionChunk api = chunk("api", null, "summary", "API entrypoints", "Public API", "src/main/java/WikiChatController.java");
+        WikiSectionChunk architectureSummary = chunk(1L, "architecture", null, "summary", "Architecture overview", "Architecture", "src/main/java/Architecture.java");
+        WikiSectionChunk architectureDetails = chunk(2L, "architecture", "auth", "body", "Authentication flow details", "Authentication Flow", "src/main/java/AuthFlow.java");
+        WikiSectionChunk architectureCache = chunk(3L, "architecture", "cache", "body", "Caching details", "Cache Layer", "src/main/java/CacheConfig.java");
+        WikiSectionChunk howItWorks = chunk(4L, "how-it-works", null, "summary", "Runtime request flow", "How It Works", "src/main/java/RuntimeFlow.java");
+        WikiSectionChunk api = chunk(5L, "api", null, "summary", "API entrypoints", "Public API", "src/main/java/WikiChatController.java");
 
         when(chunkRepository.findByProjectExternalId("github:12345"))
                 .thenReturn(List.of(architectureSummary, architectureDetails, architectureCache, howItWorks, api));
-        when(chunkRepository.findSimilarChunks("github:12345", "[0.12,0.24,0.36]", 8))
-                .thenReturn(List.of(architectureSummary, architectureDetails, architectureCache, howItWorks, api));
+        when(chunkRepository.findSimilarChunksWithScore("github:12345", "[0.12,0.24,0.36]", 30))
+                .thenReturn(List.of(
+                        new ScoredChunkRow(architectureSummary, 0.82d),
+                        new ScoredChunkRow(architectureDetails, 0.91d),
+                        new ScoredChunkRow(architectureCache, 0.79d),
+                        new ScoredChunkRow(howItWorks, 0.88d),
+                        new ScoredChunkRow(api, 0.84d)
+                ));
+        when(chunkRepository.findLexicalCandidates("github:12345", "How is auth wired?", 30))
+                .thenReturn(List.of(
+                        new ScoredChunkRow(architectureDetails, 0.73d),
+                        new ScoredChunkRow(api, 0.21d)
+                ));
+        doAnswer(invocation -> {
+            @SuppressWarnings("unchecked")
+            List<WikiSectionChunk> input = invocation.getArgument(1);
+            return IntStream.range(0, input.size())
+                    .mapToObj(index -> new WikiChunkReranker.ScoredChunk(index, switch (input.get(index).getSectionId()) {
+                        case "architecture" -> "auth".equals(input.get(index).getSubsectionId()) ? 0.97d
+                                : input.get(index).getSubsectionId() == null ? 0.80d : 0.74d;
+                        case "how-it-works" -> 0.89d;
+                        case "api" -> 0.86d;
+                        default -> 0.50d;
+                    }))
+                    .toList();
+        }).when(chunkReranker).rerank(eq("How is auth wired?"), anyList());
 
         WikiRetrievalContext result = wikiRetrievalService.retrieveContext("github:12345", "How is auth wired?");
 
@@ -77,21 +111,36 @@ class WikiRetrievalServiceTest {
                         "api:Public API",
                         "architecture:Architecture"
                 );
+        assertThat(result.chunks().getFirst().rerankScore()).isEqualTo(0.97d);
         assertThat(result.groundedContext()).contains("How It Works");
         assertThat(result.suggestedNextQuestions()).isEmpty();
     }
 
     @Test
-    @DisplayName("retrieveContext returns weak-grounding context instead of collapsing to empty context")
+    @DisplayName("retrieveContext returns weak-grounding context when top similarity is below threshold")
+    void retrieveContext_returnsWeakGroundingContextWhenSimilarityTooLow() {
+        WikiSectionChunk chunk = chunk(1L, "architecture", null, "summary", "JWT filter and refresh handling", "인증 흐름", "src/main/java/.../SecurityConfig.java");
+
+        when(chunkRepository.findByProjectExternalId("github:12345")).thenReturn(List.of(chunk));
+        when(chunkRepository.findSimilarChunksWithScore("github:12345", "[0.12,0.24,0.36]", 30))
+                .thenReturn(List.of(new ScoredChunkRow(chunk, 0.18d)));
+        when(chunkRepository.findLexicalCandidates("github:12345", "How does auth work?", 30))
+                .thenReturn(List.of());
+
+        WikiRetrievalContext result = wikiRetrievalService.retrieveContext("github:12345", "How does auth work?");
+
+        assertThat(result.hasGrounding()).isTrue();
+        assertThat(result.weakGrounding()).isTrue();
+        assertThat(result.groundedContext()).contains("인증 흐름");
+        assertThat(result.chunks()).singleElement().extracting(chunkResult -> chunkResult.heading())
+                .isEqualTo("인증 흐름");
+        assertThat(result.suggestedNextQuestions()).hasSizeBetween(2, 3);
+    }
+
+    @Test
+    @DisplayName("retrieveContext returns weak-grounding context instead of collapsing to empty context on retrieval failure")
     void retrieveContext_returnsWeakGroundingContextOnVectorSearchFailure() {
-        WikiSectionChunk chunk = WikiSectionChunk.builder()
-                .projectExternalId("github:12345")
-                .sectionId("architecture")
-                .chunkType("summary")
-                .content("JWT filter and refresh handling")
-                .metadata(Map.of("titleKo", "인증 흐름", "sourcePath", "src/main/java/.../SecurityConfig.java"))
-                .commitSha("abc")
-                .build();
+        WikiSectionChunk chunk = chunk(1L, "architecture", null, "summary", "JWT filter and refresh handling", "인증 흐름", "src/main/java/.../SecurityConfig.java");
 
         when(chunkRepository.findByProjectExternalId("github:12345")).thenReturn(List.of(chunk));
         when(openAIClient.embeddings().create(any(EmbeddingCreateParams.class)))
@@ -107,7 +156,36 @@ class WikiRetrievalServiceTest {
         assertThat(result.suggestedNextQuestions()).hasSizeBetween(2, 3);
     }
 
+    @Test
+    @DisplayName("retrieveContext skips reranker when top match is already clearly strong")
+    void retrieveContext_skipsRerankerWhenTopMatchIsClear() {
+        WikiSectionChunk auth = chunk(1L, "architecture", "auth", "body", "Authentication flow details", "Authentication Flow", "src/main/java/AuthFlow.java");
+        WikiSectionChunk api = chunk(2L, "api", null, "summary", "API entrypoints", "Public API", "src/main/java/WikiChatController.java");
+
+        when(chunkRepository.findByProjectExternalId("github:12345"))
+                .thenReturn(List.of(auth, api));
+        when(chunkRepository.findSimilarChunksWithScore("github:12345", "[0.12,0.24,0.36]", 30))
+                .thenReturn(List.of(
+                        new ScoredChunkRow(auth, 0.92d),
+                        new ScoredChunkRow(api, 0.79d)
+                ));
+        when(chunkRepository.findLexicalCandidates("github:12345", "How is auth wired?", 30))
+                .thenReturn(List.of(
+                        new ScoredChunkRow(auth, 0.61d),
+                        new ScoredChunkRow(api, 0.20d)
+                ));
+
+        WikiRetrievalContext result = wikiRetrievalService.retrieveContext("github:12345", "How is auth wired?");
+
+        assertThat(result.hasGrounding()).isTrue();
+        assertThat(result.weakGrounding()).isFalse();
+        verify(chunkReranker, never()).rerank(any(), anyList());
+        assertThat(result.chunks().getFirst().heading()).isEqualTo("Authentication Flow");
+        assertThat(result.chunks().getFirst().rerankScore()).isNull();
+    }
+
     private WikiSectionChunk chunk(
+            Long id,
             String sectionId,
             String subsectionId,
             String chunkType,
@@ -116,6 +194,7 @@ class WikiRetrievalServiceTest {
             String sourcePath
     ) {
         return WikiSectionChunk.builder()
+                .id(id)
                 .projectExternalId("github:12345")
                 .sectionId(sectionId)
                 .subsectionId(subsectionId)
