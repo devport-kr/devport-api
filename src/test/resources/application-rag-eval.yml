@@ -1,0 +1,28 @@
+spring:
+  datasource:
+    url: ${RAG_EVAL_DATABASE_URL}
+    username: ${RAG_EVAL_DATABASE_USERNAME:${DB_USERNAME:}}
+    password: ${RAG_EVAL_DATABASE_PASSWORD:${DB_PASSWORD:}}
+    driver-class-name: org.postgresql.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: none
+    show-sql: false
+    properties:
+      hibernate:
+        format_sql: false
+
+  cache:
+    type: simple
+
+  data:
+    redis:
+      repositories:
+        enabled: false
+
+logging:
+  level:
+    root: INFO
+    kr.devport.api.domain.wiki.eval: INFO
+    org.hibernate.SQL: WARN

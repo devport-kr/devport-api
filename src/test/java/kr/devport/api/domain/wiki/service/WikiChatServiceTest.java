@@ -90,7 +90,7 @@ class WikiChatServiceTest {
                         "# Repository Context\n\n## CI\n.github/workflows/deploy.yml",
                         true,
                         true,
-                        List.of(new WikiRetrievedChunk("ci", null, "CI", ".github/workflows/deploy.yml", 0.4d, 0.2d, ".github/workflows/deploy.yml")),
+                        List.of(new WikiRetrievedChunk("ci", null, "body", "CI", ".github/workflows/deploy.yml", 0.4d, 0.2d, null, ".github/workflows/deploy.yml")),
                         List.of("deploy.yml 기준으로 단계별로 설명해줘", "배포에 쓰는 secret 목록을 알려줘", "실패 시 롤백 흐름을 알려줘")
                 ));
         when(sessionStore.loadRecentTurns("session-123", "github:repo"))
@@ -210,10 +210,12 @@ class WikiChatServiceTest {
                 List.of(new WikiRetrievedChunk(
                         "architecture",
                         "auth",
+                        "body",
                         "인증 흐름",
                         "SecurityConfig -> JwtAuthenticationFilter",
                         0.9d,
                         0.7d,
+                        null,
                         "src/main/java/kr/devport/api/domain/common/config/SecurityConfig.java"
                 )),
                 List.of()
