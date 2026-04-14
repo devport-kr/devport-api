@@ -63,6 +63,15 @@ class WikiChatServiceTest {
                 .thenReturn(strongContext());
         when(sessionStore.loadRecentTurns("session-123", "github:repo"))
                 .thenReturn(List.of(
+                        turn("아주 예전 질문 1", "예전 답변 1", false),
+                        turn("아주 예전 질문 2", "예전 답변 2", false),
+                        turn("아주 예전 질문 3", "예전 답변 3", false),
+                        turn("아주 예전 질문 4", "예전 답변 4", false),
+                        turn("아주 예전 질문 5", "예전 답변 5", false),
+                        turn("아주 예전 질문 6", "예전 답변 6", false),
+                        turn("아주 예전 질문 7", "예전 답변 7", false),
+                        turn("아주 예전 질문 8", "예전 답변 8", false),
+                        turn("아주 예전 질문 9", "예전 답변 9", false),
                         turn("아주 예전 질문", "예전 답변", false),
                         turn("로그인 흐름이 어디서 시작돼?", "SecurityConfig에서 시작돼요.", false),
                         turn("그다음 JWT 검사는?", "JwtAuthenticationFilter가 담당해요.", false)
@@ -78,7 +87,8 @@ class WikiChatServiceTest {
         assertThat(result.isClarification()).isFalse();
         assertThat(messagesText).contains("로그인 흐름이 어디서 시작돼?");
         assertThat(messagesText).contains("그다음 JWT 검사는?");
-        assertThat(messagesText).doesNotContain("아주 예전 질문");
+        assertThat(messagesText).doesNotContain("아주 예전 질문 1");
+        assertThat(messagesText).doesNotContain("아주 예전 질문 2");
     }
 
     @Test

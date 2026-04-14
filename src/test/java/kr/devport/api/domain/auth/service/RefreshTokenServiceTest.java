@@ -35,13 +35,13 @@ class RefreshTokenServiceTest {
     void setUp() {
         refreshTokenService = new RefreshTokenService(refreshTokenRepository);
         ReflectionTestUtils.setField(refreshTokenService, "refreshTokenExpirationMs", 2_592_000_000L);
-        when(refreshTokenRepository.save(any(RefreshToken.class)))
-            .thenAnswer(invocation -> invocation.getArgument(0));
     }
 
     @Test
     void createRefreshTokenStoresOnlyHashedToken() {
         User user = User.builder().id(1L).username("tester").build();
+        when(refreshTokenRepository.save(any(RefreshToken.class)))
+            .thenAnswer(invocation -> invocation.getArgument(0));
 
         String rawToken = refreshTokenService.createRefreshToken(user);
 
