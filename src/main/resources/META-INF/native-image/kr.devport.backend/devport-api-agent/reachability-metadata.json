@@ -9712,6 +9712,23 @@
       "type": "kr.devport.api.domain.wiki.repository.WikiSectionChunkRepository"
     },
     {
+      "type": "kr.devport.api.domain.wiki.repository.WikiSectionChunkRepositoryCustom"
+    },
+    {
+      "type": "kr.devport.api.domain.wiki.repository.WikiSectionChunkRepositoryCustom$ScoredChunkRow"
+    },
+    {
+      "type": "kr.devport.api.domain.wiki.repository.WikiSectionChunkRepositoryImpl",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": [
+            "org.springframework.jdbc.core.JdbcTemplate"
+          ]
+        }
+      ]
+    },
+    {
       "type": "kr.devport.api.domain.wiki.service.WikiAdminProjectQueryService",
       "methods": [
         {
@@ -9905,6 +9922,20 @@
       ]
     },
     {
+      "type": "kr.devport.api.domain.wiki.service.WikiChunkReranker",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": [
+            "com.openai.client.OpenAIClient"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "kr.devport.api.domain.wiki.service.WikiChunkReranker$ScoredChunk"
+    },
+    {
       "type": "kr.devport.api.domain.wiki.service.WikiGlobalChatService",
       "methods": [
         {
@@ -9939,6 +9970,7 @@
           "name": "<init>",
           "parameterTypes": [
             "kr.devport.api.domain.wiki.repository.WikiSectionChunkRepository",
+            "kr.devport.api.domain.wiki.service.WikiChunkReranker",
             "com.openai.client.OpenAIClient"
           ]
         }
@@ -23429,6 +23461,15 @@
       "glob": "kr/devport/api/domain/wiki/repository/WikiSectionChunkRepository.class"
     },
     {
+      "glob": "kr/devport/api/domain/wiki/repository/WikiSectionChunkRepositoryCustom$ScoredChunkRow.class"
+    },
+    {
+      "glob": "kr/devport/api/domain/wiki/repository/WikiSectionChunkRepositoryCustom.class"
+    },
+    {
+      "glob": "kr/devport/api/domain/wiki/repository/WikiSectionChunkRepositoryImpl.class"
+    },
+    {
       "glob": "kr/devport/api/domain/wiki/service/WikiAdminProjectQueryService.class"
     },
     {
@@ -23456,6 +23497,12 @@
       "glob": "kr/devport/api/domain/wiki/service/WikiChatTitleService.class"
     },
     {
+      "glob": "kr/devport/api/domain/wiki/service/WikiChunkReranker$ScoredChunk.class"
+    },
+    {
+      "glob": "kr/devport/api/domain/wiki/service/WikiChunkReranker.class"
+    },
+    {
       "glob": "kr/devport/api/domain/wiki/service/WikiGlobalChatService.class"
     },
     {
@@ -23466,6 +23513,12 @@
     },
     {
       "glob": "kr/devport/api/domain/wiki/service/WikiRetrievalService$FaqType.class"
+    },
+    {
+      "glob": "kr/devport/api/domain/wiki/service/WikiRetrievalService$HybridAccumulator.class"
+    },
+    {
+      "glob": "kr/devport/api/domain/wiki/service/WikiRetrievalService$HybridCandidate.class"
     },
     {
       "glob": "kr/devport/api/domain/wiki/service/WikiRetrievalService$ScoredChunk.class"
