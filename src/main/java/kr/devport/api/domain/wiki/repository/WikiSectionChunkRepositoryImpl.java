@@ -69,7 +69,6 @@ public class WikiSectionChunkRepositoryImpl implements WikiSectionChunkRepositor
     @Override
     public List<ScoredChunkRow> findSimilarChunksWithScore(String projectExternalId, String queryEmbedding, int limit) {
         return jdbcTemplate.execute((ConnectionCallback<List<ScoredChunkRow>>) connection -> {
-            setVectorSearchEf(connection);
             try (PreparedStatement statement = connection.prepareStatement(VECTOR_BY_PROJECT_SQL)) {
                 statement.setString(1, queryEmbedding);
                 statement.setString(2, projectExternalId);
@@ -78,8 +77,6 @@ public class WikiSectionChunkRepositoryImpl implements WikiSectionChunkRepositor
                 try (ResultSet rs = statement.executeQuery()) {
                     return mapRows(rs);
                 }
-            } finally {
-                resetVectorSearchEf(connection);
             }
         });
     }
