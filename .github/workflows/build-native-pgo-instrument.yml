@@ -14,6 +14,9 @@ name: Build PGO Instrumented Image (arm64)
 
 on:
   workflow_dispatch:
+  push:
+    branches:
+      - perf/pgo
 
 concurrency:
   group: ${{ github.workflow }}
