@@ -1,0 +1,69 @@
+name: Build PGO Instrumented Image (arm64)
+
+# Manual only. Run when you need to regenerate default.iprof:
+#   - bootstrap (first time setting up PGO)
+#   - after a significant code change (new endpoint, major library swap, hot-path refactor)
+#   - periodic refresh (quarterly-ish)
+#
+# After this workflow pushes :pgo-instrument to ghcr:
+#   1. Deploy the instrumented image to a representative host
+#   2. Hit it with bench/k6/profile-mix.js from the k6 host
+#   3. SIGTERM the container — default.iprof is flushed to /workspace/default.iprof
+#   4. docker cp it out, aws s3 cp to s3://<bucket>/pgo/default.iprof
+#   5. Next run of build-native-arm64 picks up the new profile automatically
+
+on:
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}
+  cancel-in-progress: true
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
+jobs:
+  build-instrumented:
+    runs-on: ubuntu-24.04-arm
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Set up JDK
+        uses: actions/setup-java@v5
+        with:
+          java-version: '25'
+          distribution: 'liberica'
+          cache: 'gradle'
+
+      - name: Grant execute permission for gradlew
+        run: chmod +x gradlew
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push instrumented native image
+        run: |
+          set -euo pipefail
+          IMAGE="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:pgo-instrument-arm64"
+
+          # --pgo-instrument produces a binary that writes default.iprof on shutdown
+          ./gradlew clean bootBuildImage \
+            --imageName="$IMAGE" \
+            -Pspring-boot.build-image.imageName="$IMAGE" \
+            -PpgoInstrument \
+            --no-build-cache \
+            --no-daemon
+
+          docker push "$IMAGE"
+          echo "Pushed: $IMAGE"

@@ -13,6 +13,12 @@ if (!project.hasProperty('buildJvm')) {
 		binaries {
 			main {
 				buildArgs.add('-H:+SharedArenaSupport')
+				if (project.hasProperty('pgoInstrument')) {
+					buildArgs.add('--pgo-instrument')
+				}
+				if (project.hasProperty('pgoProfile')) {
+					buildArgs.add("--pgo=${project.property('pgoProfile')}")
+				}
 			}
 		}
 	}
@@ -89,13 +95,30 @@ dependencies {
 
 tasks.named('bootBuildImage') {
 	builder = "paketobuildpacks/builder-noble-java-tiny:0.0.124"
-	def baseBuildpack = project.hasProperty('buildJvm')
-		? "urn:cnb:builder:paketo-buildpacks/java"
-		: "urn:cnb:builder:paketo-buildpacks/java-native-image"
-	buildpacks = [baseBuildpack, "docker.io/paketobuildpacks/health-checker"]
+	def isNative = !project.hasProperty('buildJvm')
+	def bps = []
+	if (isNative) {
+		// Oracle GraalVM provides the native-image toolchain (required for PGO).
+		// Must come before java-native-image so it claims the build plan.
+		bps.add("docker.io/paketobuildpacks/oracle")
+		bps.add("urn:cnb:builder:paketo-buildpacks/java-native-image")
+	} else {
+		bps.add("urn:cnb:builder:paketo-buildpacks/java")
+	}
+	bps.add("docker.io/paketobuildpacks/health-checker")
+	buildpacks = bps
+
 	def env = ["BP_HEALTH_CHECKER_ENABLED": "true"]
-	if (!project.hasProperty('buildJvm')) {
-		env["BP_NATIVE_IMAGE_BUILD_ARGUMENTS"] = "-H:+UnlockExperimentalVMOptions -H:+SharedArenaSupport"
+	if (isNative) {
+		env["BP_JVM_VERSION"] = "25"
+		def nativeArgs = ["-H:+UnlockExperimentalVMOptions", "-H:+SharedArenaSupport"]
+		if (project.hasProperty('pgoInstrument')) {
+			nativeArgs.add('--pgo-instrument')
+		}
+		if (project.hasProperty('pgoProfile')) {
+			nativeArgs.add("--pgo=${project.property('pgoProfile')}")
+		}
+		env["BP_NATIVE_IMAGE_BUILD_ARGUMENTS"] = nativeArgs.join(' ')
 	}
 	environment = env
 }
