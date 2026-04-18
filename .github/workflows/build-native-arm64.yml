@@ -38,6 +38,25 @@ jobs:
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
 
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ap-northeast-2
+
+      - name: Download PGO profile from S3
+        run: |
+          set -euo pipefail
+          S3_URI="s3://${{ secrets.PGO_S3_BUCKET }}/pgo/default.iprof"
+          if ! aws s3 cp "$S3_URI" ./default.iprof; then
+            echo "::error::Failed to fetch PGO profile from $S3_URI"
+            echo "If this is the first build, run 'build-native-pgo-instrument' workflow,"
+            echo "extract default.iprof from the instrumented container, and upload to S3."
+            exit 1
+          fi
+          ls -la ./default.iprof
+
       - name: Log in to GitHub Container Registry
         uses: docker/login-action@v3
         with:
@@ -65,10 +84,13 @@ jobs:
           TAGS="${{ steps.meta.outputs.tags }}"
           FIRST_TAG=$(echo "$TAGS" | head -n 1)
 
-          # Build native image (--no-build-cache prevents stale AOT outputs from Gradle build cache)
+          # Build native image with PGO applied (--pgo=/workspace/default.iprof).
+          # default.iprof is fetched from S3 in an earlier step and lives at the repo root;
+          # Paketo copies the build context into /workspace inside the builder container.
           ./gradlew clean bootBuildImage \
             --imageName="$FIRST_TAG" \
             -Pspring-boot.build-image.imageName="$FIRST_TAG" \
+            -PpgoProfile=/workspace/default.iprof \
             --no-build-cache \
             --no-daemon
 

@@ -53,6 +53,9 @@ REFRESH_TOKEN_IMPLEMENTATION.md
 
 .planning/
 
+# PGO profile (binary, fetched from S3 in CI)
+*.iprof
+
 .env
 app.sh
 docker-compose.yml

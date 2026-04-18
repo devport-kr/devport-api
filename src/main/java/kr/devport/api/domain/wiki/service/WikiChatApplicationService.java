@@ -8,6 +8,7 @@ import kr.devport.api.domain.wiki.dto.request.WikiGlobalChatRequest;
 import kr.devport.api.domain.wiki.dto.response.WikiChatResponse;
 import kr.devport.api.domain.wiki.dto.response.WikiGlobalChatResponse;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.util.function.Consumer;
@@ -21,6 +22,9 @@ public class WikiChatApplicationService {
     private final WikiChatRateLimiter rateLimiter;
     private final WikiAnonRateLimiter anonRateLimiter;
     private final UserRepository userRepository;
+
+    @Value("${wiki.chat.rate-limit.enabled:true}")
+    private boolean rateLimitEnabled;
 
     public WikiChatResponse chatProject(
             String projectExternalId,
@@ -89,10 +93,14 @@ public class WikiChatApplicationService {
 
     private User resolveUser(Long userId, String clientIp) {
         if (userId == null) {
-            anonRateLimiter.checkAndIncrement(clientIp);
+            if (rateLimitEnabled) {
+                anonRateLimiter.checkAndIncrement(clientIp);
+            }
             return null;
         }
-        rateLimiter.check(userId.toString());
+        if (rateLimitEnabled) {
+            rateLimiter.check(userId.toString());
+        }
         return userRepository.findById(userId).orElse(null);
     }
 }
