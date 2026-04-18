@@ -114,7 +114,7 @@ tasks.named('bootBuildImage') {
 		def nativeArgs = ["-H:+UnlockExperimentalVMOptions", "-H:+SharedArenaSupport"]
 		if (project.hasProperty('pgoInstrument')) {
 			nativeArgs.add('--pgo-instrument')
-			nativeArgs.add('-J-Xmx14g')
+			nativeArgs.add('-J-Xmx28g')
 		}
 		if (project.hasProperty('pgoProfile')) {
 			nativeArgs.add("--pgo=${project.property('pgoProfile')}")
