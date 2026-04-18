@@ -122,6 +122,10 @@ tasks.named('bootBuildImage') {
 		env["BP_NATIVE_IMAGE_BUILD_ARGUMENTS"] = nativeArgs.join(' ')
 	}
 	environment = env
+
+	if (project.hasProperty('pgoProfileHostPath')) {
+		bindings = ["${project.property('pgoProfileHostPath')}:/platform/pgo/default.iprof:ro"]
+	}
 }
 
 tasks.named('test') {
