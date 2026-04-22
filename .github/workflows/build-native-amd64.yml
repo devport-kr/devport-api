@@ -3,10 +3,7 @@ name: Build and Push Native Image (amd64)
 on:
   push:
     branches:
-      - dev
-    tags:
-      - 'v*'
-  workflow_dispatch:
+      - __amd64_workflow_disabled__
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
