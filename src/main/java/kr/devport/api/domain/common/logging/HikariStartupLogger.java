@@ -1,4 +1,4 @@
-package kr.devport.api.domain.common.config;
+package kr.devport.api.domain.common.logging;
 
 import com.zaxxer.hikari.HikariDataSource;
 import lombok.RequiredArgsConstructor;
