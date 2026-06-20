@@ -14,9 +14,9 @@ import kr.devport.api.llm.entity.LLMBenchmark
 import kr.devport.api.llm.entity.LLMModel
 import kr.devport.api.llm.entity.ModelCreator
 import kr.devport.api.llm.enums.BenchmarkType
-import kr.devport.api.llm.repository.LLMBenchmarkRepository
-import kr.devport.api.llm.repository.LLMModelRepository
-import kr.devport.api.llm.repository.ModelCreatorRepository
+import kr.devport.api.llm.infrastructure.LLMBenchmarkRepository
+import kr.devport.api.llm.infrastructure.LLMModelRepository
+import kr.devport.api.llm.infrastructure.ModelCreatorRepository
 import org.springframework.cache.annotation.CacheEvict
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
@@ -71,7 +71,7 @@ class LLMModelAdminService(
         id: Long,
         request: LLMModelUpdateRequest,
     ): LLMModelDetailResponse {
-        val model = llmModelRepository.findById(id).orElseThrow { IllegalArgumentException("LLMModel not found with id: $id") }
+        val model = llmModelRepository.findById(id) ?: throw IllegalArgumentException("LLMModel not found with id: $id")
         request.externalId?.let { model.externalId = it }
         request.slug?.let { model.slug = it }
         request.modelId?.let { model.modelId = it }
@@ -113,9 +113,8 @@ class LLMModelAdminService(
     }
 
     private fun findCreator(creatorId: Long): ModelCreator =
-        modelCreatorRepository
-            .findById(creatorId)
-            .orElseThrow { IllegalArgumentException("ModelCreator not found with id: $creatorId") }
+        modelCreatorRepository.findById(creatorId)
+            ?: throw IllegalArgumentException("ModelCreator not found with id: $creatorId")
 }
 
 @Service
@@ -143,9 +142,8 @@ class LLMBenchmarkAdminService(
         request: LLMBenchmarkUpdateRequest,
     ): LLMBenchmarkResponse {
         val benchmark =
-            llmBenchmarkRepository
-                .findById(benchmarkType)
-                .orElseThrow { IllegalArgumentException("LLMBenchmark not found with type: $benchmarkType") }
+            llmBenchmarkRepository.findById(benchmarkType)
+                ?: throw IllegalArgumentException("LLMBenchmark not found with type: $benchmarkType")
         request.displayName?.let { benchmark.displayName = it }
         request.categoryGroup?.let { benchmark.categoryGroup = it }
         request.description?.let { benchmark.description = it }
@@ -182,7 +180,7 @@ class ModelCreatorAdminService(
         id: Long,
         request: ModelCreatorUpdateRequest,
     ): ModelCreatorResponse {
-        val creator = modelCreatorRepository.findById(id).orElseThrow { IllegalArgumentException("ModelCreator not found with id: $id") }
+        val creator = modelCreatorRepository.findById(id) ?: throw IllegalArgumentException("ModelCreator not found with id: $id")
         request.externalId?.let { creator.externalId = it }
         request.slug?.let { creator.slug = it }
         request.name?.let { creator.name = it }

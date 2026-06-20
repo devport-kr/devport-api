@@ -17,7 +17,10 @@ import org.springframework.data.repository.query.Param
 import java.math.BigDecimal
 import java.time.LocalDate
 
-interface ModelCreatorRepository : JpaRepository<ModelCreator, Long> {
+// Spring Data interfaces — internal to this adapter module. The core depends on the ports in
+// :llm:infrastructure; the @Repository adapters in LlmRepositoryAdapters.kt bridge the two.
+
+interface ModelCreatorJpaRepository : JpaRepository<ModelCreator, Long> {
     fun findBySlug(slug: String): ModelCreator?
 
     fun findByExternalId(externalId: String): ModelCreator?
@@ -27,23 +30,23 @@ interface ModelCreatorRepository : JpaRepository<ModelCreator, Long> {
     fun existsBySlug(slug: String): Boolean
 }
 
-interface LLMBenchmarkRepository : JpaRepository<LLMBenchmark, BenchmarkType> {
+interface LLMBenchmarkJpaRepository : JpaRepository<LLMBenchmark, BenchmarkType> {
     fun findAllByOrderBySortOrderAsc(): List<LLMBenchmark>
 
     fun findByCategoryGroupOrderBySortOrderAsc(categoryGroup: String): List<LLMBenchmark>
 }
 
-interface TextToImageModelRepository : JpaRepository<TextToImageModel, Long>
+interface TextToImageModelJpaRepository : JpaRepository<TextToImageModel, Long>
 
-interface TextToVideoModelRepository : JpaRepository<TextToVideoModel, Long>
+interface TextToVideoModelJpaRepository : JpaRepository<TextToVideoModel, Long>
 
-interface ImageToVideoModelRepository : JpaRepository<ImageToVideoModel, Long>
+interface ImageToVideoModelJpaRepository : JpaRepository<ImageToVideoModel, Long>
 
-interface TextToSpeechModelRepository : JpaRepository<TextToSpeechModel, Long>
+interface TextToSpeechModelJpaRepository : JpaRepository<TextToSpeechModel, Long>
 
-interface ImageEditingModelRepository : JpaRepository<ImageEditingModel, Long>
+interface ImageEditingModelJpaRepository : JpaRepository<ImageEditingModel, Long>
 
-interface LLMModelRepository : JpaRepository<LLMModel, Long> {
+interface LLMModelJpaRepository : JpaRepository<LLMModel, Long> {
     fun findByModelId(modelId: String): LLMModel?
 
     fun findBySlug(slug: String): LLMModel?

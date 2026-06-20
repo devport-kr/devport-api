@@ -28,6 +28,7 @@ include(":gitrepo:api")
 
 // llm domain
 include(":llm:model")
+include(":llm:infrastructure")
 include(":llm:repository-jpa")
 include(":llm:service")
 include(":llm:api")

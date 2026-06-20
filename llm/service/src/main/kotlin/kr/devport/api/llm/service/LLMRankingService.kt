@@ -8,8 +8,8 @@ import kr.devport.api.llm.dto.response.LLMModelDetailResponse
 import kr.devport.api.llm.dto.response.LLMModelSummaryResponse
 import kr.devport.api.llm.entity.LLMModel
 import kr.devport.api.llm.enums.BenchmarkType
-import kr.devport.api.llm.repository.LLMBenchmarkRepository
-import kr.devport.api.llm.repository.LLMModelRepository
+import kr.devport.api.llm.infrastructure.LLMBenchmarkRepository
+import kr.devport.api.llm.infrastructure.LLMModelRepository
 import org.springframework.cache.annotation.Cacheable
 import org.springframework.data.domain.Page
 import org.springframework.data.domain.PageRequest
