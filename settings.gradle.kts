@@ -35,6 +35,7 @@ include(":llm:api")
 
 // auth domain
 include(":auth:model")
+include(":auth:infrastructure")
 include(":auth:repository-jpa")
 include(":auth:service")
 include(":auth:api")

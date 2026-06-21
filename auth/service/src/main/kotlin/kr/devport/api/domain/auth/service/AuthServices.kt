@@ -14,10 +14,10 @@ import kr.devport.api.domain.auth.entity.RefreshToken
 import kr.devport.api.domain.auth.entity.User
 import kr.devport.api.domain.auth.enums.AuthProvider
 import kr.devport.api.domain.auth.enums.UserRole
-import kr.devport.api.domain.auth.repository.EmailVerificationTokenRepository
-import kr.devport.api.domain.auth.repository.PasswordResetTokenRepository
-import kr.devport.api.domain.auth.repository.RefreshTokenRepository
-import kr.devport.api.domain.auth.repository.UserRepository
+import kr.devport.api.domain.auth.infrastructure.EmailVerificationTokenRepository
+import kr.devport.api.domain.auth.infrastructure.PasswordResetTokenRepository
+import kr.devport.api.domain.auth.infrastructure.RefreshTokenRepository
+import kr.devport.api.domain.auth.infrastructure.UserRepository
 import kr.devport.api.domain.common.exception.DuplicateEmailException
 import kr.devport.api.domain.common.exception.DuplicateUsernameException
 import kr.devport.api.domain.common.exception.EmailVerificationRequiredException

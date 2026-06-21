@@ -4,7 +4,7 @@ import jakarta.servlet.FilterChain
 import jakarta.servlet.http.HttpServletRequest
 import jakarta.servlet.http.HttpServletResponse
 import kr.devport.api.domain.auth.entity.User
-import kr.devport.api.domain.auth.repository.UserRepository
+import kr.devport.api.domain.auth.infrastructure.UserRepository
 import kr.devport.api.domain.common.security.CustomUserDetails
 import kr.devport.api.domain.common.security.JwtTokenProvider
 import org.slf4j.LoggerFactory

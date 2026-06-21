@@ -7,7 +7,7 @@ import jakarta.servlet.http.HttpServletResponse
 import kr.devport.api.domain.auth.entity.User
 import kr.devport.api.domain.auth.enums.AuthProvider
 import kr.devport.api.domain.auth.enums.UserRole
-import kr.devport.api.domain.auth.repository.UserRepository
+import kr.devport.api.domain.auth.infrastructure.UserRepository
 import kr.devport.api.domain.auth.security.CustomUserDetailsFactory
 import kr.devport.api.domain.auth.service.OAuth2ExchangeCodeService
 import kr.devport.api.domain.auth.service.TurnstileService

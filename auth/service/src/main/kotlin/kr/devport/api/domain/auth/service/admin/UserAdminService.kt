@@ -2,7 +2,7 @@ package kr.devport.api.domain.auth.service.admin
 
 import kr.devport.api.domain.auth.dto.UserResponse
 import kr.devport.api.domain.auth.enums.UserRole
-import kr.devport.api.domain.auth.repository.UserRepository
+import kr.devport.api.domain.auth.infrastructure.UserRepository
 import kr.devport.api.domain.auth.service.toUserResponse
 import org.springframework.data.domain.Page
 import org.springframework.data.domain.PageRequest

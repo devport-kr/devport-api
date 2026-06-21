@@ -1,7 +1,7 @@
 // Auth use-cases, OAuth2, JWT filter, email, DTOs.
 dependencies {
     api(project(":auth:model"))
-    implementation(project(":auth:repository-jpa"))
+    implementation(project(":auth:infrastructure"))
     implementation(project(":support:security"))
     implementation(project(":support:exception"))
     implementation(project(":support:logging"))
