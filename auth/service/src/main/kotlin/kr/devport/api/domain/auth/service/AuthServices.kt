@@ -1,7 +1,5 @@
 package kr.devport.api.domain.auth.service
 
-import jakarta.servlet.http.HttpServletRequest
-import jakarta.servlet.http.HttpServletResponse
 import kr.devport.api.domain.auth.dto.AuthResponse
 import kr.devport.api.domain.auth.dto.LoginRequest
 import kr.devport.api.domain.auth.dto.SignupRequest
@@ -15,6 +13,8 @@ import kr.devport.api.domain.auth.entity.User
 import kr.devport.api.domain.auth.enums.AuthProvider
 import kr.devport.api.domain.auth.enums.UserRole
 import kr.devport.api.domain.auth.infrastructure.EmailVerificationTokenRepository
+import kr.devport.api.domain.auth.infrastructure.ExchangeCodePayload
+import kr.devport.api.domain.auth.infrastructure.OAuth2ExchangeCodeStore
 import kr.devport.api.domain.auth.infrastructure.PasswordResetTokenRepository
 import kr.devport.api.domain.auth.infrastructure.RefreshTokenRepository
 import kr.devport.api.domain.auth.infrastructure.UserRepository
@@ -31,21 +31,14 @@ import kr.devport.api.domain.common.logging.LogSanitizer
 import kr.devport.api.domain.common.security.JwtTokenProvider
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Value
-import org.springframework.data.redis.core.RedisTemplate
-import org.springframework.http.HttpHeaders
-import org.springframework.http.MediaType
-import org.springframework.http.ResponseCookie
 import org.springframework.mail.SimpleMailMessage
 import org.springframework.mail.javamail.JavaMailSender
 import org.springframework.security.crypto.password.PasswordEncoder
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
-import org.springframework.util.LinkedMultiValueMap
-import org.springframework.web.client.RestTemplate
 import java.nio.charset.StandardCharsets
 import java.security.MessageDigest
 import java.security.SecureRandom
-import java.time.Duration
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.util.Base64
@@ -97,9 +90,9 @@ class AuthService(
     @Transactional
     fun exchangeOAuth2Code(
         code: String,
-        request: HttpServletRequest,
+        userAgent: String?,
     ): TokenResponse {
-        val user = oAuth2ExchangeCodeService.consumeExchangeCode(code, request)
+        val user = oAuth2ExchangeCodeService.consumeExchangeCode(code, userAgent)
         val accessToken = jwtTokenProvider.generateAccessToken(user.id)
         val refreshToken = refreshTokenService.createRefreshToken(user)
         return TokenResponse(accessToken, refreshToken, "Bearer", jwtTokenProvider.accessTokenExpirationMs / 1000)
@@ -278,58 +271,8 @@ class RefreshTokenService(
 }
 
 @Service
-class RefreshTokenCookieService {
-    @Value("\${app.auth.refresh-cookie-name:devport_refresh_token}")
-    private lateinit var cookieName: String
-
-    @Value("\${app.auth.refresh-cookie-path:/api/auth}")
-    private lateinit var cookiePath: String
-
-    @Value("\${app.auth.refresh-cookie-domain:}")
-    private lateinit var cookieDomain: String
-
-    @Value("\${app.auth.refresh-cookie-secure:false}")
-    private var secureCookie: Boolean = false
-
-    @Value("\${app.auth.refresh-cookie-same-site:Lax}")
-    private lateinit var sameSite: String
-
-    @Value("\${app.jwt.refresh-token-expiration-ms}")
-    private var refreshTokenExpirationMs: Long = 0
-
-    fun addRefreshTokenCookie(
-        response: HttpServletResponse,
-        refreshToken: String,
-    ) {
-        response.addHeader(HttpHeaders.SET_COOKIE, buildCookie(refreshToken, Duration.ofMillis(refreshTokenExpirationMs)).toString())
-    }
-
-    fun clearRefreshTokenCookie(response: HttpServletResponse) {
-        response.addHeader(HttpHeaders.SET_COOKIE, buildCookie("", Duration.ZERO).toString())
-    }
-
-    fun getCookieName(): String = cookieName
-
-    private fun buildCookie(
-        value: String,
-        maxAge: Duration,
-    ): ResponseCookie {
-        val builder =
-            ResponseCookie
-                .from(cookieName, value)
-                .httpOnly(true)
-                .secure(secureCookie)
-                .sameSite(sameSite)
-                .path(cookiePath)
-                .maxAge(maxAge)
-        if (cookieDomain.isNotBlank()) builder.domain(cookieDomain)
-        return builder.build()
-    }
-}
-
-@Service
 class OAuth2ExchangeCodeService(
-    private val redisTemplate: RedisTemplate<String, Any>,
+    private val exchangeCodeStore: OAuth2ExchangeCodeStore,
     private val userRepository: UserRepository,
 ) {
     private val secureRandom = SecureRandom()
@@ -339,36 +282,29 @@ class OAuth2ExchangeCodeService(
 
     fun createExchangeCode(
         user: User,
-        request: HttpServletRequest,
+        userAgent: String?,
     ): String {
         val code = generateCode()
-        val payload =
-            mapOf<String, Any>(
-                USER_ID_KEY to (user.id ?: 0L),
-                USER_AGENT_HASH_KEY to hash(normalizeUserAgent(request.getHeader("User-Agent"))),
-            )
-        redisTemplate.opsForValue().set(buildKey(code), payload, Duration.ofSeconds(exchangeCodeTtlSeconds))
+        exchangeCodeStore.put(
+            code,
+            ExchangeCodePayload(userId = user.id ?: 0L, userAgentHash = hash(normalizeUserAgent(userAgent))),
+            exchangeCodeTtlSeconds,
+        )
         return code
     }
 
     fun consumeExchangeCode(
         code: String,
-        request: HttpServletRequest,
+        userAgent: String?,
     ): User {
-        val stored = redisTemplate.opsForValue().getAndDelete(buildKey(code))
-        if (stored !is Map<*, *>) throw InvalidTokenException("OAuth2 exchange code is invalid or expired")
-        val userId = stored[USER_ID_KEY] as? Number ?: throw InvalidTokenException("OAuth2 exchange code is invalid or expired")
-        val userAgentHash =
-            stored[USER_AGENT_HASH_KEY] as? String ?: throw InvalidTokenException("OAuth2 exchange code is invalid or expired")
-        if (userAgentHash != hash(normalizeUserAgent(request.getHeader("User-Agent")))) {
+        val payload = exchangeCodeStore.take(code) ?: throw InvalidTokenException("OAuth2 exchange code is invalid or expired")
+        if (payload.userAgentHash != hash(normalizeUserAgent(userAgent))) {
             throw InvalidTokenException("OAuth2 exchange code is invalid or expired")
         }
         return userRepository
-            .findById(userId.toLong())
+            .findById(payload.userId)
             .orElseThrow { InvalidTokenException("OAuth2 exchange code is invalid or expired") }
     }
-
-    private fun buildKey(code: String) = KEY_PREFIX + code
 
     private fun generateCode(): String {
         val bytes = ByteArray(32)
@@ -381,12 +317,6 @@ class OAuth2ExchangeCodeService(
     private fun hash(value: String): String {
         val hashed = MessageDigest.getInstance("SHA-256").digest(value.toByteArray(StandardCharsets.UTF_8))
         return Base64.getUrlEncoder().withoutPadding().encodeToString(hashed)
-    }
-
-    companion object {
-        private const val KEY_PREFIX = "auth:oauth2:exchange:"
-        private const val USER_ID_KEY = "userId"
-        private const val USER_AGENT_HASH_KEY = "userAgentHash"
     }
 }
 
@@ -561,46 +491,6 @@ class PasswordResetService(
 
     @Transactional
     fun deleteExpiredTokens() = tokenRepository.deleteByExpiresAtBefore(LocalDateTime.now())
-}
-
-@Service
-class TurnstileService {
-    private val log = LoggerFactory.getLogger(TurnstileService::class.java)
-    private val restTemplate = RestTemplate()
-
-    @Value("\${cloudflare.turnstile.secret-key}")
-    private lateinit var secretKey: String
-
-    fun validateToken(
-        token: String?,
-        remoteIp: String?,
-    ): Boolean {
-        if (token.isNullOrBlank()) return false
-        return try {
-            val body = LinkedMultiValueMap<String, String>()
-            body.add("secret", secretKey)
-            body.add("response", token)
-            if (!remoteIp.isNullOrEmpty()) body.add("remoteip", remoteIp)
-            val headers = HttpHeaders().apply { contentType = MediaType.APPLICATION_FORM_URLENCODED }
-            val response =
-                restTemplate.exchange(
-                    TURNSTILE_VERIFY_URL,
-                    org.springframework.http.HttpMethod.POST,
-                    org.springframework.http.HttpEntity(body, headers),
-                    Map::class.java,
-                )
-            response.body?.get("success") == true
-        } catch (e: Exception) {
-            log.error("Error during Turnstile token validation", e)
-            false
-        }
-    }
-
-    fun validateToken(token: String?): Boolean = validateToken(token, null)
-
-    companion object {
-        private const val TURNSTILE_VERIFY_URL = "https://challenges.cloudflare.com/turnstile/v0/siteverify"
-    }
 }
 
 @Service

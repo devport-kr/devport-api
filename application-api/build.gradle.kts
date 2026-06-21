@@ -15,6 +15,9 @@ dependencies {
     implementation(project(":auth:api"))
     implementation(project(":auth:service"))
     implementation(project(":auth:repository-jpa"))
+    implementation(project(":auth:adapter-redis"))
+    implementation(project(":auth:adapter-http"))
+    implementation(project(":auth:infrastructure"))
     implementation(project(":auth:model"))
 
     // gitrepo — migrated Hexagonal slice (adapters + use-cases composed here)

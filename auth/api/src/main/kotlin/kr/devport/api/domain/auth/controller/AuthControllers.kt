@@ -22,9 +22,9 @@ import kr.devport.api.domain.auth.service.EmailVerificationService
 import kr.devport.api.domain.auth.service.LoginService
 import kr.devport.api.domain.auth.service.PasswordResetService
 import kr.devport.api.domain.auth.service.ProfileService
-import kr.devport.api.domain.auth.service.RefreshTokenCookieService
 import kr.devport.api.domain.auth.service.SignupService
 import kr.devport.api.domain.auth.service.toUserResponse
+import kr.devport.api.domain.auth.web.RefreshTokenCookieService
 import kr.devport.api.domain.common.exception.InvalidTokenException
 import kr.devport.api.domain.common.security.CustomUserDetails
 import org.springframework.http.ResponseEntity
@@ -96,7 +96,7 @@ class AuthController(
         httpRequest: HttpServletRequest,
         response: HttpServletResponse,
     ): ResponseEntity<TokenResponse> {
-        val tokenResponse = authService.exchangeOAuth2Code(request.code, httpRequest)
+        val tokenResponse = authService.exchangeOAuth2Code(request.code, httpRequest.getHeader("User-Agent"))
         refreshTokenCookieService.addRefreshTokenCookie(response, tokenResponse.refreshToken!!)
         return ResponseEntity.ok(tokenResponse.copy(refreshToken = null))
     }

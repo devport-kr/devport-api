@@ -37,6 +37,8 @@ include(":llm:api")
 include(":auth:model")
 include(":auth:infrastructure")
 include(":auth:repository-jpa")
+include(":auth:adapter-redis")
+include(":auth:adapter-http")
 include(":auth:service")
 include(":auth:api")
 

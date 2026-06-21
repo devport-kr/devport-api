@@ -7,10 +7,10 @@ import jakarta.servlet.http.HttpServletResponse
 import kr.devport.api.domain.auth.entity.User
 import kr.devport.api.domain.auth.enums.AuthProvider
 import kr.devport.api.domain.auth.enums.UserRole
+import kr.devport.api.domain.auth.infrastructure.CaptchaVerifier
 import kr.devport.api.domain.auth.infrastructure.UserRepository
 import kr.devport.api.domain.auth.security.CustomUserDetailsFactory
 import kr.devport.api.domain.auth.service.OAuth2ExchangeCodeService
-import kr.devport.api.domain.auth.service.TurnstileService
 import kr.devport.api.domain.common.logging.LogSanitizer
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Value
@@ -283,7 +283,7 @@ class CustomOAuth2UserService(
 class OAuth2AuthenticationSuccessHandler(
     private val oAuth2ExchangeCodeService: OAuth2ExchangeCodeService,
     private val userRepository: UserRepository,
-    private val turnstileService: TurnstileService,
+    private val captchaVerifier: CaptchaVerifier,
 ) : SimpleUrlAuthenticationSuccessHandler() {
     private val log = LoggerFactory.getLogger(OAuth2AuthenticationSuccessHandler::class.java)
 
@@ -316,13 +316,13 @@ class OAuth2AuthenticationSuccessHandler(
             return buildFailureRedirectUrl("Turnstile token is missing")
         }
         val clientIp = getClientIp(request)
-        if (!turnstileService.validateToken(turnstileToken, clientIp)) {
+        if (!captchaVerifier.verify(turnstileToken, clientIp)) {
             log.warn("Turnstile validation failed for OAuth2 login, clientIp={}", LogSanitizer.maskIp(clientIp))
             return buildFailureRedirectUrl("Bot verification failed")
         }
         val userDetails = authentication.principal as kr.devport.api.domain.common.security.CustomUserDetails
         val user = userRepository.findById(userDetails.id).orElseThrow { RuntimeException("User not found") }
-        val exchangeCode = oAuth2ExchangeCodeService.createExchangeCode(user, request)
+        val exchangeCode = oAuth2ExchangeCodeService.createExchangeCode(user, request.getHeader("User-Agent"))
         return UriComponentsBuilder.fromUriString(redirectUri).queryParam("code", exchangeCode).build().toUriString()
     }
 
