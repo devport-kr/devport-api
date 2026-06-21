@@ -20,7 +20,6 @@ import jakarta.persistence.PreUpdate
 import jakarta.persistence.Table
 import kr.devport.api.domain.article.enums.Category
 import kr.devport.api.domain.article.enums.ItemType
-import kr.devport.api.domain.auth.entity.User
 import java.time.LocalDateTime
 import java.util.UUID
 
@@ -130,9 +129,9 @@ class ArticleComment {
     @JoinColumn(name = "article_id", nullable = false)
     var article: Article? = null
 
-    @ManyToOne(fetch = FetchType.EAGER)
-    @JoinColumn(name = "user_id", nullable = false)
-    var user: User? = null
+    // Cross-domain reference by id (auth owns User). Resolve via auth's UserDirectory port.
+    @Column(name = "user_id", nullable = false)
+    var userId: Long = 0
 
     @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "parent_id")

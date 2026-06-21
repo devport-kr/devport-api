@@ -44,7 +44,9 @@ include(":auth:api")
 
 // article domain
 include(":article:model")
+include(":article:infrastructure")
 include(":article:repository-jpa")
+include(":article:adapter-openai")
 include(":article:service")
 include(":article:api")
 

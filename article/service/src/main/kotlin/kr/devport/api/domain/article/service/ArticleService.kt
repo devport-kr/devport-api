@@ -6,7 +6,7 @@ import kr.devport.api.domain.article.dto.response.ArticleDetailResponse
 import kr.devport.api.domain.article.dto.response.ArticlePageResponse
 import kr.devport.api.domain.article.dto.response.TrendingTickerResponse
 import kr.devport.api.domain.article.enums.Category
-import kr.devport.api.domain.article.repository.ArticleRepository
+import kr.devport.api.domain.article.infrastructure.ArticleRepository
 import kr.devport.api.domain.common.cache.CacheNames
 import org.springframework.cache.annotation.Cacheable
 import org.springframework.data.domain.PageRequest

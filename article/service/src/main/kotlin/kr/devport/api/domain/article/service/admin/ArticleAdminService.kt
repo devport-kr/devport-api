@@ -9,7 +9,8 @@ import kr.devport.api.domain.article.dto.response.ArticleResponse
 import kr.devport.api.domain.article.entity.Article
 import kr.devport.api.domain.article.entity.ArticleMetadata
 import kr.devport.api.domain.article.enums.Category
-import kr.devport.api.domain.article.repository.ArticleRepository
+import kr.devport.api.domain.article.infrastructure.ArticleRepository
+import kr.devport.api.domain.article.infrastructure.ArticleTranslator
 import kr.devport.api.domain.article.service.toMetadataResponse
 import kr.devport.api.domain.common.cache.CacheNames
 import org.springframework.cache.annotation.CacheEvict
@@ -23,7 +24,7 @@ import java.time.LocalDateTime
 @Transactional
 class ArticleAdminService(
     private val articleRepository: ArticleRepository,
-    private val articleLLMService: ArticleLLMService,
+    private val articleTranslator: ArticleTranslator,
 ) {
     @CacheEvict(cacheNames = [CacheNames.ARTICLES, CacheNames.TRENDING_TICKER], allEntries = true)
     fun createArticle(request: ArticleCreateRequest): ArticleResponse {
@@ -61,9 +62,8 @@ class ArticleAdminService(
         request: ArticleUpdateRequest,
     ): ArticleResponse {
         val article =
-            articleRepository
-                .findById(id)
-                .orElseThrow { IllegalArgumentException("Article not found with id: $id") }
+            articleRepository.findById(id)
+                ?: throw IllegalArgumentException("Article not found with id: $id")
 
         request.itemType?.let { article.itemType = it }
         request.source?.let { article.source = it }
@@ -100,7 +100,7 @@ class ArticleAdminService(
     @CacheEvict(cacheNames = [CacheNames.ARTICLES, CacheNames.TRENDING_TICKER], allEntries = true)
     fun createArticleFromLLM(request: ArticleLLMCreateRequest): ArticleResponse {
         val result =
-            articleLLMService.processArticle(
+            articleTranslator.processArticle(
                 request.titleEn,
                 request.url,
                 request.content,
@@ -144,7 +144,7 @@ class ArticleAdminService(
 
     fun previewArticleLLM(request: ArticleLLMCreateRequest): ArticleLLMPreviewResponse {
         val result =
-            articleLLMService.processArticle(
+            articleTranslator.processArticle(
                 request.titleEn,
                 request.url,
                 request.content,

@@ -35,6 +35,8 @@ dependencies {
     implementation(project(":article:api"))
     implementation(project(":article:service"))
     implementation(project(":article:repository-jpa"))
+    implementation(project(":article:adapter-openai"))
+    implementation(project(":article:infrastructure"))
     implementation(project(":article:model"))
 
     implementation(project(":mypage:api"))

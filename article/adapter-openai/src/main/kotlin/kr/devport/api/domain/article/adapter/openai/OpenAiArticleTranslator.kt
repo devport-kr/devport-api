@@ -1,4 +1,4 @@
-package kr.devport.api.domain.article.service.admin
+package kr.devport.api.domain.article.adapter.openai
 
 import com.fasterxml.jackson.core.JsonProcessingException
 import com.fasterxml.jackson.databind.JsonNode
@@ -12,35 +12,28 @@ import com.openai.models.chat.completions.ChatCompletionCreateParams
 import com.openai.models.chat.completions.ChatCompletionMessageParam
 import com.openai.models.chat.completions.ChatCompletionSystemMessageParam
 import com.openai.models.chat.completions.ChatCompletionUserMessageParam
+import kr.devport.api.domain.article.infrastructure.ArticleTranslator
+import kr.devport.api.domain.article.infrastructure.LLMArticleResult
 import kr.devport.api.domain.common.exception.LLMProcessingException
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.stereotype.Service
 
 /**
- * Translates an English article to a comprehensive Korean rendering via the OpenAI Chat Completions
- * API with a strict JSON schema. Kept compact but faithful to the original prompt contract.
+ * OpenAI adapter for [ArticleTranslator]: translates an English article into a comprehensive Korean
+ * rendering via the Chat Completions API with a strict JSON schema.
  */
 @Service
-class ArticleLLMService(
+class OpenAiArticleTranslator(
     private val openAIClient: OpenAIClient,
     @param:Value("\${app.openai.model}") private val model: String,
     @param:Value("\${app.openai.max-completion-tokens}") maxCompletionTokens: Int,
-) {
+) : ArticleTranslator {
     private val log = LoggerFactory.getLogger(javaClass)
     private val objectMapper = ObjectMapper()
     private val maxCompletionTokens: Int = minOf(maxCompletionTokens, 128000)
 
-    data class LLMArticleResult(
-        val isTechnical: Boolean,
-        val titleKo: String,
-        val summaryKo: String,
-        val category: String,
-        val tags: List<String>,
-        val url: String?,
-    )
-
-    fun processArticle(
+    override fun processArticle(
         titleEn: String?,
         url: String?,
         content: String?,

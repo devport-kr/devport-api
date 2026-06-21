@@ -4,9 +4,9 @@ import kr.devport.api.domain.article.dto.request.CommentCreateRequest
 import kr.devport.api.domain.article.dto.request.CommentUpdateRequest
 import kr.devport.api.domain.article.dto.response.CommentResponse
 import kr.devport.api.domain.article.entity.ArticleComment
-import kr.devport.api.domain.article.repository.ArticleCommentRepository
-import kr.devport.api.domain.article.repository.ArticleRepository
-import kr.devport.api.domain.auth.repository.UserRepository
+import kr.devport.api.domain.article.infrastructure.ArticleCommentRepository
+import kr.devport.api.domain.article.infrastructure.ArticleRepository
+import kr.devport.api.domain.auth.infrastructure.UserDirectory
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 
@@ -15,15 +15,16 @@ import org.springframework.transaction.annotation.Transactional
 class CommentService(
     private val commentRepository: ArticleCommentRepository,
     private val articleRepository: ArticleRepository,
-    private val userRepository: UserRepository,
+    private val userDirectory: UserDirectory,
 ) {
     fun getCommentsByArticle(
         articleExternalId: String,
         currentUserId: Long?,
-    ): List<CommentResponse> =
-        commentRepository
-            .findAllByArticleExternalId(articleExternalId)
-            .map { CommentResponse.from(it, currentUserId) }
+    ): List<CommentResponse> {
+        val comments = commentRepository.findAllByArticleExternalId(articleExternalId)
+        val authors = userDirectory.findByIds(comments.map { it.userId }.toSet())
+        return comments.map { CommentResponse.from(it, authors[it.userId], currentUserId) }
+    }
 
     @Transactional
     fun createComment(
@@ -34,15 +35,14 @@ class CommentService(
         val article =
             articleRepository.findByExternalId(articleExternalId)
                 ?: throw IllegalArgumentException("Article not found: $articleExternalId")
-        val user =
-            userRepository
-                .findById(userId)
-                .orElseThrow { IllegalArgumentException("User not found: $userId") }
+        val author =
+            userDirectory.findById(userId)
+                ?: throw IllegalArgumentException("User not found: $userId")
 
         val comment =
             ArticleComment().apply {
                 this.article = article
-                this.user = user
+                this.userId = userId
                 this.content = request.content
             }
 
@@ -57,7 +57,7 @@ class CommentService(
         }
 
         val saved = commentRepository.save(comment)
-        return CommentResponse.from(saved, userId)
+        return CommentResponse.from(saved, author, userId)
     }
 
     @Transactional
@@ -70,7 +70,7 @@ class CommentService(
             commentRepository.findByExternalId(commentExternalId)
                 ?: throw IllegalArgumentException("Comment not found: $commentExternalId")
 
-        if (comment.user?.id != userId) {
+        if (comment.userId != userId) {
             throw IllegalArgumentException("You can only edit your own comments")
         }
         if (comment.deleted) {
@@ -79,7 +79,7 @@ class CommentService(
 
         comment.content = request.content
         val updated = commentRepository.save(comment)
-        return CommentResponse.from(updated, userId)
+        return CommentResponse.from(updated, userDirectory.findById(userId), userId)
     }
 
     @Transactional
@@ -91,7 +91,7 @@ class CommentService(
             commentRepository.findByExternalId(commentExternalId)
                 ?: throw IllegalArgumentException("Comment not found: $commentExternalId")
 
-        if (comment.user?.id != userId) {
+        if (comment.userId != userId) {
             throw IllegalArgumentException("You can only delete your own comments")
         }
 

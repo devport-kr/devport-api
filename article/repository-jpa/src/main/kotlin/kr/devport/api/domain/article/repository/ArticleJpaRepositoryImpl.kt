@@ -16,7 +16,7 @@ import org.springframework.util.StringUtils.hasText
 import java.time.LocalDateTime
 
 @Repository
-class ArticleRepositoryImpl(
+class ArticleJpaRepositoryImpl(
     private val queryFactory: JPAQueryFactory,
 ) : ArticleRepositoryCustom {
     private val article = QArticle.article

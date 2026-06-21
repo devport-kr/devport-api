@@ -1,7 +1,7 @@
 package kr.devport.api.domain.article.dto.response
 
 import kr.devport.api.domain.article.entity.ArticleComment
-import kr.devport.api.domain.auth.entity.User
+import kr.devport.api.domain.auth.UserSummary
 import java.time.LocalDateTime
 
 data class CommentAuthorResponse(
@@ -13,7 +13,7 @@ data class CommentAuthorResponse(
 ) {
     companion object {
         @JvmStatic
-        fun from(user: User): CommentAuthorResponse =
+        fun from(user: UserSummary): CommentAuthorResponse =
             CommentAuthorResponse(
                 id = user.id,
                 name = user.name,
@@ -38,6 +38,7 @@ data class CommentResponse(
         @JvmStatic
         fun from(
             comment: ArticleComment,
+            author: UserSummary?,
             currentUserId: Long?,
         ): CommentResponse {
             val displayContent = if (comment.deleted) "[삭제된 댓글입니다]" else comment.content
@@ -46,10 +47,10 @@ data class CommentResponse(
                 content = displayContent,
                 deleted = comment.deleted,
                 parentId = comment.parentComment?.externalId,
-                author = CommentAuthorResponse.from(comment.user!!),
+                author = author?.let { CommentAuthorResponse.from(it) },
                 createdAt = comment.createdAt,
                 updatedAt = comment.updatedAt,
-                isOwner = currentUserId != null && currentUserId == comment.user?.id,
+                isOwner = currentUserId != null && currentUserId == comment.userId,
             )
         }
     }
