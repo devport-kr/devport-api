@@ -46,7 +46,6 @@ out/
 .vscode/
 
 
-CLAUDE.md
 HELP.md
 .claude
 REFRESH_TOKEN_IMPLEMENTATION.md
