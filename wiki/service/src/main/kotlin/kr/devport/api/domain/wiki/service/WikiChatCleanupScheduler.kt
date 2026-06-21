@@ -1,6 +1,6 @@
 package kr.devport.api.domain.wiki.service
 
-import kr.devport.api.domain.wiki.repository.WikiChatSessionRepository
+import kr.devport.api.domain.wiki.infrastructure.WikiChatSessionRepository
 import org.slf4j.LoggerFactory
 import org.springframework.scheduling.annotation.Scheduled
 import org.springframework.stereotype.Component

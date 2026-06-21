@@ -2,35 +2,30 @@
 
 package kr.devport.api.domain.wiki.service
 
-import com.openai.client.OpenAIClient
-import com.openai.core.http.StreamResponse
-import com.openai.models.chat.completions.ChatCompletion
-import com.openai.models.chat.completions.ChatCompletionChunk
-import com.openai.models.chat.completions.ChatCompletionCreateParams
-import com.openai.models.chat.completions.ChatCompletionMessage
 import kr.devport.api.domain.wiki.dto.internal.WikiRetrievalContext
 import kr.devport.api.domain.wiki.dto.internal.WikiRetrievedChunk
-import kr.devport.api.domain.wiki.store.WikiChatSessionStore
-import kr.devport.api.domain.wiki.store.WikiChatSessionStore.ChatTurn
+import kr.devport.api.domain.wiki.infrastructure.ChatMessage
+import kr.devport.api.domain.wiki.infrastructure.ChatPort
+import kr.devport.api.domain.wiki.infrastructure.ChatTurn
+import kr.devport.api.domain.wiki.infrastructure.WikiChatSessionStore
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ExtendWith
-import org.mockito.Answers
 import org.mockito.InjectMocks
 import org.mockito.Mock
 import org.mockito.junit.jupiter.MockitoExtension
 import org.mockito.junit.jupiter.MockitoSettings
 import org.mockito.kotlin.any
+import org.mockito.kotlin.anyOrNull
 import org.mockito.kotlin.argumentCaptor
 import org.mockito.kotlin.atLeastOnce
-import org.mockito.kotlin.mock
+import org.mockito.kotlin.doAnswer
+import org.mockito.kotlin.eq
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
 import org.mockito.quality.Strictness
-import java.util.Optional
-import java.util.stream.Stream
 
 @ExtendWith(MockitoExtension::class)
 @MockitoSettings(strictness = Strictness.LENIENT)
@@ -47,8 +42,8 @@ class WikiChatServiceTest {
     @Mock
     lateinit var titleService: WikiChatTitleService
 
-    @Mock(answer = Answers.RETURNS_DEEP_STUBS)
-    lateinit var openAIClient: OpenAIClient
+    @Mock
+    lateinit var chatPort: ChatPort
 
     @InjectMocks
     lateinit var wikiChatService: WikiChatService
@@ -63,13 +58,7 @@ class WikiChatServiceTest {
     }
 
     private fun stubChatJson(json: String) {
-        val message = mock<ChatCompletionMessage>()
-        whenever(message.content()).thenReturn(Optional.of(json))
-        val choice = mock<ChatCompletion.Choice>()
-        whenever(choice.message()).thenReturn(message)
-        val completion = mock<ChatCompletion>()
-        whenever(completion.choices()).thenReturn(listOf(choice))
-        whenever(openAIClient.chat().completions().create(any<ChatCompletionCreateParams>())).thenReturn(completion)
+        whenever(chatPort.complete(any(), any(), anyOrNull(), anyOrNull())).thenReturn(json)
     }
 
     @Test
@@ -96,9 +85,7 @@ class WikiChatServiceTest {
 
         val result = wikiChatService.chatResult("session-123", "github:repo", "JWT 흐름 설명해줘")
 
-        val captor = argumentCaptor<ChatCompletionCreateParams>()
-        verify(openAIClient.chat().completions(), atLeastOnce()).create(captor.capture())
-        val messagesText = captor.firstValue.messages().toString()
+        val messagesText = captureCompletedMessagesText()
 
         assertThat(result.isClarification).isFalse()
         assertThat(messagesText).contains("로그인 흐름이 어디서 시작돼?")
@@ -177,9 +164,7 @@ class WikiChatServiceTest {
 
         wikiChatService.chatResult("s1", "github:repo", "이전 질문 요약해줘")
 
-        val captor = argumentCaptor<ChatCompletionCreateParams>()
-        verify(openAIClient.chat().completions(), atLeastOnce()).create(captor.capture())
-        assertThat(captor.firstValue.messages().toString()).contains("JWT 구조 알려줘")
+        assertThat(captureCompletedMessagesText()).contains("JWT 구조 알려줘")
     }
 
     @Test
@@ -192,9 +177,7 @@ class WikiChatServiceTest {
 
         wikiChatService.chatResult("s2", "github:repo", "what did I ask before?")
 
-        val captor = argumentCaptor<ChatCompletionCreateParams>()
-        verify(openAIClient.chat().completions(), atLeastOnce()).create(captor.capture())
-        assertThat(captor.firstValue.messages().toString()).contains("How does JWT work?")
+        assertThat(captureCompletedMessagesText()).contains("How does JWT work?")
     }
 
     @Test
@@ -207,9 +190,7 @@ class WikiChatServiceTest {
 
         wikiChatService.chatResult("s3", "github:repo", "왜?")
 
-        val captor = argumentCaptor<ChatCompletionCreateParams>()
-        verify(openAIClient.chat().completions(), atLeastOnce()).create(captor.capture())
-        assertThat(captor.firstValue.messages().toString()).contains("SecurityConfig 역할이 뭐야?")
+        assertThat(captureCompletedMessagesText()).contains("SecurityConfig 역할이 뭐야?")
     }
 
     @Test
@@ -237,12 +218,7 @@ class WikiChatServiceTest {
         whenever(retrievalService.retrieveContext("github:repo", "인증 구조가 뭐야?")).thenReturn(strongContext())
         whenever(sessionStore.loadRecentTurns("session-s", "github:repo")).thenReturn(emptyList())
         whenever(sessionStore.hasActiveSession("session-s")).thenReturn(false)
-
-        val chunk1 = stubChunk("요약하면 ")
-        val chunk2 = stubChunk("인증 필터 중심이에요.")
-        val streamResponse = mock<StreamResponse<ChatCompletionChunk>>()
-        whenever(streamResponse.stream()).thenReturn(Stream.of(chunk1, chunk2))
-        whenever(openAIClient.chat().completions().createStreaming(any<ChatCompletionCreateParams>())).thenReturn(streamResponse)
+        stubStreamTokens("요약하면 ", "인증 필터 중심이에요.")
 
         val received = mutableListOf<String>()
         val result = wikiChatService.streamChatResult("session-s", "github:repo", "인증 구조가 뭐야?", received::add)
@@ -261,15 +237,26 @@ class WikiChatServiceTest {
         whenever(sessionStore.hasActiveSession("session-c")).thenReturn(false)
 
         val clarificationText = "질문이 모호해요.\n\n선택할 수 있는 범위:\n- 로그인\n- 인가\n- 토큰 갱신"
-        val clarificationChunk = stubChunk(clarificationText)
-        val streamResponse = mock<StreamResponse<ChatCompletionChunk>>()
-        whenever(streamResponse.stream()).thenReturn(Stream.of(clarificationChunk))
-        whenever(openAIClient.chat().completions().createStreaming(any<ChatCompletionCreateParams>())).thenReturn(streamResponse)
+        stubStreamTokens(clarificationText)
 
         val result = wikiChatService.streamChatResult("session-c", "github:repo", "인증 쪽 설명해줘", { _ -> })
 
         assertThat(result.isClarification).isTrue()
         assertThat(result.clarificationOptions).containsExactly("로그인", "인가", "토큰 갱신")
+    }
+
+    private fun captureCompletedMessagesText(): String {
+        val captor = argumentCaptor<List<ChatMessage>>()
+        verify(chatPort, atLeastOnce()).complete(any(), captor.capture(), anyOrNull(), anyOrNull())
+        return captor.firstValue.joinToString("\n") { it.content }
+    }
+
+    private fun stubStreamTokens(vararg tokens: String) {
+        doAnswer { invocation ->
+            val onToken = invocation.getArgument<(String) -> Unit>(2)
+            tokens.forEach(onToken)
+            Unit
+        }.whenever(chatPort).stream(eq("gpt-5-mini"), any(), any())
     }
 
     private fun strongContext(): WikiRetrievalContext =
@@ -293,16 +280,6 @@ class WikiChatServiceTest {
             ),
             emptyList(),
         )
-
-    private fun stubChunk(token: String): ChatCompletionChunk {
-        val delta = mock<ChatCompletionChunk.Choice.Delta>()
-        whenever(delta.content()).thenReturn(Optional.of(token))
-        val choice = mock<ChatCompletionChunk.Choice>()
-        whenever(choice.delta()).thenReturn(delta)
-        val chunk = mock<ChatCompletionChunk>()
-        whenever(chunk.choices()).thenReturn(listOf(choice))
-        return chunk
-    }
 
     private fun turn(
         question: String,

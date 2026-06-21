@@ -55,6 +55,9 @@ dependencies {
     implementation(project(":wiki:api"))
     implementation(project(":wiki:service"))
     implementation(project(":wiki:repository-jpa"))
+    implementation(project(":wiki:adapter-openai"))
+    implementation(project(":wiki:adapter-redis"))
+    implementation(project(":wiki:infrastructure"))
     implementation(project(":wiki:model"))
 
     implementation("org.springframework.boot:spring-boot-starter-data-redis")
@@ -81,9 +84,17 @@ dependencies {
     testImplementation("org.springframework.boot:spring-boot-starter-security-oauth2-resource-server-test")
     testImplementation("org.springframework.boot:spring-boot-starter-security-test")
     testImplementation("org.springframework.boot:spring-boot-starter-webmvc-test")
+    testImplementation(libs.konsist)
     testImplementation("org.mockito.kotlin:mockito-kotlin:5.4.0")
+
+    // Integration boot test runs against real Postgres (pgvector) + Redis via Testcontainers.
+    // Boot 4.0 ships Testcontainers 2.0 (renamed modules), version-managed by the testcontainers BOM.
+    testImplementation(platform(libs.testcontainers.bom))
+    testImplementation("org.springframework.boot:spring-boot-testcontainers")
+    testImplementation("org.testcontainers:testcontainers-junit-jupiter")
+    testImplementation("org.testcontainers:testcontainers-postgresql")
+
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
-    testRuntimeOnly("com.h2database:h2")
 }
 
 springBoot {

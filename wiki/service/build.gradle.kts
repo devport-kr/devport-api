@@ -1,18 +1,14 @@
-// Wiki use-cases, DTOs, Redis-backed session store, and RAG/OpenAI orchestration (Kotlin).
+// Wiki use-cases, DTOs, and RAG orchestration (Kotlin). Depends only on ports —
+// no repository-jpa, no OpenAI, no Redis, no auth, no web.
 dependencies {
     api(project(":wiki:model"))
-    implementation(project(":wiki:repository-jpa"))
+    implementation(project(":wiki:infrastructure"))
 
-    implementation(project(":auth:model"))
-    implementation(project(":auth:repository-jpa"))
-    implementation(project(":port:model"))
-    implementation(project(":port:repository-jpa"))
+    // Cross-domain: resolve projects via port's inbound ProjectDirectory port (ProjectView).
+    implementation(project(":port:infrastructure"))
+
     implementation(project(":support:cache"))
 
-    implementation("org.springframework.boot:spring-boot-starter-data-redis")
     implementation("org.springframework.boot:spring-boot-starter-validation")
-    implementation("com.openai:openai-java:${rootProject.libs.versions.openai.get()}") {
-        exclude(group = "io.swagger.core.v3", module = "swagger-annotations")
-    }
     implementation("com.fasterxml.jackson.core:jackson-databind")
 }

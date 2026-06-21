@@ -1,13 +1,12 @@
 package kr.devport.api.domain.wiki.service
 
 import kr.devport.api.domain.common.cache.CacheNames
-import kr.devport.api.domain.port.repository.ProjectRepository
+import kr.devport.api.domain.port.infrastructure.ProjectDirectory
 import kr.devport.api.domain.wiki.dto.response.WikiProjectListResponse
 import kr.devport.api.domain.wiki.dto.response.WikiProjectPageResponse
 import kr.devport.api.domain.wiki.entity.WikiSectionChunk
-import kr.devport.api.domain.wiki.repository.WikiSectionChunkRepository
+import kr.devport.api.domain.wiki.infrastructure.WikiSectionChunkRepository
 import org.springframework.cache.annotation.Cacheable
-import org.springframework.data.domain.Sort
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.time.OffsetDateTime
@@ -19,12 +18,12 @@ import java.util.regex.Pattern
 @Service
 @Transactional(readOnly = true)
 class WikiService(
-    private val projectRepository: ProjectRepository,
+    private val projectDirectory: ProjectDirectory,
     private val wikiSectionChunkRepository: WikiSectionChunkRepository,
 ) {
     @Cacheable(cacheNames = [CacheNames.WIKI_PROJECTS])
     fun getProjects(): WikiProjectListResponse {
-        val projects = projectRepository.findAll(Sort.by(Sort.Direction.DESC, "stars"))
+        val projects = projectDirectory.listAllByStarsDesc()
 
         // Single query for all summary chunks across all projects (avoids N+1); keep first on dupes.
         val summaryByProject =
@@ -58,9 +57,8 @@ class WikiService(
     @Cacheable(cacheNames = [CacheNames.WIKI_PROJECT_PAGE], key = "#projectExternalId")
     fun getProjectWiki(projectExternalId: String): WikiProjectPageResponse {
         val project =
-            projectRepository
-                .findByExternalId(projectExternalId)
-                .orElseThrow { IllegalArgumentException("Project not found: $projectExternalId") }
+            projectDirectory.findByExternalId(projectExternalId)
+                ?: throw IllegalArgumentException("Project not found: $projectExternalId")
 
         val chunks = wikiSectionChunkRepository.findByProjectExternalId(projectExternalId)
         if (chunks.isEmpty()) {

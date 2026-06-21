@@ -1,5 +1,8 @@
-package kr.devport.api.domain.wiki.store
+package kr.devport.api.domain.wiki.adapter.redis
 
+import kr.devport.api.domain.wiki.infrastructure.ChatSession
+import kr.devport.api.domain.wiki.infrastructure.ChatTurn
+import kr.devport.api.domain.wiki.infrastructure.WikiChatSessionStore
 import org.slf4j.LoggerFactory
 import org.springframework.data.redis.core.RedisTemplate
 import org.springframework.data.redis.serializer.SerializationException
@@ -9,36 +12,20 @@ import java.time.Instant
 import java.time.temporal.ChronoUnit
 
 /**
- * Redis-backed session store for wiki chat turns. Sessions expire via Redis TTL and survive restarts
- * and node changes. Turns are stored as plain maps (not the entity type) so the format is stable
- * across deployments. Only recent turns per session are retained to bound storage.
+ * Redis adapter for [WikiChatSessionStore]. Sessions expire via Redis TTL and survive restarts and
+ * node changes. Turns are stored as plain maps (not the entity type) so the format is stable across
+ * deployments. The [KEY_PREFIX] and map serialization are preserved so live sessions survive a deploy.
  */
 @Component
-class WikiChatSessionStore(
+class WikiChatSessionRedisStore(
     private val redisTemplate: RedisTemplate<String, Any>,
-) {
+) : WikiChatSessionStore {
     private val log = LoggerFactory.getLogger(javaClass)
-
-    /** Chat session with TTL expiration tracking. */
-    data class ChatSession(
-        var sessionId: String? = null,
-        var turns: MutableList<ChatTurn> = mutableListOf(),
-        var expiresAt: Instant? = null,
-        var projectExternalId: String? = null,
-    )
-
-    /** Single chat turn (question + answer pair). */
-    data class ChatTurn(
-        var question: String? = null,
-        var answer: String? = null,
-        var timestamp: Instant? = null,
-        var wasClarification: Boolean = false,
-    )
 
     /**
      * Save a chat turn with TTL refresh. Creates a new session if missing, prunes old turns at capacity.
      */
-    fun saveTurn(
+    override fun saveTurn(
         sessionId: String,
         projectExternalId: String?,
         question: String,
@@ -69,14 +56,14 @@ class WikiChatSessionStore(
     }
 
     /** Load chat turns for a session. Empty if missing or expired. */
-    fun loadTurns(sessionId: String): List<ChatTurn> = loadTurnsInternal(sessionId, null)
+    override fun loadTurns(sessionId: String): List<ChatTurn> = loadTurnsInternal(sessionId, null)
 
-    fun loadTurns(
+    override fun loadTurns(
         sessionId: String,
         projectExternalId: String?,
     ): List<ChatTurn> = loadTurnsInternal(sessionId, projectExternalId)
 
-    fun loadRecentTurns(
+    override fun loadRecentTurns(
         sessionId: String,
         projectExternalId: String?,
     ): List<ChatTurn> {
@@ -88,13 +75,13 @@ class WikiChatSessionStore(
         }
     }
 
-    fun getSession(sessionId: String): ChatSession? = fetchSession(KEY_PREFIX + sessionId)
+    override fun getSession(sessionId: String): ChatSession? = fetchSession(KEY_PREFIX + sessionId)
 
     /** True if the session exists and is not expired. */
-    fun hasActiveSession(sessionId: String): Boolean = redisTemplate.hasKey(KEY_PREFIX + sessionId) == true
+    override fun hasActiveSession(sessionId: String): Boolean = redisTemplate.hasKey(KEY_PREFIX + sessionId) == true
 
     /** Clear a specific session. */
-    fun clearSession(sessionId: String) {
+    override fun clearSession(sessionId: String) {
         redisTemplate.delete(KEY_PREFIX + sessionId)
     }
 
@@ -232,7 +219,7 @@ class WikiChatSessionStore(
     }
 
     /** Active session count for observability. Uses Redis KEYS; not a hot-path operation. */
-    fun getActiveSessionCount(): Int = redisTemplate.keys("$KEY_PREFIX*")?.size ?: 0
+    override fun getActiveSessionCount(): Int = redisTemplate.keys("$KEY_PREFIX*")?.size ?: 0
 
     companion object {
         private const val DEFAULT_TTL_MINUTES = 30

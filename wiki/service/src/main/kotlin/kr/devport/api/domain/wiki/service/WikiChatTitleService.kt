@@ -1,11 +1,9 @@
 package kr.devport.api.domain.wiki.service
 
-import com.openai.client.OpenAIClient
-import com.openai.models.ChatModel
-import com.openai.models.chat.completions.ChatCompletionCreateParams
-import com.openai.models.chat.completions.ChatCompletionMessageParam
-import com.openai.models.chat.completions.ChatCompletionUserMessageParam
-import kr.devport.api.domain.wiki.repository.WikiChatSessionRepository
+import kr.devport.api.domain.wiki.infrastructure.ChatMessage
+import kr.devport.api.domain.wiki.infrastructure.ChatPort
+import kr.devport.api.domain.wiki.infrastructure.ChatRole
+import kr.devport.api.domain.wiki.infrastructure.WikiChatSessionRepository
 import org.slf4j.LoggerFactory
 import org.springframework.scheduling.annotation.Async
 import org.springframework.stereotype.Service
@@ -18,7 +16,7 @@ import org.springframework.transaction.annotation.Transactional
 @Service
 class WikiChatTitleService(
     private val sessionRepository: WikiChatSessionRepository,
-    private val openAIClient: OpenAIClient,
+    private val chatPort: ChatPort,
 ) {
     private val log = LoggerFactory.getLogger(javaClass)
 
@@ -33,24 +31,14 @@ class WikiChatTitleService(
                 "다음 첫 질문으로 시작하는 대화의 제목을 5~7단어로 간결하게 한국어로 작성하세요: '" +
                     firstQuestion + "'. 제목만 출력하고 따옴표나 마침표는 붙이지 마세요."
 
-            val messages =
-                listOf<ChatCompletionMessageParam>(
-                    ChatCompletionMessageParam.ofUser(
-                        ChatCompletionUserMessageParam.builder().content(prompt).build(),
-                    ),
-                )
+            val title =
+                chatPort
+                    .complete(
+                        model = CHAT_MODEL,
+                        messages = listOf(ChatMessage(ChatRole.USER, prompt)),
+                        maxCompletionTokens = 30L,
+                    ).trim()
 
-            val completion =
-                openAIClient.chat().completions().create(
-                    ChatCompletionCreateParams
-                        .builder()
-                        .model(ChatModel.GPT_4O_MINI)
-                        .messages(messages)
-                        .maxCompletionTokens(30L)
-                        .build(),
-                )
-
-            val title = completion.choices().first().message().content().orElse("").trim()
             if (title.isNotBlank()) {
                 sessionRepository.findByExternalId(sessionExternalId).ifPresent { session ->
                     session.title = title
@@ -60,5 +48,9 @@ class WikiChatTitleService(
         } catch (e: Exception) {
             log.warn("wiki-title: Failed to generate title for session={}", sessionExternalId, e)
         }
+    }
+
+    companion object {
+        private const val CHAT_MODEL = "gpt-4o-mini"
     }
 }

@@ -1,5 +1,6 @@
-package kr.devport.api.domain.wiki.store
+package kr.devport.api.domain.wiki.adapter.redis
 
+import kr.devport.api.domain.wiki.infrastructure.WikiChatSessionStore
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.DisplayName
@@ -18,7 +19,7 @@ import java.time.Duration
 
 @ExtendWith(MockitoExtension::class)
 @MockitoSettings(strictness = Strictness.LENIENT)
-class WikiChatSessionStoreTest {
+class WikiChatSessionRedisStoreTest {
     @Mock
     lateinit var redisTemplate: RedisTemplate<String, Any>
 
@@ -47,7 +48,7 @@ class WikiChatSessionStoreTest {
             redisStore.containsKey(invocation.getArgument<String>(0))
         }
 
-        sessionStore = WikiChatSessionStore(redisTemplate)
+        sessionStore = WikiChatSessionRedisStore(redisTemplate)
     }
 
     @Test

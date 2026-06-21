@@ -1,12 +1,11 @@
 package kr.devport.api.domain.wiki.service
 
-import com.openai.client.OpenAIClient
-import com.openai.models.embeddings.EmbeddingCreateParams
 import kr.devport.api.domain.wiki.dto.internal.WikiGlobalRetrievalContext
 import kr.devport.api.domain.wiki.dto.internal.WikiGlobalRetrievalContext.ScoredProject
 import kr.devport.api.domain.wiki.dto.internal.WikiRetrievedChunk
 import kr.devport.api.domain.wiki.entity.WikiSectionChunk
-import kr.devport.api.domain.wiki.repository.WikiSectionChunkRepository
+import kr.devport.api.domain.wiki.infrastructure.EmbeddingPort
+import kr.devport.api.domain.wiki.infrastructure.WikiSectionChunkRepository
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
 
@@ -17,7 +16,7 @@ import org.springframework.stereotype.Service
 @Service
 class WikiGlobalRetrievalService(
     private val chunkRepository: WikiSectionChunkRepository,
-    private val openAIClient: OpenAIClient,
+    private val embeddingPort: EmbeddingPort,
 ) {
     private val log = LoggerFactory.getLogger(javaClass)
 
@@ -98,17 +97,7 @@ class WikiGlobalRetrievalService(
         return chunk.sectionId
     }
 
-    private fun embedText(text: String): FloatArray {
-        val params =
-            EmbeddingCreateParams
-                .builder()
-                .model("text-embedding-3-small")
-                .input(text)
-                .build()
-        val response = openAIClient.embeddings().create(params)
-        val embeddingFloats = response.data().first().embedding()
-        return FloatArray(embeddingFloats.size) { embeddingFloats[it] }
-    }
+    private fun embedText(text: String): FloatArray = embeddingPort.embed(text)
 
     private fun toVectorString(vector: FloatArray): String = vector.joinToString(",", prefix = "[", postfix = "]")
 

@@ -67,7 +67,10 @@ include(":port:api")
 
 // wiki domain (large RAG/OpenAI Java retained inside modules)
 include(":wiki:model")
+include(":wiki:infrastructure")
 include(":wiki:repository-jpa")
+include(":wiki:adapter-openai")
+include(":wiki:adapter-redis")
 include(":wiki:service")
 include(":wiki:api")
 

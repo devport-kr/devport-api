@@ -1,21 +1,17 @@
 package kr.devport.api.domain.wiki.service
 
 import com.fasterxml.jackson.databind.ObjectMapper
-import com.openai.client.OpenAIClient
-import com.openai.core.JsonValue
-import com.openai.models.ChatModel
-import com.openai.models.ResponseFormatJsonSchema
-import com.openai.models.chat.completions.ChatCompletionCreateParams
-import com.openai.models.chat.completions.ChatCompletionMessageParam
-import com.openai.models.chat.completions.ChatCompletionSystemMessageParam
-import com.openai.models.chat.completions.ChatCompletionUserMessageParam
 import kr.devport.api.domain.wiki.entity.WikiSectionChunk
+import kr.devport.api.domain.wiki.infrastructure.ChatMessage
+import kr.devport.api.domain.wiki.infrastructure.ChatPort
+import kr.devport.api.domain.wiki.infrastructure.ChatRole
+import kr.devport.api.domain.wiki.infrastructure.JsonSchemaSpec
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
 
 @Service
 class WikiChunkReranker(
-    private val openAIClient: OpenAIClient,
+    private val chatPort: ChatPort,
 ) {
     private val log = LoggerFactory.getLogger(javaClass)
     private val objectMapper = ObjectMapper()
@@ -30,17 +26,13 @@ class WikiChunkReranker(
 
         val cappedCandidates = candidates.take(MAX_CANDIDATES)
 
-        val completion =
-            openAIClient.chat().completions().create(
-                ChatCompletionCreateParams
-                    .builder()
-                    .model(ChatModel.GPT_5_MINI)
-                    .messages(buildMessages(question, cappedCandidates))
-                    .responseFormat(buildResponseFormat())
-                    .build(),
+        val payload =
+            chatPort.complete(
+                model = CHAT_MODEL,
+                messages = buildMessages(question, cappedCandidates),
+                jsonSchema = buildResponseFormat(),
             )
 
-        val payload = completion.choices().first().message().content().orElse("")
         val parsed = parse(payload)
         return if (parsed.isEmpty()) fallbackScores(cappedCandidates.size) else parsed
     }
@@ -48,27 +40,19 @@ class WikiChunkReranker(
     private fun buildMessages(
         question: String,
         candidates: List<WikiSectionChunk>,
-    ): List<ChatCompletionMessageParam> =
+    ): List<ChatMessage> =
         listOf(
-            ChatCompletionMessageParam.ofSystem(
-                ChatCompletionSystemMessageParam
-                    .builder()
-                    .content(
-                        """
-                        You are reranking repository wiki chunks for retrieval.
-                        Return JSON only.
-                        Score chunks by how directly they help answer the question.
-                        Higher score means more useful grounding.
-                        Prefer chunks with exact technical relevance over broad summaries.
-                        """.trimIndent(),
-                    ).build(),
+            ChatMessage(
+                ChatRole.SYSTEM,
+                """
+                You are reranking repository wiki chunks for retrieval.
+                Return JSON only.
+                Score chunks by how directly they help answer the question.
+                Higher score means more useful grounding.
+                Prefer chunks with exact technical relevance over broad summaries.
+                """.trimIndent(),
             ),
-            ChatCompletionMessageParam.ofUser(
-                ChatCompletionUserMessageParam
-                    .builder()
-                    .content(buildUserPrompt(question, candidates))
-                    .build(),
-            ),
+            ChatMessage(ChatRole.USER, buildUserPrompt(question, candidates)),
         )
 
     private fun buildUserPrompt(
@@ -93,14 +77,13 @@ class WikiChunkReranker(
         return prompt.toString()
     }
 
-    private fun buildResponseFormat(): ResponseFormatJsonSchema {
-        val schema =
-            ResponseFormatJsonSchema.JsonSchema.Schema
-                .builder()
-                .putAdditionalProperty("type", JsonValue.from("object"))
-                .putAdditionalProperty(
-                    "properties",
-                    JsonValue.from(
+    private fun buildResponseFormat(): JsonSchemaSpec =
+        JsonSchemaSpec(
+            name = "wiki_chunk_rerank_result",
+            schema =
+                mapOf(
+                    "type" to "object",
+                    "properties" to
                         mapOf(
                             "scores" to
                                 mapOf(
@@ -118,22 +101,10 @@ class WikiChunkReranker(
                                         ),
                                 ),
                         ),
-                    ),
-                ).putAdditionalProperty("required", JsonValue.from(listOf("scores")))
-                .putAdditionalProperty("additionalProperties", JsonValue.from(false))
-                .build()
-
-        return ResponseFormatJsonSchema
-            .builder()
-            .jsonSchema(
-                ResponseFormatJsonSchema.JsonSchema
-                    .builder()
-                    .name("wiki_chunk_rerank_result")
-                    .strict(true)
-                    .schema(schema)
-                    .build(),
-            ).build()
-    }
+                    "required" to listOf("scores"),
+                    "additionalProperties" to false,
+                ),
+        )
 
     private fun parse(payload: String): List<ScoredChunk> =
         try {
@@ -183,5 +154,6 @@ class WikiChunkReranker(
     companion object {
         private const val MAX_CANDIDATES = 20
         private const val MAX_CONTENT_CHARS = 600
+        private const val CHAT_MODEL = "gpt-5-mini"
     }
 }

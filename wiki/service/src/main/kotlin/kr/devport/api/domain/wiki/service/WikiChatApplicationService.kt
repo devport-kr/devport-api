@@ -1,7 +1,5 @@
 package kr.devport.api.domain.wiki.service
 
-import kr.devport.api.domain.auth.entity.User
-import kr.devport.api.domain.auth.repository.UserRepository
 import kr.devport.api.domain.wiki.dto.internal.WikiChatResult
 import kr.devport.api.domain.wiki.dto.request.WikiChatRequest
 import kr.devport.api.domain.wiki.dto.request.WikiGlobalChatRequest
@@ -12,8 +10,8 @@ import org.springframework.stereotype.Service
 import java.util.function.Consumer
 
 /**
- * Orchestrates wiki chat: resolves the caller (applying anon/authenticated rate limits) then
- * delegates to the project or global chat use-cases.
+ * Orchestrates wiki chat: applies anon/authenticated rate limits then delegates to the project or
+ * global chat use-cases. Callers are identified by [userId] (null = anonymous).
  */
 @Service
 class WikiChatApplicationService(
@@ -21,7 +19,6 @@ class WikiChatApplicationService(
     private val wikiGlobalChatService: WikiGlobalChatService,
     private val rateLimiter: WikiChatRateLimiter,
     private val anonRateLimiter: WikiAnonRateLimiter,
-    private val userRepository: UserRepository,
     @param:Value("\${wiki.chat.rate-limit.enabled:true}") private val rateLimitEnabled: Boolean,
 ) {
     fun chatProject(
@@ -30,8 +27,8 @@ class WikiChatApplicationService(
         userId: Long?,
         clientIp: String?,
     ): WikiChatResponse {
-        val user = resolveUser(userId, clientIp)
-        val result = wikiChatService.chatResult(request.sessionId, projectExternalId, request.question, user)
+        applyRateLimit(userId, clientIp)
+        val result = wikiChatService.chatResult(request.sessionId, projectExternalId, request.question, userId)
         return WikiChatResponse.from(result, request.sessionId)
     }
 
@@ -42,13 +39,13 @@ class WikiChatApplicationService(
         clientIp: String?,
         tokenConsumer: Consumer<String>,
     ): WikiChatResult {
-        val user = resolveUser(userId, clientIp)
+        applyRateLimit(userId, clientIp)
         return wikiChatService.streamChatResult(
             request.sessionId,
             projectExternalId,
             request.question,
             tokenConsumer,
-            user,
+            userId,
         )
     }
 
@@ -57,8 +54,8 @@ class WikiChatApplicationService(
         userId: Long?,
         clientIp: String?,
     ): WikiGlobalChatResponse {
-        val user = resolveUser(userId, clientIp)
-        return wikiGlobalChatService.chatResult(request.sessionId, request.question, user)
+        applyRateLimit(userId, clientIp)
+        return wikiGlobalChatService.chatResult(request.sessionId, request.question, userId)
     }
 
     fun streamGlobal(
@@ -67,27 +64,25 @@ class WikiChatApplicationService(
         clientIp: String?,
         tokenConsumer: Consumer<String>,
     ): WikiGlobalChatResponse {
-        val user = resolveUser(userId, clientIp)
-        return wikiGlobalChatService.streamChatResult(request.sessionId, request.question, tokenConsumer, user)
+        applyRateLimit(userId, clientIp)
+        return wikiGlobalChatService.streamChatResult(request.sessionId, request.question, tokenConsumer, userId)
     }
 
     fun clearProjectSession(sessionId: String) {
         wikiChatService.clearSession(sessionId)
     }
 
-    private fun resolveUser(
+    private fun applyRateLimit(
         userId: Long?,
         clientIp: String?,
-    ): User? {
-        if (userId == null) {
-            if (rateLimitEnabled) {
-                anonRateLimiter.checkAndIncrement(clientIp ?: "")
-            }
-            return null
+    ) {
+        if (!rateLimitEnabled) {
+            return
         }
-        if (rateLimitEnabled) {
+        if (userId == null) {
+            anonRateLimiter.checkAndIncrement(clientIp ?: "")
+        } else {
             rateLimiter.check(userId.toString())
         }
-        return userRepository.findById(userId).orElse(null)
     }
 }

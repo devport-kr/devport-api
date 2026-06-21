@@ -3,24 +3,28 @@ package kr.devport.api.domain.wiki.repository
 import com.fasterxml.jackson.core.type.TypeReference
 import com.fasterxml.jackson.databind.ObjectMapper
 import kr.devport.api.domain.wiki.entity.WikiSectionChunk
-import kr.devport.api.domain.wiki.repository.WikiSectionChunkRepositoryCustom.ScoredChunkRow
+import kr.devport.api.domain.wiki.infrastructure.ScoredChunkRow
 import org.springframework.jdbc.core.ConnectionCallback
 import org.springframework.jdbc.core.JdbcTemplate
 import org.springframework.jdbc.core.RowMapper
-import org.springframework.stereotype.Repository
+import org.springframework.stereotype.Component
 import java.sql.Connection
 import java.sql.ResultSet
 
-@Repository
-class WikiSectionChunkRepositoryImpl(
+/**
+ * pgvector + lexical similarity search over wiki_section_chunks via JdbcTemplate + raw SQL.
+ * Injected into [WikiSectionChunkRepositoryAdapter] which bridges it to the infrastructure port.
+ */
+@Component
+class WikiSectionChunkSearch(
     private val jdbcTemplate: JdbcTemplate,
-) : WikiSectionChunkRepositoryCustom {
+) {
     private val objectMapper = ObjectMapper()
 
     private val scoredChunkRowMapper =
         RowMapper { rs, _ -> ScoredChunkRow(mapChunk(rs), rs.getDouble("score")) }
 
-    override fun findSimilarChunksWithScore(
+    fun findSimilarChunksWithScore(
         projectExternalId: String,
         queryEmbedding: String,
         limit: Int,
@@ -37,7 +41,7 @@ class WikiSectionChunkRepositoryImpl(
             },
         )!!
 
-    override fun findSimilarChunksGlobalWithScore(
+    fun findSimilarChunksGlobalWithScore(
         queryEmbedding: String,
         limit: Int,
     ): List<ScoredChunkRow> =
@@ -57,7 +61,7 @@ class WikiSectionChunkRepositoryImpl(
             },
         )!!
 
-    override fun findLexicalCandidates(
+    fun findLexicalCandidates(
         projectExternalId: String,
         question: String,
         limit: Int,
@@ -160,7 +164,7 @@ class WikiSectionChunkRepositoryImpl(
                 (similarity(c.content, ?) + 0.5 * COALESCE(similarity(c.metadata->>'titleKo', ?), 0)) AS score
                 FROM wiki_section_chunks c
                 WHERE c.project_external_id = ?
-                  AND (c.content % ? OR c.metadata->>'titleKo' % ?)
+                  AND (c.content % ? OR (c.metadata->>'titleKo') % ?)
                 ORDER BY score DESC
                 LIMIT ?
                 """

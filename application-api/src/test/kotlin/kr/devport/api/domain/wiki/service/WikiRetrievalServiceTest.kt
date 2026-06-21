@@ -2,19 +2,16 @@
 
 package kr.devport.api.domain.wiki.service
 
-import com.openai.client.OpenAIClient
-import com.openai.models.embeddings.Embedding
-import com.openai.models.embeddings.EmbeddingCreateParams
 import kr.devport.api.domain.wiki.entity.WikiSectionChunk
-import kr.devport.api.domain.wiki.repository.WikiSectionChunkRepository
-import kr.devport.api.domain.wiki.repository.WikiSectionChunkRepositoryCustom.ScoredChunkRow
+import kr.devport.api.domain.wiki.infrastructure.EmbeddingPort
+import kr.devport.api.domain.wiki.infrastructure.ScoredChunkRow
+import kr.devport.api.domain.wiki.infrastructure.WikiSectionChunkRepository
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ExtendWith
-import org.mockito.Answers
 import org.mockito.InjectMocks
 import org.mockito.Mock
 import org.mockito.junit.jupiter.MockitoExtension
@@ -22,7 +19,6 @@ import org.mockito.junit.jupiter.MockitoSettings
 import org.mockito.kotlin.any
 import org.mockito.kotlin.doAnswer
 import org.mockito.kotlin.eq
-import org.mockito.kotlin.mock
 import org.mockito.kotlin.never
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
@@ -37,17 +33,15 @@ class WikiRetrievalServiceTest {
     @Mock
     lateinit var chunkReranker: WikiChunkReranker
 
-    @Mock(answer = Answers.RETURNS_DEEP_STUBS)
-    lateinit var openAIClient: OpenAIClient
+    @Mock
+    lateinit var embeddingPort: EmbeddingPort
 
     @InjectMocks
     lateinit var wikiRetrievalService: WikiRetrievalService
 
     @BeforeEach
     fun setUp() {
-        val embedding = mock<Embedding>()
-        whenever(embedding.embedding()).thenReturn(listOf(0.12f, 0.24f, 0.36f))
-        whenever(openAIClient.embeddings().create(any<EmbeddingCreateParams>()).data()).thenReturn(listOf(embedding))
+        whenever(embeddingPort.embed(any())).thenReturn(floatArrayOf(0.12f, 0.24f, 0.36f))
     }
 
     @Test
@@ -158,8 +152,7 @@ class WikiRetrievalServiceTest {
             chunk(1L, "architecture", null, "summary", "JWT filter and refresh handling", "인증 흐름", "src/main/java/.../SecurityConfig.java")
 
         whenever(chunkRepository.findByProjectExternalId("github:12345")).thenReturn(listOf(chunk))
-        whenever(openAIClient.embeddings().create(any<EmbeddingCreateParams>()))
-            .thenThrow(RuntimeException("embedding outage"))
+        whenever(embeddingPort.embed(any())).thenThrow(RuntimeException("embedding outage"))
 
         val result = wikiRetrievalService.retrieveContext("github:12345", "How does auth work?")
 

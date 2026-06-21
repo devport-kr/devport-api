@@ -5,6 +5,9 @@ spring-boot = "4.0.0"
 springdoc = "3.0.0"
 querydsl = "5.1.0"
 openai = "4.21.0"
+konsist = "0.17.3"
+# Matches the Testcontainers version declared by spring-boot-testcontainers:4.0.0.
+testcontainers = "2.0.2"
 
 [plugins]
 build-recipe = { id = "com.linecorp.build-recipe-plugin", version = "1.1.1" }
@@ -17,3 +20,5 @@ kotlin-jpa = { id = "org.jetbrains.kotlin.plugin.jpa", version.ref = "kotlin" }
 
 [libraries]
 kotlin-bom = { group = "org.jetbrains.kotlin", name = "kotlin-bom", version.ref = "kotlin" }
+konsist = { group = "com.lemonappdev", name = "konsist", version.ref = "konsist" }
+testcontainers-bom = { group = "org.testcontainers", name = "testcontainers-bom", version.ref = "testcontainers" }

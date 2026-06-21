@@ -1,55 +1,49 @@
-# Test profile configuration for cache integration tests
+# Integration test profile. The datasource (Postgres/pgvector) and Redis connections are supplied at
+# runtime by Testcontainers via @ServiceConnection — no static datasource is configured here.
+# Dummy values below satisfy the otherwise-required ${...} placeholders in application.yml so the full
+# composition root can boot.
+
+# Required (no-default) placeholders from application.yml — dummy values for boot only.
+GITHUB_CLIENT_ID: test-client-id
+GITHUB_CLIENT_SECRET: test-client-secret
+GOOGLE_CLIENT_ID: test-client-id
+GOOGLE_CLIENT_SECRET: test-client-secret
+NAVER_CLIENT_ID: test-client-id
+NAVER_CLIENT_SECRET: test-client-secret
+SMTP_USERNAME: test@example.com
+SMTP_PASSWORD: test-smtp-password
+JWT_SECRET: contextload-test-jwt-secret-please-ignore-0123456789-0123456789-0123456789
+OPENAI_API_KEY: test-openai-key
+CRAWLER_WEBHOOK_SECRET: test-webhook-secret-key-for-integration-tests
+
 spring:
   application:
     name: devport-api-test
-  
-  # Redis configuration for integration tests
-  # Uses embedded Redis from spring-boot-starter-data-redis-test
+
   data:
     redis:
       repositories:
         enabled: false
-  
-  # H2 in-memory database for tests (no external dependencies)
-  # Use PostgreSQL mode for compatibility with production schema
-  datasource:
-    url: jdbc:h2:mem:testdb;MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE;DEFAULT_NULL_ORDERING=HIGH
-    username: sa
-    password:
-    driver-class-name: org.h2.Driver
-  
-  # JPA configuration
+
   jpa:
     hibernate:
-      ddl-auto: create-drop  # Clean state per test run
+      ddl-auto: create-drop  # Testcontainers Postgres starts empty; build the schema per run.
     show-sql: false
     properties:
       hibernate:
         format_sql: false
         use_sql_comments: false
-  
-  # Cache configuration
+
   cache:
     type: redis
     redis:
-      time-to-live: 60000  # 1 minute for deterministic test behavior
+      time-to-live: 60000
       cache-null-values: false
-  
-  # Main application class
+
   main:
     allow-bean-definition-overriding: true
-  
-  # Webhook configuration
-  webhook:
-    crawler:
-      secret: test-webhook-secret-key-for-integration-tests
 
-# Logging - minimal for tests
 logging:
   level:
     root: WARN
     kr.devport.api: INFO
-    org.springframework.cache: DEBUG  # Cache operations visible for debugging
-    org.springframework.data.redis: DEBUG
-  pattern:
-    console: "%d{HH:mm:ss.SSS} [%thread] %-5level %logger{36} [requestId=%X{requestId:-none}] - %msg%n"

@@ -1,9 +1,9 @@
 package kr.devport.api.domain.wiki.service
 
-import kr.devport.api.domain.port.entity.Project
-import kr.devport.api.domain.port.repository.ProjectRepository
+import kr.devport.api.domain.port.ProjectView
+import kr.devport.api.domain.port.infrastructure.ProjectDirectory
 import kr.devport.api.domain.wiki.entity.WikiSectionChunk
-import kr.devport.api.domain.wiki.repository.WikiSectionChunkRepository
+import kr.devport.api.domain.wiki.infrastructure.WikiSectionChunkRepository
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
@@ -11,15 +11,12 @@ import org.junit.jupiter.api.extension.ExtendWith
 import org.mockito.InjectMocks
 import org.mockito.Mock
 import org.mockito.junit.jupiter.MockitoExtension
-import org.mockito.kotlin.any
 import org.mockito.kotlin.whenever
-import org.springframework.data.domain.Sort
-import java.util.Optional
 
 @ExtendWith(MockitoExtension::class)
 class WikiServiceTest {
     @Mock
-    lateinit var projectRepository: ProjectRepository
+    lateinit var projectDirectory: ProjectDirectory
 
     @Mock
     lateinit var wikiSectionChunkRepository: WikiSectionChunkRepository
@@ -31,13 +28,15 @@ class WikiServiceTest {
     @DisplayName("getProjectWiki builds sections from summary and body chunks")
     fun getProjectWikiBuildsSectionsFromChunks() {
         val project =
-            Project().apply {
-                id = 11L
-                externalId = "github:repo"
-                fullName = "owner/repo"
-                stars = 100
-                forks = 10
-            }
+            ProjectView(
+                id = 11L,
+                externalId = "github:repo",
+                fullName = "owner/repo",
+                description = null,
+                stars = 100,
+                forks = 10,
+                language = null,
+            )
 
         val summaryChunk =
             WikiSectionChunk().apply {
@@ -61,7 +60,7 @@ class WikiServiceTest {
                 commitSha = "abc"
             }
 
-        whenever(projectRepository.findByExternalId("github:repo")).thenReturn(Optional.of(project))
+        whenever(projectDirectory.findByExternalId("github:repo")).thenReturn(project)
         whenever(wikiSectionChunkRepository.findByProjectExternalId("github:repo"))
             .thenReturn(listOf(summaryChunk, bodyChunk))
 
@@ -81,14 +80,15 @@ class WikiServiceTest {
     @DisplayName("getProjects uses first summary chunk for browse summary")
     fun getProjectsUsesSummaryChunk() {
         val project =
-            Project().apply {
-                id = 1L
-                externalId = "github:repo"
-                fullName = "owner/repo"
-                description = "desc"
-                stars = 123
-                language = "Java"
-            }
+            ProjectView(
+                id = 1L,
+                externalId = "github:repo",
+                fullName = "owner/repo",
+                description = "desc",
+                stars = 123,
+                forks = null,
+                language = "Java",
+            )
 
         val summaryChunk =
             WikiSectionChunk().apply {
@@ -100,7 +100,7 @@ class WikiServiceTest {
                 commitSha = "abc"
             }
 
-        whenever(projectRepository.findAll(any<Sort>())).thenReturn(mutableListOf(project))
+        whenever(projectDirectory.listAllByStarsDesc()).thenReturn(listOf(project))
         whenever(wikiSectionChunkRepository.findAllSummaryChunks()).thenReturn(listOf(summaryChunk))
 
         val response = wikiService.getProjects()
@@ -113,16 +113,17 @@ class WikiServiceTest {
     @DisplayName("getProjects excludes projects with no chunks")
     fun getProjectsExcludesProjectsWithNoChunks() {
         val project =
-            Project().apply {
-                id = 9L
-                externalId = "github:none"
-                fullName = "owner/none"
-                description = "desc"
-                stars = 1
-                language = "Java"
-            }
+            ProjectView(
+                id = 9L,
+                externalId = "github:none",
+                fullName = "owner/none",
+                description = "desc",
+                stars = 1,
+                forks = null,
+                language = "Java",
+            )
 
-        whenever(projectRepository.findAll(any<Sort>())).thenReturn(mutableListOf(project))
+        whenever(projectDirectory.listAllByStarsDesc()).thenReturn(listOf(project))
         whenever(wikiSectionChunkRepository.findAllSummaryChunks()).thenReturn(emptyList())
 
         assertThat(wikiService.getProjects().projects).isEmpty()

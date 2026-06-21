@@ -1,7 +1,5 @@
 package kr.devport.api.domain.wiki.service
 
-import kr.devport.api.domain.auth.entity.User
-import kr.devport.api.domain.auth.repository.UserRepository
 import kr.devport.api.domain.wiki.dto.response.WikiMessageResponse
 import kr.devport.api.domain.wiki.dto.response.WikiSessionListResponse
 import kr.devport.api.domain.wiki.dto.response.WikiSessionResponse
@@ -9,9 +7,9 @@ import kr.devport.api.domain.wiki.entity.WikiChatMessage
 import kr.devport.api.domain.wiki.entity.WikiChatSession
 import kr.devport.api.domain.wiki.enums.WikiChatSessionType
 import kr.devport.api.domain.wiki.exception.WikiSessionNotFoundException
-import kr.devport.api.domain.wiki.repository.WikiChatMessageRepository
-import kr.devport.api.domain.wiki.repository.WikiChatSessionRepository
-import kr.devport.api.domain.wiki.store.WikiChatSessionStore.ChatTurn
+import kr.devport.api.domain.wiki.infrastructure.ChatTurn
+import kr.devport.api.domain.wiki.infrastructure.WikiChatMessageRepository
+import kr.devport.api.domain.wiki.infrastructure.WikiChatSessionRepository
 import org.springframework.data.domain.Page
 import org.springframework.data.domain.PageRequest
 import org.springframework.stereotype.Service
@@ -19,19 +17,19 @@ import org.springframework.transaction.annotation.Transactional
 import java.time.LocalDateTime
 
 /**
- * All DB persistence for wiki chat sessions and messages.
+ * All DB persistence for wiki chat sessions and messages. Sessions reference the user by id
+ * (cross-domain); no auth entities flow through here.
  */
 @Service
 class WikiChatSessionPersistenceService(
     private val sessionRepository: WikiChatSessionRepository,
     private val messageRepository: WikiChatMessageRepository,
-    private val userRepository: UserRepository,
 ) {
     /** Find or create a session. Refreshes last_message_at and expiresAt on every call. */
     @Transactional
     fun findOrCreateSession(
         externalId: String,
-        user: User?,
+        userId: Long?,
         projectExternalId: String?,
         sessionType: WikiChatSessionType,
     ): WikiChatSession =
@@ -47,7 +45,7 @@ class WikiChatSessionPersistenceService(
                 val session =
                     WikiChatSession().apply {
                         this.externalId = externalId
-                        this.user = user
+                        this.userId = userId
                         this.projectExternalId = projectExternalId
                         this.sessionType = sessionType
                         this.lastMessageAt = now
@@ -137,7 +135,7 @@ class WikiChatSessionPersistenceService(
                 .findByExternalId(externalId)
                 .orElseThrow { WikiSessionNotFoundException("세션을 찾을 수 없습니다.") }
 
-        if (session.user == null || session.user?.id != userId) {
+        if (session.userId == null || session.userId != userId) {
             throw WikiSessionNotFoundException("세션을 찾을 수 없습니다.")
         }
 
@@ -158,8 +156,7 @@ class WikiChatSessionPersistenceService(
         page: Int,
         size: Int,
     ): WikiSessionListResponse {
-        val user = resolveUser(userId)
-        val sessionPage = sessionRepository.findByUserOrderByLastMessageAtDesc(user, PageRequest.of(page, size))
+        val sessionPage = sessionRepository.findByUserIdOrderByLastMessageAtDesc(userId, PageRequest.of(page, size))
         return toListResponse(sessionPage)
     }
 
@@ -171,10 +168,9 @@ class WikiChatSessionPersistenceService(
         page: Int,
         size: Int,
     ): WikiSessionListResponse {
-        val user = resolveUser(userId)
         val sessionPage =
-            sessionRepository.findByUserAndProjectExternalIdOrderByLastMessageAtDesc(
-                user,
+            sessionRepository.findByUserIdAndProjectExternalIdOrderByLastMessageAtDesc(
+                userId,
                 projectExternalId,
                 PageRequest.of(page, size),
             )
@@ -188,17 +184,14 @@ class WikiChatSessionPersistenceService(
         page: Int,
         size: Int,
     ): WikiSessionListResponse {
-        val user = resolveUser(userId)
         val sessionPage =
-            sessionRepository.findByUserAndSessionTypeOrderByLastMessageAtDesc(
-                user,
+            sessionRepository.findByUserIdAndSessionTypeOrderByLastMessageAtDesc(
+                userId,
                 WikiChatSessionType.GLOBAL,
                 PageRequest.of(page, size),
             )
         return toListResponse(sessionPage)
     }
-
-    private fun resolveUser(userId: Long): User = userRepository.findById(userId).orElseThrow { IllegalStateException("User not found") }
 
     /** Hard delete a session (auth-checked). Cascade deletes messages automatically. */
     @Transactional
@@ -211,7 +204,7 @@ class WikiChatSessionPersistenceService(
                 .findByExternalId(externalId)
                 .orElseThrow { WikiSessionNotFoundException("세션을 찾을 수 없습니다.") }
 
-        if (session.user == null || session.user?.id != userId) {
+        if (session.userId == null || session.userId != userId) {
             throw WikiSessionNotFoundException("세션을 찾을 수 없습니다.")
         }
 

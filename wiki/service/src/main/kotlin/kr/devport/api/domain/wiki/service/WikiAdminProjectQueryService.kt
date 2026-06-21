@@ -1,19 +1,17 @@
 package kr.devport.api.domain.wiki.service
 
-import kr.devport.api.domain.port.entity.Project
-import kr.devport.api.domain.port.repository.ProjectRepository
+import kr.devport.api.domain.port.ProjectView
+import kr.devport.api.domain.port.infrastructure.ProjectDirectory
 import kr.devport.api.domain.wiki.dto.response.WikiAdminProjectSummaryResponse
 import org.springframework.stereotype.Service
-import org.springframework.transaction.annotation.Transactional
 
 @Service
-@Transactional(readOnly = true)
 class WikiAdminProjectQueryService(
-    private val projectRepository: ProjectRepository,
+    private val projectDirectory: ProjectDirectory,
 ) {
-    fun listProjects(): List<WikiAdminProjectSummaryResponse> = projectRepository.findAllForWikiAdmin().map { it.toSummary() }
+    fun listProjects(): List<WikiAdminProjectSummaryResponse> = projectDirectory.listForWikiAdmin().map { it.toSummary() }
 
-    private fun Project.toSummary(): WikiAdminProjectSummaryResponse =
+    private fun ProjectView.toSummary(): WikiAdminProjectSummaryResponse =
         WikiAdminProjectSummaryResponse(
             projectId = id,
             projectExternalId = externalId,

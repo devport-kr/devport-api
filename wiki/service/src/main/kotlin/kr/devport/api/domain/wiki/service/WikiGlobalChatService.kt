@@ -1,31 +1,26 @@
 package kr.devport.api.domain.wiki.service
 
 import com.fasterxml.jackson.databind.ObjectMapper
-import com.openai.client.OpenAIClient
-import com.openai.core.JsonValue
-import com.openai.models.ChatModel
-import com.openai.models.ResponseFormatJsonSchema
-import com.openai.models.chat.completions.ChatCompletionCreateParams
-import com.openai.models.chat.completions.ChatCompletionMessageParam
-import com.openai.models.chat.completions.ChatCompletionSystemMessageParam
-import com.openai.models.chat.completions.ChatCompletionUserMessageParam
-import kr.devport.api.domain.auth.entity.User
-import kr.devport.api.domain.port.repository.ProjectRepository
+import kr.devport.api.domain.port.infrastructure.ProjectDirectory
 import kr.devport.api.domain.wiki.dto.internal.WikiGlobalChatResult
 import kr.devport.api.domain.wiki.dto.internal.WikiGlobalChatResult.RelatedProjectLlmOutput
 import kr.devport.api.domain.wiki.dto.internal.WikiGlobalRetrievalContext
 import kr.devport.api.domain.wiki.dto.response.RelatedProjectResponse
 import kr.devport.api.domain.wiki.dto.response.WikiGlobalChatResponse
 import kr.devport.api.domain.wiki.enums.WikiChatSessionType
-import kr.devport.api.domain.wiki.store.WikiChatSessionStore
-import kr.devport.api.domain.wiki.store.WikiChatSessionStore.ChatTurn
+import kr.devport.api.domain.wiki.infrastructure.ChatMessage
+import kr.devport.api.domain.wiki.infrastructure.ChatPort
+import kr.devport.api.domain.wiki.infrastructure.ChatRole
+import kr.devport.api.domain.wiki.infrastructure.ChatTurn
+import kr.devport.api.domain.wiki.infrastructure.JsonSchemaSpec
+import kr.devport.api.domain.wiki.infrastructure.WikiChatSessionStore
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
 import java.util.function.Consumer
 
 /**
- * Global wiki chat — discovers relevant projects across all wikis. Returns an answer plus a related
- * project list (structured JSON for the non-streaming path, retrieval-derived for streaming).
+ * Global wiki chat discovers relevant projects across all wikis. The core owns prompt, parsing, and
+ * persistence policy; the LLM and project lookup details live behind ports.
  */
 @Service
 class WikiGlobalChatService(
@@ -33,8 +28,8 @@ class WikiGlobalChatService(
     private val sessionStore: WikiChatSessionStore,
     private val persistenceService: WikiChatSessionPersistenceService,
     private val titleService: WikiChatTitleService,
-    private val projectRepository: ProjectRepository,
-    private val openAIClient: OpenAIClient,
+    private val projectDirectory: ProjectDirectory,
+    private val chatPort: ChatPort,
 ) {
     private val log = LoggerFactory.getLogger(javaClass)
     private val objectMapper = ObjectMapper()
@@ -42,35 +37,21 @@ class WikiGlobalChatService(
     fun chatResult(
         sessionId: String,
         question: String,
-        user: User?,
+        userId: Long?,
     ): WikiGlobalChatResponse {
         val context = retrievalService.retrieve(question)
-        val promptTurns = loadContextTurns(sessionId, user)
-        val messages = buildMessages(context, promptTurns, question)
-
-        val completion =
-            openAIClient.chat().completions().create(
-                ChatCompletionCreateParams
-                    .builder()
-                    .model(ChatModel.GPT_4O_MINI)
-                    .messages(messages)
-                    .responseFormat(buildResponseFormat())
-                    .build(),
+        val promptTurns = loadContextTurns(sessionId, userId)
+        val payload =
+            chatPort.complete(
+                model = CHAT_MODEL,
+                messages = buildMessages(context, promptTurns, question),
+                jsonSchema = buildResponseFormat(),
             )
 
-        val payload = completion.choices().first().message().content().orElse("")
         val result = parseResult(payload)
         val answer = result.answer ?: ""
 
-        val isFirst = persistenceService.isFirstMessage(sessionId)
-        if (user != null) {
-            val session = persistenceService.findOrCreateSession(sessionId, user, null, WikiChatSessionType.GLOBAL)
-            persistenceService.saveUserMessage(session, question)
-            persistenceService.saveAssistantMessage(session, answer, false)
-            if (isFirst) {
-                titleService.generateAndSave(sessionId, question)
-            }
-        }
+        persist(sessionId, question, answer, userId)
         sessionStore.saveTurn(sessionId, null, question, answer, false)
 
         val enriched = enrichProjects(result.relatedProjects ?: emptyList())
@@ -81,50 +62,21 @@ class WikiGlobalChatService(
         sessionId: String,
         question: String,
         tokenConsumer: Consumer<String>,
-        user: User?,
+        userId: Long?,
     ): WikiGlobalChatResponse {
         val context = retrievalService.retrieve(question)
-        val promptTurns = loadContextTurns(sessionId, user)
-        val messages = buildStreamMessages(context, promptTurns, question)
-
+        val promptTurns = loadContextTurns(sessionId, userId)
         val accumulated = StringBuilder()
 
-        openAIClient
-            .chat()
-            .completions()
-            .createStreaming(
-                ChatCompletionCreateParams
-                    .builder()
-                    .model(ChatModel.GPT_4O_MINI)
-                    .messages(messages)
-                    .build(),
-            ).use { completionStream ->
-                completionStream.stream().use { chunks ->
-                    chunks.forEach { chunk ->
-                        for (choice in chunk.choices()) {
-                            choice.delta().content().ifPresent { token ->
-                                tokenConsumer.accept(token)
-                                accumulated.append(token)
-                            }
-                        }
-                    }
-                }
-            }
+        chatPort.stream(CHAT_MODEL, buildStreamMessages(context, promptTurns, question)) { token ->
+            tokenConsumer.accept(token)
+            accumulated.append(token)
+        }
 
         val answer = accumulated.toString().trim()
-
-        val isFirst = persistenceService.isFirstMessage(sessionId)
-        if (user != null) {
-            val session = persistenceService.findOrCreateSession(sessionId, user, null, WikiChatSessionType.GLOBAL)
-            persistenceService.saveUserMessage(session, question)
-            persistenceService.saveAssistantMessage(session, answer, false)
-            if (isFirst) {
-                titleService.generateAndSave(sessionId, question)
-            }
-        }
+        persist(sessionId, question, answer, userId)
         sessionStore.saveTurn(sessionId, null, question, answer, false)
 
-        // For streaming, related projects come from the retrieval context (no JSON parsing).
         val relatedFromContext =
             (context.scoredProjects ?: emptyList()).map { sp ->
                 RelatedProjectLlmOutput(sp.projectExternalId, "")
@@ -133,15 +85,34 @@ class WikiGlobalChatService(
         return WikiGlobalChatResponse(answer, enriched, enriched.isNotEmpty(), sessionId)
     }
 
+    private fun persist(
+        sessionId: String,
+        question: String,
+        answer: String,
+        userId: Long?,
+    ) {
+        if (userId == null) {
+            return
+        }
+
+        val isFirst = persistenceService.isFirstMessage(sessionId)
+        val session = persistenceService.findOrCreateSession(sessionId, userId, null, WikiChatSessionType.GLOBAL)
+        persistenceService.saveUserMessage(session, question)
+        persistenceService.saveAssistantMessage(session, answer, false)
+        if (isFirst) {
+            titleService.generateAndSave(sessionId, question)
+        }
+    }
+
     private fun loadContextTurns(
         sessionId: String,
-        user: User?,
+        userId: Long?,
     ): List<ChatTurn> {
         val redisTurns = sessionStore.loadRecentTurns(sessionId, null)
         if (redisTurns.isNotEmpty()) {
             return redisTurns
         }
-        if (user != null) {
+        if (userId != null) {
             val dbTurns = persistenceService.loadRecentMessages(sessionId, MAX_PROMPT_TURNS)
             if (dbTurns.isNotEmpty()) {
                 return dbTurns
@@ -154,30 +125,15 @@ class WikiGlobalChatService(
         context: WikiGlobalRetrievalContext,
         previousTurns: List<ChatTurn>,
         question: String,
-    ): List<ChatCompletionMessageParam> {
-        val messages = mutableListOf<ChatCompletionMessageParam>()
-        messages.add(
-            ChatCompletionMessageParam.ofSystem(
-                ChatCompletionSystemMessageParam.builder().content(buildSystemPrompt(context)).build(),
-            ),
-        )
+    ): List<ChatMessage> {
+        val messages = mutableListOf<ChatMessage>()
+        messages.add(ChatMessage(ChatRole.SYSTEM, buildSystemPrompt(context)))
         for (turn in previousTurns) {
-            messages.add(
-                ChatCompletionMessageParam.ofUser(
-                    ChatCompletionUserMessageParam.builder().content(turn.question ?: "").build(),
-                ),
-            )
-            messages.add(
-                ChatCompletionMessageParam.ofUser(
-                    ChatCompletionUserMessageParam.builder().content(turn.answer ?: "").build(),
-                ),
-            )
+            messages.add(ChatMessage(ChatRole.USER, turn.question ?: ""))
+            // Global chat replays prior answers as USER turns (preserves original behavior).
+            messages.add(ChatMessage(ChatRole.USER, turn.answer ?: ""))
         }
-        messages.add(
-            ChatCompletionMessageParam.ofUser(
-                ChatCompletionUserMessageParam.builder().content("질문: $question\n\nJSON으로만 응답하세요.").build(),
-            ),
-        )
+        messages.add(ChatMessage(ChatRole.USER, "질문: $question\n\nJSON으로만 응답하세요."))
         return messages
     }
 
@@ -185,30 +141,15 @@ class WikiGlobalChatService(
         context: WikiGlobalRetrievalContext,
         previousTurns: List<ChatTurn>,
         question: String,
-    ): List<ChatCompletionMessageParam> {
-        val messages = mutableListOf<ChatCompletionMessageParam>()
-        messages.add(
-            ChatCompletionMessageParam.ofSystem(
-                ChatCompletionSystemMessageParam.builder().content(buildStreamSystemPrompt(context)).build(),
-            ),
-        )
+    ): List<ChatMessage> {
+        val messages = mutableListOf<ChatMessage>()
+        messages.add(ChatMessage(ChatRole.SYSTEM, buildStreamSystemPrompt(context)))
         for (turn in previousTurns) {
-            messages.add(
-                ChatCompletionMessageParam.ofUser(
-                    ChatCompletionUserMessageParam.builder().content(turn.question ?: "").build(),
-                ),
-            )
-            messages.add(
-                ChatCompletionMessageParam.ofUser(
-                    ChatCompletionUserMessageParam.builder().content(turn.answer ?: "").build(),
-                ),
-            )
+            messages.add(ChatMessage(ChatRole.USER, turn.question ?: ""))
+            // Global chat replays prior answers as USER turns (preserves original behavior).
+            messages.add(ChatMessage(ChatRole.USER, turn.answer ?: ""))
         }
-        messages.add(
-            ChatCompletionMessageParam.ofUser(
-                ChatCompletionUserMessageParam.builder().content("질문: $question").build(),
-            ),
-        )
+        messages.add(ChatMessage(ChatRole.USER, "질문: $question"))
         return messages
     }
 
@@ -228,7 +169,7 @@ class WikiGlobalChatService(
         }
 
         If no projects are truly relevant, return an empty relatedProjects array and set hasRelatedProjects to false.
-        Be honest — do not invent relevance.
+        Be honest - do not invent relevance.
 
         Multi-Project Context:
         ${context.groundedContext}
@@ -269,31 +210,27 @@ class WikiGlobalChatService(
     private fun enrichProjects(llmOutputs: List<RelatedProjectLlmOutput>): List<RelatedProjectResponse> =
         llmOutputs.mapNotNull { llmOutput ->
             try {
-                projectRepository
-                    .findByExternalId(llmOutput.projectExternalId ?: "")
-                    .map { project ->
-                        RelatedProjectResponse(
-                            projectExternalId = project.externalId,
-                            fullName = project.fullName,
-                            description = project.description,
-                            relevanceReason = llmOutput.relevanceReason,
-                            stars = project.stars ?: 0,
-                        )
-                    }.orElse(null)
+                val project = projectDirectory.findByExternalId(llmOutput.projectExternalId ?: "") ?: return@mapNotNull null
+                RelatedProjectResponse(
+                    projectExternalId = project.externalId,
+                    fullName = project.fullName,
+                    description = project.description,
+                    relevanceReason = llmOutput.relevanceReason,
+                    stars = project.stars ?: 0,
+                )
             } catch (e: Exception) {
                 log.warn("wiki-global-chat: Failed to enrich project {}: {}", llmOutput.projectExternalId, e.message)
                 null
             }
         }
 
-    private fun buildResponseFormat(): ResponseFormatJsonSchema {
-        val schema =
-            ResponseFormatJsonSchema.JsonSchema.Schema
-                .builder()
-                .putAdditionalProperty("type", JsonValue.from("object"))
-                .putAdditionalProperty(
-                    "properties",
-                    JsonValue.from(
+    private fun buildResponseFormat(): JsonSchemaSpec =
+        JsonSchemaSpec(
+            name = "wiki_global_chat_result",
+            schema =
+                mapOf(
+                    "type" to "object",
+                    "properties" to
                         mapOf(
                             "answer" to mapOf("type" to "string"),
                             "relatedProjects" to
@@ -313,26 +250,13 @@ class WikiGlobalChatService(
                                 ),
                             "hasRelatedProjects" to mapOf("type" to "boolean"),
                         ),
-                    ),
-                ).putAdditionalProperty(
-                    "required",
-                    JsonValue.from(listOf("answer", "relatedProjects", "hasRelatedProjects")),
-                ).putAdditionalProperty("additionalProperties", JsonValue.from(false))
-                .build()
-
-        return ResponseFormatJsonSchema
-            .builder()
-            .jsonSchema(
-                ResponseFormatJsonSchema.JsonSchema
-                    .builder()
-                    .name("wiki_global_chat_result")
-                    .strict(true)
-                    .schema(schema)
-                    .build(),
-            ).build()
-    }
+                    "required" to listOf("answer", "relatedProjects", "hasRelatedProjects"),
+                    "additionalProperties" to false,
+                ),
+        )
 
     companion object {
         private const val MAX_PROMPT_TURNS = 10
+        private const val CHAT_MODEL = "gpt-4o-mini"
     }
 }

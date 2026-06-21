@@ -2,22 +2,15 @@ package kr.devport.api.domain.wiki.service
 
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.ObjectMapper
-import com.openai.client.OpenAIClient
-import com.openai.core.JsonValue
-import com.openai.models.ChatModel
-import com.openai.models.ResponseFormatJsonSchema
-import com.openai.models.chat.completions.ChatCompletionAssistantMessageParam
-import com.openai.models.chat.completions.ChatCompletionChunk
-import com.openai.models.chat.completions.ChatCompletionCreateParams
-import com.openai.models.chat.completions.ChatCompletionMessageParam
-import com.openai.models.chat.completions.ChatCompletionSystemMessageParam
-import com.openai.models.chat.completions.ChatCompletionUserMessageParam
-import kr.devport.api.domain.auth.entity.User
 import kr.devport.api.domain.wiki.dto.internal.WikiChatResult
 import kr.devport.api.domain.wiki.dto.internal.WikiRetrievalContext
 import kr.devport.api.domain.wiki.enums.WikiChatSessionType
-import kr.devport.api.domain.wiki.store.WikiChatSessionStore
-import kr.devport.api.domain.wiki.store.WikiChatSessionStore.ChatTurn
+import kr.devport.api.domain.wiki.infrastructure.ChatMessage
+import kr.devport.api.domain.wiki.infrastructure.ChatPort
+import kr.devport.api.domain.wiki.infrastructure.ChatRole
+import kr.devport.api.domain.wiki.infrastructure.ChatTurn
+import kr.devport.api.domain.wiki.infrastructure.JsonSchemaSpec
+import kr.devport.api.domain.wiki.infrastructure.WikiChatSessionStore
 import org.springframework.stereotype.Service
 import java.util.Locale
 import java.util.function.Consumer
@@ -33,7 +26,7 @@ class WikiChatService(
     private val sessionStore: WikiChatSessionStore,
     private val persistenceService: WikiChatSessionPersistenceService,
     private val titleService: WikiChatTitleService,
-    private val openAIClient: OpenAIClient,
+    private val chatPort: ChatPort,
 ) {
     private val objectMapper = ObjectMapper()
 
@@ -48,21 +41,17 @@ class WikiChatService(
         sessionId: String,
         projectExternalId: String,
         userQuestion: String,
-        user: User? = null,
+        userId: Long? = null,
     ): WikiChatResult {
-        val chatRequest = prepareChatRequest(sessionId, projectExternalId, userQuestion, user)
+        val chatRequest = prepareChatRequest(sessionId, projectExternalId, userQuestion, userId)
         val messages = buildMessages(chatRequest.context, chatRequest.promptTurns, userQuestion, chatRequest.clarificationTurns, false)
-        val completion =
-            openAIClient.chat().completions().create(
-                ChatCompletionCreateParams
-                    .builder()
-                    .model(ChatModel.GPT_5_MINI)
-                    .messages(messages)
-                    .responseFormat(buildResponseFormat())
-                    .build(),
+        val payload =
+            chatPort.complete(
+                model = CHAT_MODEL,
+                messages = messages,
+                jsonSchema = buildResponseFormat(),
             )
 
-        val payload = completion.choices().first().message().content().orElse("")
         val result =
             normalizeResult(
                 parseResult(payload, chatRequest.context),
@@ -72,7 +61,7 @@ class WikiChatService(
                 chatRequest.clarificationTurns,
             )
 
-        persist(sessionId, projectExternalId, userQuestion, result, user)
+        persist(sessionId, projectExternalId, userQuestion, result, userId)
         return result
     }
 
@@ -82,26 +71,16 @@ class WikiChatService(
         projectExternalId: String,
         userQuestion: String,
         tokenConsumer: Consumer<String>,
-        user: User? = null,
+        userId: Long? = null,
     ): WikiChatResult {
-        val chatRequest = prepareChatRequest(sessionId, projectExternalId, userQuestion, user)
+        val chatRequest = prepareChatRequest(sessionId, projectExternalId, userQuestion, userId)
         val messages = buildMessages(chatRequest.context, chatRequest.promptTurns, userQuestion, chatRequest.clarificationTurns, true)
         val accumulated = StringBuilder()
 
-        openAIClient
-            .chat()
-            .completions()
-            .createStreaming(
-                ChatCompletionCreateParams
-                    .builder()
-                    .model(ChatModel.GPT_5_MINI)
-                    .messages(messages)
-                    .build(),
-            ).use { completionStream ->
-                completionStream.stream().use { chunks ->
-                    chunks.forEach { chunk -> appendStreamChunk(chunk, tokenConsumer, accumulated) }
-                }
-            }
+        chatPort.stream(CHAT_MODEL, messages) { token ->
+            tokenConsumer.accept(token)
+            accumulated.append(token)
+        }
 
         val result =
             normalizeStreamedResult(
@@ -110,7 +89,7 @@ class WikiChatService(
                 !chatRequest.topicShift && chatRequest.promptTurns.isNotEmpty(),
             )
 
-        persist(sessionId, projectExternalId, userQuestion, result, user)
+        persist(sessionId, projectExternalId, userQuestion, result, userId)
         return result
     }
 
@@ -119,11 +98,11 @@ class WikiChatService(
         projectExternalId: String,
         userQuestion: String,
         result: WikiChatResult,
-        user: User?,
+        userId: Long?,
     ) {
-        if (user != null) {
+        if (userId != null) {
             val isFirst = persistenceService.isFirstMessage(sessionId)
-            val session = persistenceService.findOrCreateSession(sessionId, user, projectExternalId, WikiChatSessionType.PROJECT)
+            val session = persistenceService.findOrCreateSession(sessionId, userId, projectExternalId, WikiChatSessionType.PROJECT)
             persistenceService.saveUserMessage(session, userQuestion)
             persistenceService.saveAssistantMessage(session, result.answer ?: "", result.isClarification)
             if (isFirst) {
@@ -139,37 +118,17 @@ class WikiChatService(
         userQuestion: String,
         clarificationTurns: Int,
         streaming: Boolean,
-    ): List<ChatCompletionMessageParam> {
-        val messages = mutableListOf<ChatCompletionMessageParam>()
+    ): List<ChatMessage> {
+        val messages = mutableListOf<ChatMessage>()
 
-        val systemPrompt = buildSystemPrompt(context, clarificationTurns > 0, streaming)
-        messages.add(
-            ChatCompletionMessageParam.ofSystem(
-                ChatCompletionSystemMessageParam.builder().content(systemPrompt).build(),
-            ),
-        )
+        messages.add(ChatMessage(ChatRole.SYSTEM, buildSystemPrompt(context, clarificationTurns > 0, streaming)))
 
         for (turn in previousTurns) {
-            messages.add(
-                ChatCompletionMessageParam.ofUser(
-                    ChatCompletionUserMessageParam.builder().content(turn.question ?: "").build(),
-                ),
-            )
-            messages.add(
-                ChatCompletionMessageParam.ofAssistant(
-                    ChatCompletionAssistantMessageParam.builder().content(turn.answer ?: "").build(),
-                ),
-            )
+            messages.add(ChatMessage(ChatRole.USER, turn.question ?: ""))
+            messages.add(ChatMessage(ChatRole.ASSISTANT, turn.answer ?: ""))
         }
 
-        messages.add(
-            ChatCompletionMessageParam.ofUser(
-                ChatCompletionUserMessageParam
-                    .builder()
-                    .content(buildUserPrompt(context, userQuestion, clarificationTurns, streaming))
-                    .build(),
-            ),
-        )
+        messages.add(ChatMessage(ChatRole.USER, buildUserPrompt(context, userQuestion, clarificationTurns, streaming)))
 
         return messages
     }
@@ -546,31 +505,18 @@ class WikiChatService(
         return sanitizeList(items)
     }
 
-    private fun appendStreamChunk(
-        chunk: ChatCompletionChunk,
-        tokenConsumer: Consumer<String>,
-        accumulated: StringBuilder,
-    ) {
-        for (choice in chunk.choices()) {
-            choice.delta().content().ifPresent { token ->
-                tokenConsumer.accept(token)
-                accumulated.append(token)
-            }
-        }
-    }
-
     private fun prepareChatRequest(
         sessionId: String,
         projectExternalId: String,
         userQuestion: String,
-        user: User?,
+        userId: Long?,
     ): ChatRequestContext {
         val context = retrievalService.retrieveContext(projectExternalId, userQuestion)
         val hadActiveSession = sessionStore.hasActiveSession(sessionId)
         val redisTurns = sessionStore.loadRecentTurns(sessionId, projectExternalId)
         // If Redis is cold but the user is authenticated, load from DB (resumed session).
         var previousTurns = redisTurns
-        if (redisTurns.isEmpty() && user != null) {
+        if (redisTurns.isEmpty() && userId != null) {
             previousTurns = persistenceService.loadRecentMessages(sessionId, MAX_PROMPT_TURNS)
         }
         val sessionReset = hadActiveSession && redisTurns.isEmpty()
@@ -580,14 +526,13 @@ class WikiChatService(
         return ChatRequestContext(context, promptTurns, topicShift, sessionReset, clarificationTurns)
     }
 
-    private fun buildResponseFormat(): ResponseFormatJsonSchema {
-        val schema =
-            ResponseFormatJsonSchema.JsonSchema.Schema
-                .builder()
-                .putAdditionalProperty("type", JsonValue.from("object"))
-                .putAdditionalProperty(
-                    "properties",
-                    JsonValue.from(
+    private fun buildResponseFormat(): JsonSchemaSpec =
+        JsonSchemaSpec(
+            name = "wiki_chat_result",
+            schema =
+                mapOf(
+                    "type" to "object",
+                    "properties" to
                         mapOf(
                             "answer" to mapOf("type" to "string"),
                             "isClarification" to mapOf("type" to "boolean"),
@@ -595,10 +540,7 @@ class WikiChatService(
                             "suggestedNextQuestions" to mapOf("type" to "array", "items" to mapOf("type" to "string")),
                             "usedPreviousContext" to mapOf("type" to "boolean"),
                         ),
-                    ),
-                ).putAdditionalProperty(
-                    "required",
-                    JsonValue.from(
+                    "required" to
                         listOf(
                             "answer",
                             "isClarification",
@@ -606,21 +548,9 @@ class WikiChatService(
                             "suggestedNextQuestions",
                             "usedPreviousContext",
                         ),
-                    ),
-                ).putAdditionalProperty("additionalProperties", JsonValue.from(false))
-                .build()
-
-        return ResponseFormatJsonSchema
-            .builder()
-            .jsonSchema(
-                ResponseFormatJsonSchema.JsonSchema
-                    .builder()
-                    .name("wiki_chat_result")
-                    .strict(true)
-                    .schema(schema)
-                    .build(),
-            ).build()
-    }
+                    "additionalProperties" to false,
+                ),
+        )
 
     /** Clear session memory explicitly. */
     fun clearSession(sessionId: String) {
@@ -641,6 +571,7 @@ class WikiChatService(
     companion object {
         private const val MAX_PROMPT_TURNS = 10
         private const val MAX_CLARIFICATION_TURNS = 2
+        private const val CHAT_MODEL = "gpt-5-mini"
         private val TOKEN_SPLIT: Pattern = Pattern.compile("[^a-z0-9가-힣]+")
         private const val CLARIFICATION_HEADING = "선택할 수 있는 범위:"
         private const val SUGGESTED_QUESTION_HEADING = "다음처럼 좁혀서 물어보면 더 정확해요:"
