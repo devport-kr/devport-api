@@ -47,6 +47,8 @@ dependencies {
     implementation(project(":port:api"))
     implementation(project(":port:service"))
     implementation(project(":port:repository-jpa"))
+    implementation(project(":port:adapter-http"))
+    implementation(project(":port:infrastructure"))
     implementation(project(":port:model"))
 
     implementation(project(":wiki:api"))

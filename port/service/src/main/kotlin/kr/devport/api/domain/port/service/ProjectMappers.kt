@@ -1,5 +1,6 @@
 package kr.devport.api.domain.port.service
 
+import kr.devport.api.domain.auth.UserSummary
 import kr.devport.api.domain.port.dto.response.ProjectCommentAuthorResponse
 import kr.devport.api.domain.port.dto.response.ProjectCommentResponse
 import kr.devport.api.domain.port.dto.response.ProjectDetailResponse
@@ -41,6 +42,7 @@ internal fun ProjectEvent.toEventResponse(): ProjectEventResponse =
     )
 
 internal fun ProjectComment.toCommentResponse(
+    author: UserSummary?,
     currentUserId: Long?,
     userVote: Int,
 ): ProjectCommentResponse =
@@ -49,10 +51,10 @@ internal fun ProjectComment.toCommentResponse(
         content = content,
         deleted = deleted,
         parentId = parentComment?.externalId,
-        author = ProjectCommentAuthorResponse.from(user),
+        author = ProjectCommentAuthorResponse.from(author),
         votes = voteScore,
         userVote = userVote,
         createdAt = createdAt,
         updatedAt = updatedAt,
-        isOwner = currentUserId != null && user?.id == currentUserId,
+        isOwner = currentUserId != null && userId == currentUserId,
     )

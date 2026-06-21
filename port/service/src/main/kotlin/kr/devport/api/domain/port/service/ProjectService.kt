@@ -3,8 +3,8 @@ package kr.devport.api.domain.port.service
 import kr.devport.api.domain.port.dto.response.ProjectDetailResponse
 import kr.devport.api.domain.port.dto.response.ProjectEventResponse
 import kr.devport.api.domain.port.enums.EventType
-import kr.devport.api.domain.port.repository.ProjectEventRepository
-import kr.devport.api.domain.port.repository.ProjectRepository
+import kr.devport.api.domain.port.infrastructure.ProjectEventRepository
+import kr.devport.api.domain.port.infrastructure.ProjectRepository
 import org.springframework.data.domain.Page
 import org.springframework.data.domain.Pageable
 import org.springframework.stereotype.Service

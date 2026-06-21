@@ -16,7 +16,6 @@ import jakarta.persistence.ManyToOne
 import jakarta.persistence.PrePersist
 import jakarta.persistence.Table
 import jakarta.persistence.UniqueConstraint
-import kr.devport.api.domain.auth.entity.User
 import kr.devport.api.domain.port.enums.EventType
 import org.hibernate.annotations.JdbcTypeCode
 import org.hibernate.type.SqlTypes
@@ -171,9 +170,9 @@ class ProjectComment {
     @JoinColumn(name = "project_id", nullable = false)
     var project: Project? = null
 
-    @ManyToOne(fetch = FetchType.EAGER)
-    @JoinColumn(name = "user_id", nullable = false)
-    var user: User? = null
+    // Cross-domain reference by id (auth owns User). Resolve via auth's UserDirectory port.
+    @Column(name = "user_id", nullable = false)
+    var userId: Long = 0
 
     @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "parent_id")
@@ -223,9 +222,9 @@ class ProjectCommentVote {
     @JoinColumn(name = "comment_id", nullable = false)
     var comment: ProjectComment? = null
 
-    @ManyToOne(fetch = FetchType.EAGER)
-    @JoinColumn(name = "user_id", nullable = false)
-    var user: User? = null
+    // Cross-domain reference by id (auth owns User). Resolve via auth's UserDirectory port.
+    @Column(name = "user_id", nullable = false)
+    var userId: Long = 0
 
     @Column(nullable = false)
     var vote: Short = 0

@@ -1,7 +1,7 @@
 package kr.devport.api.domain.port.dto.response
 
 import com.fasterxml.jackson.annotation.JsonProperty
-import kr.devport.api.domain.auth.entity.User
+import kr.devport.api.domain.auth.UserSummary
 import kr.devport.api.domain.port.enums.EventType
 import java.time.LocalDate
 import java.time.LocalDateTime
@@ -26,7 +26,7 @@ data class ProjectCommentAuthorResponse(
     val flairColor: String? = null,
 ) {
     companion object {
-        fun from(user: User?): ProjectCommentAuthorResponse =
+        fun from(user: UserSummary?): ProjectCommentAuthorResponse =
             ProjectCommentAuthorResponse(
                 id = user?.id,
                 name = user?.name ?: user?.username,

@@ -1,6 +1,6 @@
 package kr.devport.api.domain.port.service
 
-import kr.devport.api.domain.auth.repository.UserRepository
+import kr.devport.api.domain.auth.infrastructure.UserDirectory
 import kr.devport.api.domain.port.dto.request.CommentCreateRequest
 import kr.devport.api.domain.port.dto.request.CommentUpdateRequest
 import kr.devport.api.domain.port.dto.request.VoteRequest
@@ -8,9 +8,9 @@ import kr.devport.api.domain.port.dto.response.ProjectCommentResponse
 import kr.devport.api.domain.port.dto.response.VoteResponse
 import kr.devport.api.domain.port.entity.ProjectComment
 import kr.devport.api.domain.port.entity.ProjectCommentVote
-import kr.devport.api.domain.port.repository.ProjectCommentRepository
-import kr.devport.api.domain.port.repository.ProjectCommentVoteRepository
-import kr.devport.api.domain.port.repository.ProjectRepository
+import kr.devport.api.domain.port.infrastructure.ProjectCommentRepository
+import kr.devport.api.domain.port.infrastructure.ProjectCommentVoteRepository
+import kr.devport.api.domain.port.infrastructure.ProjectRepository
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
@@ -20,7 +20,7 @@ import java.time.LocalDateTime
 class ProjectCommentService(
     private val commentRepository: ProjectCommentRepository,
     private val projectRepository: ProjectRepository,
-    private val userRepository: UserRepository,
+    private val userDirectory: UserDirectory,
     private val voteRepository: ProjectCommentVoteRepository,
 ) {
     private val log = LoggerFactory.getLogger(javaClass)
@@ -29,10 +29,13 @@ class ProjectCommentService(
     fun getCommentsByProject(
         projectExternalId: String,
         currentUserId: Long?,
-    ): List<ProjectCommentResponse> =
-        commentRepository
-            .findAllByProjectExternalId(projectExternalId)
-            .map { it.toCommentResponse(currentUserId, findUserVote(it.externalId, currentUserId)) }
+    ): List<ProjectCommentResponse> {
+        val comments = commentRepository.findAllByProjectExternalId(projectExternalId)
+        val authors = userDirectory.findByIds(comments.map { it.userId }.toSet())
+        return comments.map {
+            it.toCommentResponse(authors[it.userId], currentUserId, findUserVote(it.externalId, currentUserId))
+        }
+    }
 
     @Transactional
     fun createComment(
@@ -44,15 +47,14 @@ class ProjectCommentService(
             projectRepository
                 .findByExternalId(projectExternalId)
                 .orElseThrow { IllegalArgumentException("Project not found: $projectExternalId") }
-        val user =
-            userRepository
-                .findById(userId)
-                .orElseThrow { IllegalArgumentException("User not found: $userId") }
+        val author =
+            userDirectory.findById(userId)
+                ?: throw IllegalArgumentException("User not found: $userId")
 
         val comment =
             ProjectComment().apply {
                 this.project = project
-                this.user = user
+                this.userId = userId
                 content = request.content
             }
 
@@ -70,7 +72,7 @@ class ProjectCommentService(
 
         val saved = commentRepository.save(comment)
         log.info("Created comment {} for project {}", saved.externalId, projectExternalId)
-        return saved.toCommentResponse(userId, userVote = 0)
+        return saved.toCommentResponse(author, userId, userVote = 0)
     }
 
     @Transactional
@@ -84,7 +86,7 @@ class ProjectCommentService(
                 .findByExternalId(commentExternalId)
                 .orElseThrow { IllegalArgumentException("Comment not found: $commentExternalId") }
 
-        if (comment.user?.id != userId) {
+        if (comment.userId != userId) {
             throw IllegalArgumentException("You can only edit your own comments")
         }
         if (comment.deleted) {
@@ -95,7 +97,7 @@ class ProjectCommentService(
         comment.updatedAt = LocalDateTime.now()
         val updated = commentRepository.save(comment)
         log.info("Updated comment {}", commentExternalId)
-        return updated.toCommentResponse(userId, findUserVote(commentExternalId, userId))
+        return updated.toCommentResponse(userDirectory.findById(userId), userId, findUserVote(commentExternalId, userId))
     }
 
     @Transactional
@@ -108,7 +110,7 @@ class ProjectCommentService(
                 .findByExternalId(commentExternalId)
                 .orElseThrow { IllegalArgumentException("Comment not found: $commentExternalId") }
 
-        if (comment.user?.id != userId) {
+        if (comment.userId != userId) {
             throw IllegalArgumentException("You can only delete your own comments")
         }
 
@@ -128,11 +130,7 @@ class ProjectCommentService(
             commentRepository
                 .findByExternalId(commentExternalId)
                 .orElseThrow { IllegalArgumentException("Comment not found") }
-        val user =
-            userRepository
-                .findById(userId)
-                .orElseThrow { IllegalArgumentException("User not found") }
-        val existingVote = voteRepository.findByComment_ExternalIdAndUser_Id(commentExternalId, userId)
+        val existingVote = voteRepository.findByComment_ExternalIdAndUserId(commentExternalId, userId)
 
         if (request.vote == 0) {
             existingVote.ifPresent { vote ->
@@ -155,7 +153,7 @@ class ProjectCommentService(
             val vote =
                 ProjectCommentVote().apply {
                     this.comment = comment
-                    this.user = user
+                    this.userId = userId
                     vote = request.vote.toShort()
                 }
             voteRepository.save(vote)
@@ -182,7 +180,7 @@ class ProjectCommentService(
         }
 
         return voteRepository
-            .findByComment_ExternalIdAndUser_Id(commentExternalId, currentUserId)
+            .findByComment_ExternalIdAndUserId(commentExternalId, currentUserId)
             .map { it.vote.toInt() }
             .orElse(0)
     }

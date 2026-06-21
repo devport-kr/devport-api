@@ -7,7 +7,7 @@ import kr.devport.api.domain.port.entity.QProject
 import org.springframework.stereotype.Repository
 
 @Repository
-class ProjectRepositoryImpl(
+class ProjectJpaRepositoryImpl(
     private val queryFactory: JPAQueryFactory,
 ) : ProjectRepositoryCustom {
     override fun findHotProjects(limit: Int): List<Project> {

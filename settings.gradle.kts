@@ -58,7 +58,9 @@ include(":mypage:api")
 
 // port domain
 include(":port:model")
+include(":port:infrastructure")
 include(":port:repository-jpa")
+include(":port:adapter-http")
 include(":port:service")
 include(":port:api")
 
