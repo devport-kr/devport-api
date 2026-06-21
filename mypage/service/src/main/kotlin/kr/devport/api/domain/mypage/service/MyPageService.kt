@@ -1,13 +1,12 @@
 package kr.devport.api.domain.mypage.service
 
-import kr.devport.api.domain.article.repository.ArticleRepository
-import kr.devport.api.domain.auth.repository.UserRepository
+import kr.devport.api.domain.article.infrastructure.ArticleDirectory
 import kr.devport.api.domain.mypage.dto.response.ReadHistoryResponse
 import kr.devport.api.domain.mypage.dto.response.SavedArticleResponse
 import kr.devport.api.domain.mypage.entity.UserReadHistory
 import kr.devport.api.domain.mypage.entity.UserSavedArticle
-import kr.devport.api.domain.mypage.repository.UserReadHistoryRepository
-import kr.devport.api.domain.mypage.repository.UserSavedArticleRepository
+import kr.devport.api.domain.mypage.infrastructure.UserReadHistoryRepository
+import kr.devport.api.domain.mypage.infrastructure.UserSavedArticleRepository
 import org.springframework.data.domain.Page
 import org.springframework.data.domain.Pageable
 import org.springframework.stereotype.Service
@@ -18,42 +17,38 @@ import org.springframework.transaction.annotation.Transactional
 class MyPageService(
     private val savedArticleRepository: UserSavedArticleRepository,
     private val readHistoryRepository: UserReadHistoryRepository,
-    private val articleRepository: ArticleRepository,
-    private val userRepository: UserRepository,
+    private val articleDirectory: ArticleDirectory,
 ) {
     // --- Saved Articles ---
 
     fun getSavedArticles(
         userId: Long,
         pageable: Pageable,
-    ): Page<SavedArticleResponse> =
-        savedArticleRepository
-            .findByUserIdOrderByCreatedAtDesc(userId, pageable)
-            .map { SavedArticleResponse.from(it) }
+    ): Page<SavedArticleResponse> {
+        val page = savedArticleRepository.findByUserIdOrderByCreatedAtDesc(userId, pageable)
+        val articles = articleDirectory.findByIds(page.content.map { it.articleId }.toSet())
+        return page.map { SavedArticleResponse.from(it, articles[it.articleId]) }
+    }
 
     @Transactional
     fun saveArticle(
         userId: Long,
         articleExternalId: String,
     ) {
-        if (savedArticleRepository.existsByUserIdAndArticle_ExternalId(userId, articleExternalId)) {
+        val article =
+            articleDirectory.findByExternalId(articleExternalId)
+                ?: throw IllegalArgumentException("Article not found: $articleExternalId")
+
+        if (savedArticleRepository.existsByUserIdAndArticleId(userId, article.id)) {
             return // Already saved, idempotent
         }
 
-        val article =
-            articleRepository.findByExternalId(articleExternalId)
-                ?: throw IllegalArgumentException("Article not found: $articleExternalId")
-        val user =
-            userRepository
-                .findById(userId)
-                .orElseThrow { IllegalArgumentException("User not found: $userId") }
-
-        val saved =
+        savedArticleRepository.save(
             UserSavedArticle().apply {
-                this.user = user
-                this.article = article
-            }
-        savedArticleRepository.save(saved)
+                this.userId = userId
+                this.articleId = article.id
+            },
+        )
     }
 
     @Transactional
@@ -61,23 +56,28 @@ class MyPageService(
         userId: Long,
         articleExternalId: String,
     ) {
-        savedArticleRepository.deleteByUserIdAndArticle_ExternalId(userId, articleExternalId)
+        val article = articleDirectory.findByExternalId(articleExternalId) ?: return
+        savedArticleRepository.deleteByUserIdAndArticleId(userId, article.id)
     }
 
     fun isArticleSaved(
         userId: Long,
         articleExternalId: String,
-    ): Boolean = savedArticleRepository.existsByUserIdAndArticle_ExternalId(userId, articleExternalId)
+    ): Boolean {
+        val article = articleDirectory.findByExternalId(articleExternalId) ?: return false
+        return savedArticleRepository.existsByUserIdAndArticleId(userId, article.id)
+    }
 
     // --- Read History ---
 
     fun getReadHistory(
         userId: Long,
         pageable: Pageable,
-    ): Page<ReadHistoryResponse> =
-        readHistoryRepository
-            .findByUserIdOrderByReadAtDesc(userId, pageable)
-            .map { ReadHistoryResponse.from(it) }
+    ): Page<ReadHistoryResponse> {
+        val page = readHistoryRepository.findByUserIdOrderByReadAtDesc(userId, pageable)
+        val articles = articleDirectory.findByIds(page.content.map { it.articleId }.toSet())
+        return page.map { ReadHistoryResponse.from(it, articles[it.articleId]) }
+    }
 
     @Transactional
     fun trackArticleView(
@@ -85,23 +85,19 @@ class MyPageService(
         articleExternalId: String,
     ) {
         val article =
-            articleRepository.findByExternalId(articleExternalId)
+            articleDirectory.findByExternalId(articleExternalId)
                 ?: throw IllegalArgumentException("Article not found: $articleExternalId")
 
-        val existing = readHistoryRepository.findByUserIdAndArticle_Id(userId, article.id!!)
+        val existing = readHistoryRepository.findByUserIdAndArticleId(userId, article.id)
         if (existing != null) {
             existing.updateReadAt()
         } else {
-            val user =
-                userRepository
-                    .findById(userId)
-                    .orElseThrow { IllegalArgumentException("User not found: $userId") }
-            val history =
+            readHistoryRepository.save(
                 UserReadHistory().apply {
-                    this.user = user
-                    this.article = article
-                }
-            readHistoryRepository.save(history)
+                    this.userId = userId
+                    this.articleId = article.id
+                },
+            )
         }
     }
 }

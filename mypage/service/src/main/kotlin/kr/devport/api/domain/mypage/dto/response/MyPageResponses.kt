@@ -1,5 +1,6 @@
 package kr.devport.api.domain.mypage.dto.response
 
+import kr.devport.api.domain.article.ArticleView
 import kr.devport.api.domain.mypage.entity.UserReadHistory
 import kr.devport.api.domain.mypage.entity.UserSavedArticle
 import java.time.LocalDateTime
@@ -13,17 +14,18 @@ data class SavedArticleResponse(
     val savedAt: LocalDateTime? = null,
 ) {
     companion object {
-        fun from(saved: UserSavedArticle): SavedArticleResponse {
-            val article = saved.article!!
-            return SavedArticleResponse(
-                articleId = article.externalId,
-                summaryKoTitle = article.summaryKoTitle,
-                source = article.source,
-                category = article.category?.name,
-                url = article.url,
+        fun from(
+            saved: UserSavedArticle,
+            article: ArticleView?,
+        ): SavedArticleResponse =
+            SavedArticleResponse(
+                articleId = article?.externalId,
+                summaryKoTitle = article?.summaryKoTitle,
+                source = article?.source,
+                category = article?.category,
+                url = article?.url,
                 savedAt = saved.createdAt,
             )
-        }
     }
 }
 
@@ -36,16 +38,17 @@ data class ReadHistoryResponse(
     val readAt: LocalDateTime? = null,
 ) {
     companion object {
-        fun from(history: UserReadHistory): ReadHistoryResponse {
-            val article = history.article!!
-            return ReadHistoryResponse(
-                articleId = article.externalId,
-                summaryKoTitle = article.summaryKoTitle,
-                source = article.source,
-                category = article.category?.name,
-                url = article.url,
+        fun from(
+            history: UserReadHistory,
+            article: ArticleView?,
+        ): ReadHistoryResponse =
+            ReadHistoryResponse(
+                articleId = article?.externalId,
+                summaryKoTitle = article?.summaryKoTitle,
+                source = article?.source,
+                category = article?.category,
+                url = article?.url,
                 readAt = history.readAt,
             )
-        }
     }
 }

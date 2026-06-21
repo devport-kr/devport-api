@@ -52,6 +52,7 @@ include(":article:api")
 
 // mypage domain (mutually referential with article: mypage -> article model/repo, article:api -> mypage:service)
 include(":mypage:model")
+include(":mypage:infrastructure")
 include(":mypage:repository-jpa")
 include(":mypage:service")
 include(":mypage:api")

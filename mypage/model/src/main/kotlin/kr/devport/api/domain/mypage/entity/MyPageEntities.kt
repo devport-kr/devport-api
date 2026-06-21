@@ -2,19 +2,17 @@ package kr.devport.api.domain.mypage.entity
 
 import jakarta.persistence.Column
 import jakarta.persistence.Entity
-import jakarta.persistence.FetchType
 import jakarta.persistence.GeneratedValue
 import jakarta.persistence.GenerationType
 import jakarta.persistence.Id
 import jakarta.persistence.Index
-import jakarta.persistence.JoinColumn
-import jakarta.persistence.ManyToOne
 import jakarta.persistence.PrePersist
 import jakarta.persistence.Table
 import jakarta.persistence.UniqueConstraint
-import kr.devport.api.domain.article.entity.Article
-import kr.devport.api.domain.auth.entity.User
 import java.time.LocalDateTime
+
+// Cross-domain references by id: auth owns User, article owns Article. Resolve via their
+// inbound ports (UserDirectory / ArticleDirectory) rather than JPA associations.
 
 @Entity
 @Table(
@@ -27,13 +25,11 @@ class UserSavedArticle {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     var id: Long? = null
 
-    @ManyToOne(fetch = FetchType.EAGER)
-    @JoinColumn(name = "user_id", nullable = false)
-    var user: User? = null
+    @Column(name = "user_id", nullable = false)
+    var userId: Long = 0
 
-    @ManyToOne(fetch = FetchType.EAGER)
-    @JoinColumn(name = "article_id", nullable = false)
-    var article: Article? = null
+    @Column(name = "article_id", nullable = false)
+    var articleId: Long = 0
 
     @Column(nullable = false, name = "created_at")
     var createdAt: LocalDateTime? = null
@@ -58,13 +54,11 @@ class UserReadHistory {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     var id: Long? = null
 
-    @ManyToOne(fetch = FetchType.EAGER)
-    @JoinColumn(name = "user_id", nullable = false)
-    var user: User? = null
+    @Column(name = "user_id", nullable = false)
+    var userId: Long = 0
 
-    @ManyToOne(fetch = FetchType.EAGER)
-    @JoinColumn(name = "article_id", nullable = false)
-    var article: Article? = null
+    @Column(name = "article_id", nullable = false)
+    var articleId: Long = 0
 
     @Column(nullable = false, name = "read_at")
     var readAt: LocalDateTime? = null

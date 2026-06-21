@@ -1,6 +1,4 @@
-// My-page persistence model (UserSavedArticle, UserReadHistory). Each links a User (auth) to an
-// Article (article). No QueryDSL (derived queries only), so no kapt.
+// My-page persistence model (UserSavedArticle, UserReadHistory). Each links a user id to an
+// article id (cross-domain references), so no dependency on other domains' models.
 dependencies {
-    api(project(":article:model"))
-    api(project(":auth:model"))
 }

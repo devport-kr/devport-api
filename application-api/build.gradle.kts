@@ -42,6 +42,7 @@ dependencies {
     implementation(project(":mypage:api"))
     implementation(project(":mypage:service"))
     implementation(project(":mypage:repository-jpa"))
+    implementation(project(":mypage:infrastructure"))
     implementation(project(":mypage:model"))
 
     implementation(project(":port:api"))

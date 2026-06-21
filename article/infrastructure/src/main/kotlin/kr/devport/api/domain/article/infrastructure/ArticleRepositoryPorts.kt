@@ -11,6 +11,8 @@ import org.springframework.data.domain.Pageable
 interface ArticleRepository {
     fun findById(id: Long): Article?
 
+    fun findAllByIdIn(ids: Collection<Long>): List<Article>
+
     fun findByExternalId(externalId: String): Article?
 
     fun findByCategory(

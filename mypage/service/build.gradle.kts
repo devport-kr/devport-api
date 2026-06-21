@@ -1,7 +1,6 @@
-// My-page use-cases + DTOs. Reads Article via :article:repository-jpa and User via :auth:repository-jpa.
+// My-page use-cases + DTOs. Depends only on ports — resolves articles via article's ArticleDirectory.
 dependencies {
     api(project(":mypage:model"))
-    implementation(project(":mypage:repository-jpa"))
-    implementation(project(":article:repository-jpa"))
-    implementation(project(":auth:repository-jpa"))
+    implementation(project(":mypage:infrastructure"))
+    implementation(project(":article:infrastructure"))
 }

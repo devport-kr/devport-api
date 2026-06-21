@@ -16,6 +16,8 @@ class ArticleRepositoryAdapter(
 ) : ArticleRepository {
     override fun findById(id: Long): Article? = jpa.findById(id).orElse(null)
 
+    override fun findAllByIdIn(ids: Collection<Long>): List<Article> = jpa.findAllById(ids)
+
     override fun findByExternalId(externalId: String): Article? = jpa.findByExternalId(externalId)
 
     override fun findByCategory(
