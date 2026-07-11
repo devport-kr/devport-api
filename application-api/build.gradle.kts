@@ -101,6 +101,16 @@ springBoot {
     mainClass.set("kr.devport.api.DevportApiApplicationKt")
 }
 
+// CI runs `./gradlew build -PexcludeIntegrationTests` to skip the Docker/Testcontainers boot
+// test (ApplicationContextLoadTest, @Tag("integration")). GitHub-hosted runners ship a running
+// Docker daemon, so `@Testcontainers(disabledWithoutDocker = true)` would NOT self-skip there —
+// this flag keeps the CI verify job to unit + ktlint + the Konsist architecture boundary test.
+if (project.hasProperty("excludeIntegrationTests")) {
+    tasks.named<Test>("test") {
+        useJUnitPlatform { excludeTags("integration") }
+    }
+}
+
 tasks.named<BootBuildImage>("bootBuildImage") {
     builder.set("paketobuildpacks/builder-noble-java-tiny:0.0.124")
     buildpacks.set(

@@ -4,6 +4,7 @@ import kr.devport.api.domain.wiki.entity.WikiSectionChunk
 import kr.devport.api.domain.wiki.infrastructure.WikiSectionChunkRepository
 import kr.devport.api.domain.wiki.repository.WikiSectionChunkJpaRepository
 import org.assertj.core.api.Assertions.assertThat
+import org.junit.jupiter.api.Tag
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
@@ -23,6 +24,7 @@ import org.testcontainers.utility.DockerImageName
  * gitrepo, llm, mypage, port, wiki + all adapters) wires together, and the wiki pgvector/pg_trgm
  * search SQL — which H2 could never model — actually round-trips through the repository port.
  */
+@Tag("integration")
 @Testcontainers(disabledWithoutDocker = true)
 @SpringBootTest
 @ActiveProfiles("test")
