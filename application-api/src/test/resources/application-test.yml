@@ -1,0 +1,49 @@
+# Integration test profile. The datasource (Postgres/pgvector) and Redis connections are supplied at
+# runtime by Testcontainers via @ServiceConnection — no static datasource is configured here.
+# Dummy values below satisfy the otherwise-required ${...} placeholders in application.yml so the full
+# composition root can boot.
+
+# Required (no-default) placeholders from application.yml — dummy values for boot only.
+GITHUB_CLIENT_ID: test-client-id
+GITHUB_CLIENT_SECRET: test-client-secret
+GOOGLE_CLIENT_ID: test-client-id
+GOOGLE_CLIENT_SECRET: test-client-secret
+NAVER_CLIENT_ID: test-client-id
+NAVER_CLIENT_SECRET: test-client-secret
+SMTP_USERNAME: test@example.com
+SMTP_PASSWORD: test-smtp-password
+JWT_SECRET: contextload-test-jwt-secret-please-ignore-0123456789-0123456789-0123456789
+OPENAI_API_KEY: test-openai-key
+CRAWLER_WEBHOOK_SECRET: test-webhook-secret-key-for-integration-tests
+
+spring:
+  application:
+    name: devport-api-test
+
+  data:
+    redis:
+      repositories:
+        enabled: false
+
+  jpa:
+    hibernate:
+      ddl-auto: create-drop  # Testcontainers Postgres starts empty; build the schema per run.
+    show-sql: false
+    properties:
+      hibernate:
+        format_sql: false
+        use_sql_comments: false
+
+  cache:
+    type: redis
+    redis:
+      time-to-live: 60000
+      cache-null-values: false
+
+  main:
+    allow-bean-definition-overriding: true
+
+logging:
+  level:
+    root: WARN
+    kr.devport.api: INFO
