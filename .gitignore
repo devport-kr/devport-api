@@ -46,12 +46,16 @@ out/
 .vscode/
 
 
-CLAUDE.md
 HELP.md
 .claude
 REFRESH_TOKEN_IMPLEMENTATION.md
+MIGRATION_REPORT.md
+WIKI_REFACTOR.md
 
 .planning/
+
+# PGO profile (binary, fetched from S3 in CI)
+*.iprof
 
 .env
 app.sh
