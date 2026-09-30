@@ -94,7 +94,7 @@ class ArticleController(
         if (query.trim().length < 2) {
             return ResponseEntity.badRequest().build()
         }
-        return ResponseEntity.ok(articleService.searchFulltext(query, page, size))
+        return ResponseEntity.ok(articleService.searchFulltext(query, page.coerceAtLeast(0), size.coerceIn(1, MAX_FULLTEXT_PAGE_SIZE)))
     }
 
     @Operation(summary = "Get article detail by UUID")
@@ -115,3 +115,5 @@ class ArticleController(
         return ResponseEntity.ok().build()
     }
 }
+
+private const val MAX_FULLTEXT_PAGE_SIZE = 50

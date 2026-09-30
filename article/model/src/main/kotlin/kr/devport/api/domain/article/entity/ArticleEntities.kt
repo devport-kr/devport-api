@@ -20,6 +20,7 @@ import jakarta.persistence.PreUpdate
 import jakarta.persistence.Table
 import kr.devport.api.domain.article.enums.Category
 import kr.devport.api.domain.article.enums.ItemType
+import org.hibernate.annotations.BatchSize
 import java.time.LocalDateTime
 import java.util.UUID
 
@@ -65,6 +66,8 @@ class Article {
     @Column(nullable = false)
     var score: Int? = null
 
+    // Batch-load tags for a page of articles (1 query instead of N).
+    @BatchSize(size = 100)
     @ElementCollection
     @CollectionTable(name = "article_tags", joinColumns = [JoinColumn(name = "article_id")])
     @Column(name = "tag")

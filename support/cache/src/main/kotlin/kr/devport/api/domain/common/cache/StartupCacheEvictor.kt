@@ -21,6 +21,7 @@ class StartupCacheEvictor(
             listOf(
                 CacheNames.ARTICLES,
                 CacheNames.TRENDING_TICKER,
+                CacheNames.ARTICLE_SEARCH,
                 CacheNames.GIT_REPOS,
                 CacheNames.TRENDING_GIT_REPOS,
                 CacheNames.GIT_REPOS_BY_LANGUAGE,

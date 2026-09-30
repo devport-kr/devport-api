@@ -26,7 +26,10 @@ class ArticleAdminService(
     private val articleRepository: ArticleRepository,
     private val articleTranslator: ArticleTranslator,
 ) {
-    @CacheEvict(cacheNames = [CacheNames.ARTICLES, CacheNames.TRENDING_TICKER], allEntries = true)
+    @CacheEvict(
+        cacheNames = [CacheNames.ARTICLES, CacheNames.TRENDING_TICKER, CacheNames.ARTICLE_SEARCH],
+        allEntries = true,
+    )
     fun createArticle(request: ArticleCreateRequest): ArticleResponse {
         val article =
             Article().apply {
@@ -56,7 +59,10 @@ class ArticleAdminService(
         return articleRepository.save(article).toResponse()
     }
 
-    @CacheEvict(cacheNames = [CacheNames.ARTICLES, CacheNames.TRENDING_TICKER], allEntries = true)
+    @CacheEvict(
+        cacheNames = [CacheNames.ARTICLES, CacheNames.TRENDING_TICKER, CacheNames.ARTICLE_SEARCH],
+        allEntries = true,
+    )
     fun updateArticle(
         id: Long,
         request: ArticleUpdateRequest,
@@ -89,7 +95,10 @@ class ArticleAdminService(
         return articleRepository.save(article).toResponse()
     }
 
-    @CacheEvict(cacheNames = [CacheNames.ARTICLES, CacheNames.TRENDING_TICKER], allEntries = true)
+    @CacheEvict(
+        cacheNames = [CacheNames.ARTICLES, CacheNames.TRENDING_TICKER, CacheNames.ARTICLE_SEARCH],
+        allEntries = true,
+    )
     fun deleteArticle(id: Long) {
         if (!articleRepository.existsById(id)) {
             throw IllegalArgumentException("Article not found with id: $id")
@@ -97,7 +106,10 @@ class ArticleAdminService(
         articleRepository.deleteById(id)
     }
 
-    @CacheEvict(cacheNames = [CacheNames.ARTICLES, CacheNames.TRENDING_TICKER], allEntries = true)
+    @CacheEvict(
+        cacheNames = [CacheNames.ARTICLES, CacheNames.TRENDING_TICKER, CacheNames.ARTICLE_SEARCH],
+        allEntries = true,
+    )
     fun createArticleFromLLM(request: ArticleLLMCreateRequest): ArticleResponse {
         val result =
             articleTranslator.processArticle(

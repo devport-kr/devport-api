@@ -8,6 +8,7 @@ import kr.devport.api.domain.article.dto.response.ArticleResponse
 import kr.devport.api.domain.article.dto.response.TrendingTickerResponse
 import kr.devport.api.domain.article.entity.Article
 import kr.devport.api.domain.article.entity.ArticleMetadata
+import kr.devport.api.domain.article.infrastructure.ArticleTitleSuggestionRow
 import org.springframework.data.domain.Page
 
 internal fun ArticleMetadata?.toMetadataResponse(): ArticleMetadataResponse? =
@@ -62,23 +63,16 @@ internal fun Article.toTrendingTickerResponse(): TrendingTickerResponse =
         createdAtSource = createdAtSource,
     )
 
-internal fun Article.toAutocompleteResponse(query: String): ArticleAutocompleteResponse {
-    val searchTerm = query.trim().lowercase()
-    val matchType =
-        if (summaryKoTitle?.lowercase()?.contains(searchTerm) == true) {
-            ArticleAutocompleteResponse.MatchType.TITLE
-        } else {
-            ArticleAutocompleteResponse.MatchType.BODY
-        }
-    return ArticleAutocompleteResponse(
+internal fun ArticleTitleSuggestionRow.toAutocompleteResponse(): ArticleAutocompleteResponse =
+    ArticleAutocompleteResponse(
         externalId = externalId,
         summaryKoTitle = summaryKoTitle,
         source = source,
         category = category?.name,
-        matchType = matchType,
+        // Autocomplete matches titles only.
+        matchType = ArticleAutocompleteResponse.MatchType.TITLE,
         score = score,
     )
-}
 
 internal fun Page<Article>.toPageResponse(): ArticlePageResponse =
     ArticlePageResponse(

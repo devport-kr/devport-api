@@ -8,6 +8,7 @@ object CacheNames {
     // Article domain caches
     const val ARTICLES = "articles"
     const val TRENDING_TICKER = "trendingTicker"
+    const val ARTICLE_SEARCH = "articleSearch"
 
     // Git repository domain caches
     const val GIT_REPOS = "gitRepos"

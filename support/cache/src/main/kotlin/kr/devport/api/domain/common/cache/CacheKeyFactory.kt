@@ -23,6 +23,12 @@ class CacheKeyFactory {
 
     fun trendingTickerKey(limit: Int): String = limit.toString()
 
+    fun articleSearchKey(
+        query: String,
+        page: Int,
+        size: Int,
+    ): String = "%s_%d_%d".format(query.trim().lowercase(), page, size)
+
     // ===== Git repository =====
 
     fun gitRepoListKey(

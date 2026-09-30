@@ -6,6 +6,7 @@ import kr.devport.api.domain.article.entity.ArticleComment
 import kr.devport.api.domain.article.enums.Category
 import kr.devport.api.domain.article.infrastructure.ArticleCommentRepository
 import kr.devport.api.domain.article.infrastructure.ArticleRepository
+import kr.devport.api.domain.article.infrastructure.ArticleTitleSuggestionRow
 import org.springframework.data.domain.Page
 import org.springframework.data.domain.Pageable
 import org.springframework.stereotype.Repository
@@ -13,6 +14,7 @@ import org.springframework.stereotype.Repository
 @Repository
 class ArticleRepositoryAdapter(
     private val jpa: ArticleJpaRepository,
+    private val searchSql: ArticleSearchSql,
 ) : ArticleRepository {
     override fun findById(id: Long): Article? = jpa.findById(id).orElse(null)
 
@@ -41,17 +43,30 @@ class ArticleRepositoryAdapter(
         pageable: Pageable,
     ): Page<Article> = jpa.searchWithCondition(condition, pageable)
 
-    override fun searchAutocomplete(
-        query: String,
-        limit: Int,
-    ): List<Article> = jpa.searchAutocomplete(query, limit)
-
     override fun searchFulltext(
         query: String,
         pageable: Pageable,
     ): Page<Article> = jpa.searchFulltext(query, pageable)
 
-    override fun countFulltextMatches(query: String): Long = jpa.countFulltextMatches(query)
+    override fun searchFulltextContent(
+        query: String,
+        pageable: Pageable,
+    ): List<Article> = jpa.searchFulltextContent(query, pageable)
+
+    override fun countFulltextMatches(
+        query: String,
+        cap: Int,
+    ): Long = searchSql.countFulltextMatches(query, cap)
+
+    override fun findTitleSuggestions(
+        query: String,
+        limit: Int,
+    ): List<ArticleTitleSuggestionRow> = searchSql.findTitleSuggestions(query, limit)
+
+    override fun countTitleMatches(
+        query: String,
+        cap: Int,
+    ): Long = searchSql.countTitleMatches(query, cap)
 }
 
 @Repository

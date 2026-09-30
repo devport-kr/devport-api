@@ -12,18 +12,18 @@ interface ArticleRepositoryCustom {
         pageable: Pageable,
     ): Page<Article>
 
-    /** Autocomplete: title matches prioritized, then recency. Min 2 chars. */
-    fun searchAutocomplete(
-        query: String,
-        limit: Int,
-    ): List<Article>
-
     /** Full-text search over Korean title/body, title matches prioritized, then recency. */
     fun searchFulltext(
         query: String,
         pageable: Pageable,
     ): Page<Article>
 
-    /** Total full-text match count for the "show all X results" UI. */
+    /** Full-text page content only (no count query). */
+    fun searchFulltextContent(
+        query: String,
+        pageable: Pageable,
+    ): List<Article>
+
+    /** Exact full-text match count (admin listing). */
     fun countFulltextMatches(query: String): Long
 }
