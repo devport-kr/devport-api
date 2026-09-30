@@ -36,18 +36,45 @@ interface ArticleRepository {
         pageable: Pageable,
     ): Page<Article>
 
-    fun searchAutocomplete(
-        query: String,
-        limit: Int,
-    ): List<Article>
-
+    /** Exact-count full-text search (title OR body). Used by admin listing. */
     fun searchFulltext(
         query: String,
         pageable: Pageable,
     ): Page<Article>
 
-    fun countFulltextMatches(query: String): Long
+    /** Full-text page content only (title OR body, title matches first, then recency); no count. */
+    fun searchFulltextContent(
+        query: String,
+        pageable: Pageable,
+    ): List<Article>
+
+    /** Full-text match count, counting at most [cap] rows (cheap for very common terms). */
+    fun countFulltextMatches(
+        query: String,
+        cap: Int,
+    ): Long
+
+    /** Title-only autocomplete suggestions, newest first. Lightweight projection (no body, no tags). */
+    fun findTitleSuggestions(
+        query: String,
+        limit: Int,
+    ): List<ArticleTitleSuggestionRow>
+
+    /** Title-only match count, counting at most [cap] rows. */
+    fun countTitleMatches(
+        query: String,
+        cap: Int,
+    ): Long
 }
+
+/** Pure row the autocomplete port speaks — only what the dropdown needs. */
+data class ArticleTitleSuggestionRow(
+    val externalId: String?,
+    val summaryKoTitle: String?,
+    val source: String?,
+    val category: Category?,
+    val score: Int?,
+)
 
 /** Out-port: article comment persistence contract. */
 interface ArticleCommentRepository {

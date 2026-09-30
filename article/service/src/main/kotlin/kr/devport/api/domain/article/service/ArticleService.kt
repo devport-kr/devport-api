@@ -73,20 +73,43 @@ class ArticleService(
     }
 
     fun searchAutocomplete(query: String): ArticleAutocompleteListResponse {
-        val articles = articleRepository.searchAutocomplete(query, 5)
-        val totalMatches = articleRepository.countFulltextMatches(query)
+        val suggestions = articleRepository.findTitleSuggestions(query, AUTOCOMPLETE_LIMIT)
+        // Count one past the cap so we can tell "exactly 100" from "100+".
+        val counted = articleRepository.countTitleMatches(query, AUTOCOMPLETE_COUNT_CAP + 1)
         return ArticleAutocompleteListResponse(
-            suggestions = articles.map { it.toAutocompleteResponse(query) },
-            totalMatches = totalMatches,
+            suggestions = suggestions.map { it.toAutocompleteResponse() },
+            totalMatches = minOf(counted, AUTOCOMPLETE_COUNT_CAP.toLong()),
+            totalCapped = counted > AUTOCOMPLETE_COUNT_CAP,
         )
     }
 
+    @Cacheable(
+        cacheNames = [CacheNames.ARTICLE_SEARCH],
+        key = "@cacheKeyFactory.articleSearchKey(#query, #page, #size)",
+        unless = "@cacheFallbackBypass.shouldBypass('ARTICLE')",
+    )
     fun searchFulltext(
         query: String,
         page: Int,
         size: Int,
     ): ArticlePageResponse {
         val pageable = PageRequest.of(page, size)
-        return articleRepository.searchFulltext(query, pageable).toPageResponse()
+        val content = articleRepository.searchFulltextContent(query, pageable)
+        val counted = articleRepository.countFulltextMatches(query, FULLTEXT_COUNT_CAP + 1)
+        val total = minOf(counted, FULLTEXT_COUNT_CAP.toLong())
+        return ArticlePageResponse(
+            content = content.map { it.toArticleResponse() },
+            totalElements = total,
+            totalPages = ((total + size - 1) / size).toInt(),
+            currentPage = page,
+            hasMore = (page + 1).toLong() * size < total,
+            totalCapped = counted > FULLTEXT_COUNT_CAP,
+        )
+    }
+
+    companion object {
+        const val AUTOCOMPLETE_LIMIT = 5
+        const val AUTOCOMPLETE_COUNT_CAP = 100
+        const val FULLTEXT_COUNT_CAP = 1000
     }
 }

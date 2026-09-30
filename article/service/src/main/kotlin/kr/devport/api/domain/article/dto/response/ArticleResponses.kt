@@ -49,6 +49,8 @@ data class ArticlePageResponse(
     val totalPages: Int? = null,
     val currentPage: Int? = null,
     val hasMore: Boolean? = null,
+    /** True when [totalElements] was cut off at the search cap (real total is larger). */
+    val totalCapped: Boolean? = null,
 )
 
 data class TrendingTickerResponse(
@@ -75,4 +77,6 @@ data class ArticleAutocompleteResponse(
 data class ArticleAutocompleteListResponse(
     val suggestions: List<ArticleAutocompleteResponse>? = null,
     val totalMatches: Long? = null,
+    /** True when [totalMatches] was cut off at the cap ("99+" in the UI). */
+    val totalCapped: Boolean? = null,
 )

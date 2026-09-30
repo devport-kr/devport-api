@@ -98,9 +98,19 @@ class ArticleJpaRepositoryImpl(
 
     // ========== Autocomplete / full-text search ==========
 
-    override fun searchAutocomplete(
+    override fun searchFulltext(
         query: String,
-        limit: Int,
+        pageable: Pageable,
+    ): Page<Article> {
+        if (!hasText(query) || query.trim().length < 2) {
+            return PageImpl(emptyList(), pageable, 0L)
+        }
+        return PageImpl(searchFulltextContent(query, pageable), pageable, countFulltextMatches(query))
+    }
+
+    override fun searchFulltextContent(
+        query: String,
+        pageable: Pageable,
     ): List<Article> {
         if (!hasText(query) || query.trim().length < 2) {
             return emptyList()
@@ -121,42 +131,9 @@ class ArticleJpaRepositoryImpl(
                     .or(article.summaryKoBody.containsIgnoreCase(searchTerm)),
             )
             .orderBy(priorityOrder.asc(), article.createdAtSource.desc())
-            .limit(limit.toLong())
+            .offset(pageable.offset)
+            .limit(pageable.pageSize.toLong())
             .fetch()
-    }
-
-    override fun searchFulltext(
-        query: String,
-        pageable: Pageable,
-    ): Page<Article> {
-        if (!hasText(query) || query.trim().length < 2) {
-            return PageImpl(emptyList(), pageable, 0L)
-        }
-        val searchTerm = query.trim()
-
-        val priorityOrder =
-            CaseBuilder()
-                .`when`(article.summaryKoTitle.containsIgnoreCase(searchTerm))
-                .then(1)
-                .otherwise(2)
-
-        val searchCondition =
-            article.summaryKoTitle
-                .containsIgnoreCase(searchTerm)
-                .or(article.summaryKoBody.containsIgnoreCase(searchTerm))
-
-        val content =
-            queryFactory
-                .selectFrom(article)
-                .where(searchCondition)
-                .orderBy(priorityOrder.asc(), article.createdAtSource.desc())
-                .offset(pageable.offset)
-                .limit(pageable.pageSize.toLong())
-                .fetch()
-
-        val total = countFulltextMatches(query)
-
-        return PageImpl(content, pageable, total)
     }
 
     override fun countFulltextMatches(query: String): Long {

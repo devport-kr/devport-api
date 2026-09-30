@@ -11,6 +11,7 @@ object CacheTtlPolicy {
         mapOf(
             CacheNames.ARTICLES to Duration.ofMinutes(10),
             CacheNames.TRENDING_TICKER to Duration.ofMinutes(5),
+            CacheNames.ARTICLE_SEARCH to Duration.ofMinutes(10),
             CacheNames.GIT_REPOS to Duration.ofMinutes(10),
             CacheNames.TRENDING_GIT_REPOS to Duration.ofHours(1),
             CacheNames.GIT_REPOS_BY_LANGUAGE to Duration.ofMinutes(30),
