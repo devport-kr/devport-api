@@ -6,8 +6,7 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.databind.SerializationFeature
 import com.fasterxml.jackson.databind.jsontype.BasicPolymorphicTypeValidator
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule
-import kr.devport.api.domain.article.dto.response.ArticlePageResponse
-import kr.devport.api.domain.common.cache.CacheNames
+import com.fasterxml.jackson.module.kotlin.KotlinModule
 import kr.devport.api.domain.common.cache.CacheTtlPolicy
 import org.springframework.cache.CacheManager
 import org.springframework.cache.annotation.EnableCaching
@@ -58,17 +57,6 @@ class RedisConfig {
             cacheConfigurations[cacheName] = defaultConfig.entryTtl(ttl)
         }
 
-        // Search results are keyed by user input, so use an explicitly typed serializer (no polymorphic
-        // typing) rather than relying on default typing to round-trip a final Kotlin data class.
-        cacheConfigurations[CacheNames.ARTICLE_SEARCH] =
-            defaultConfig
-                .entryTtl(CacheTtlPolicy.getTtl(CacheNames.ARTICLE_SEARCH))
-                .serializeValuesWith(
-                    RedisSerializationContext.SerializationPair.fromSerializer(
-                        typedJsonSerializer(ArticlePageResponse::class.java),
-                    ),
-                )
-
         // SCAN-based batch strategy for production-safe cache clearing (avoids the blocking KEYS command).
         val cacheWriter = RedisCacheWriter.nonLockingRedisCacheWriter(connectionFactory, BatchStrategies.scan(1000))
 
@@ -79,51 +67,24 @@ class RedisConfig {
             .build()
     }
 
-    private fun <T : Any> typedJsonSerializer(type: Class<T>): RedisSerializer<Any> {
+    internal fun jsonRedisSerializer(): RedisSerializer<Any> {
         val objectMapper = ObjectMapper()
+
+        // Kotlin module: DTOs are final data classes, many without a no-arg constructor.
+        objectMapper.registerModule(KotlinModule.Builder().build())
         objectMapper.registerModule(JavaTimeModule())
         objectMapper.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS)
         objectMapper.disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES)
 
-        return object : RedisSerializer<Any> {
-            override fun serialize(value: Any?): ByteArray =
-                if (value == null) {
-                    ByteArray(0)
-                } else {
-                    try {
-                        objectMapper.writeValueAsBytes(value)
-                    } catch (e: Exception) {
-                        throw SerializationException("Could not serialize: ${e.message}", e)
-                    }
-                }
-
-            override fun deserialize(bytes: ByteArray?): Any? =
-                if (bytes == null || bytes.isEmpty()) {
-                    null
-                } else {
-                    try {
-                        objectMapper.readValue(bytes, type)
-                    } catch (e: Exception) {
-                        throw SerializationException("Could not deserialize: ${e.message}", e)
-                    }
-                }
-        }
-    }
-
-    private fun jsonRedisSerializer(): RedisSerializer<Any> {
-        val objectMapper = ObjectMapper()
-
-        objectMapper.registerModule(JavaTimeModule())
-        objectMapper.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS)
-        objectMapper.disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES)
-
-        // Include type information so Hibernate proxies / polymorphic values round-trip through Redis.
+        // Type info for EVERYTHING, including final classes. NON_FINAL skips Kotlin data classes (final by
+        // default), so the value is written without "@class" and can't be read back as Any -> every cache
+        // hit failed with "missing type id property '@class'".
         objectMapper.activateDefaultTyping(
             BasicPolymorphicTypeValidator
                 .builder()
                 .allowIfSubType(Any::class.java)
                 .build(),
-            ObjectMapper.DefaultTyping.NON_FINAL,
+            ObjectMapper.DefaultTyping.EVERYTHING,
             JsonTypeInfo.As.PROPERTY,
         )
 

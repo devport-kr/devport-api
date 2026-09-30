@@ -7,6 +7,8 @@ import org.springframework.boot.gradle.tasks.bundling.BootBuildImage
 
 dependencies {
     implementation(project(":support:cache"))
+    // Redis cache serializer must rebuild final Kotlin data classes (constructor-only DTOs).
+    implementation("com.fasterxml.jackson.module:jackson-module-kotlin")
     implementation(project(":support:security"))
     implementation(project(":support:exception"))
     implementation(project(":support:logging"))
