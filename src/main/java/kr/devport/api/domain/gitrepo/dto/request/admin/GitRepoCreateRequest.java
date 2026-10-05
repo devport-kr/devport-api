@@ -34,6 +34,8 @@ public class GitRepoCreateRequest {
 
     private String summaryKoBody;
 
+    private String imageUrl;
+
     private Category category;
 
     @NotNull(message = "Score is required")

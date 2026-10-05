@@ -104,6 +104,7 @@ public class GitRepoService {
             .starsThisWeek(gitRepo.getStarsThisWeek())
             .summaryKoTitle(gitRepo.getSummaryKoTitle())
             .summaryKoBody(gitRepo.getSummaryKoBody())
+            .imageUrl(gitRepo.getImageUrl())
             .category(gitRepo.getCategory())
             .score(gitRepo.getScore())
             .createdAt(gitRepo.getCreatedAt())
