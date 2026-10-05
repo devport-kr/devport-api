@@ -21,6 +21,7 @@ public class GitRepoUpdateRequest {
     private Integer starsThisWeek;
     private String summaryKoTitle;
     private String summaryKoBody;
+    private String imageUrl;
     private Category category;
     private Integer score;
 }

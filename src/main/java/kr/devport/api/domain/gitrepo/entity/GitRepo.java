@@ -58,6 +58,9 @@ public class GitRepo {
     @Column(columnDefinition = "TEXT", name = "summary_ko_body")
     private String summaryKoBody;
 
+    @Column(length = 1000, name = "image_url")
+    private String imageUrl;
+
     @Enumerated(EnumType.STRING)
     @Column(length = 50)
     private Category category;

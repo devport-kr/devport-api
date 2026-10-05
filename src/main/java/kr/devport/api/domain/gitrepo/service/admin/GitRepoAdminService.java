@@ -36,6 +36,7 @@ public class GitRepoAdminService {
             .starsThisWeek(request.getStarsThisWeek())
             .summaryKoTitle(request.getSummaryKoTitle())
             .summaryKoBody(request.getSummaryKoBody())
+            .imageUrl(request.getImageUrl())
             .category(request.getCategory())
             .score(request.getScore())
             .createdAt(LocalDateTime.now())
@@ -64,6 +65,7 @@ public class GitRepoAdminService {
         if (request.getStarsThisWeek() != null) gitRepo.setStarsThisWeek(request.getStarsThisWeek());
         if (request.getSummaryKoTitle() != null) gitRepo.setSummaryKoTitle(request.getSummaryKoTitle());
         if (request.getSummaryKoBody() != null) gitRepo.setSummaryKoBody(request.getSummaryKoBody());
+        if (request.getImageUrl() != null) gitRepo.setImageUrl(request.getImageUrl());
         if (request.getCategory() != null) gitRepo.setCategory(request.getCategory());
         if (request.getScore() != null) gitRepo.setScore(request.getScore());
 
@@ -96,6 +98,7 @@ public class GitRepoAdminService {
             .starsThisWeek(gitRepo.getStarsThisWeek())
             .summaryKoTitle(gitRepo.getSummaryKoTitle())
             .summaryKoBody(gitRepo.getSummaryKoBody())
+            .imageUrl(gitRepo.getImageUrl())
             .category(gitRepo.getCategory())
             .score(gitRepo.getScore())
             .build();
