@@ -6435,6 +6435,10 @@
           "parameterTypes": []
         },
         {
+          "name": "getImageUrl",
+          "parameterTypes": []
+        },
+        {
           "name": "getLanguage",
           "parameterTypes": []
         },
@@ -6500,6 +6504,12 @@
           "name": "setId",
           "parameterTypes": [
             "java.lang.Long"
+          ]
+        },
+        {
+          "name": "setImageUrl",
+          "parameterTypes": [
+            "java.lang.String"
           ]
         },
         {
@@ -6572,6 +6582,9 @@
         },
         {
           "name": "id"
+        },
+        {
+          "name": "imageUrl"
         },
         {
           "name": "language"

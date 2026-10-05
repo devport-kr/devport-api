@@ -48,6 +48,10 @@ public class GitRepoResponse {
     @Schema(description = "Korean body summary", example = "Facebook에서 개발한 사용자 인터페이스 구축용 JavaScript 라이브러리입니다.")
     private String summaryKoBody;
 
+    @Schema(description = "Representative image URL (README banner/screenshot or social preview); null when none",
+            example = "https://raw.githubusercontent.com/KeygraphHQ/shannon/main/assets/github-banner-dark.png")
+    private String imageUrl;
+
     @Schema(description = "Technology category", example = "FRONTEND")
     private Category category;
 
