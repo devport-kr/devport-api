@@ -123,7 +123,7 @@ class NewsletterMailServiceTest {
             assertThat(MailTestSupport.html(message)).contains("src=\"cid:devport-logo\"").doesNotContain("{{");
         }
 
-        assertThat(bodies).allSatisfy(body -> assertThat(body).doesNotContain("{{").endsWith("devport\n"));
+        assertThat(bodies).allSatisfy(body -> assertThat(body).doesNotContain("{{").endsWith("감사합니다,\ndevport.kr\n"));
         assertThat(bodies.get(0)).contains("https://devport.kr/newsletter/confirm?token=raw-token");
         assertThat(bodies.get(1))
             .contains("- 전송자: devport (https://devport.kr)")

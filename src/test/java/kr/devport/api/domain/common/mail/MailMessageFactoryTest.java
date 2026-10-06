@@ -41,6 +41,7 @@ class MailMessageFactoryTest {
             .contains("src=\"cid:" + MailMessageFactory.LOGO_CONTENT_ID + "\"")
             .contains("href=\"https://devport.kr/newsletter/confirm?token=t\"")
             .contains("본 메일은 발신 전용입니다.")
+            .contains("감사합니다,<br>devport.kr</p>")
             .contains("<a href=\"https://devport.kr\" style=\"color:#6b7280;\">devport.kr</a>")
             .doesNotContain("{{");
         assertThat(MailTestSupport.text(message))

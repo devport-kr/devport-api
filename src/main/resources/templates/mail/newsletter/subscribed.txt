@@ -10,4 +10,4 @@ devport 뉴스레터 수신 동의가 처리되었습니다.
 {{unsubscribeUrl}}
 
 감사합니다,
-{{senderName}}
+devport.kr
