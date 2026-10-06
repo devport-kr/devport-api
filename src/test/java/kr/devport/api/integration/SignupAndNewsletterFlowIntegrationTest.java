@@ -15,6 +15,7 @@ import kr.devport.api.domain.newsletter.entity.NewsletterIssue;
 import kr.devport.api.domain.newsletter.enums.NewsletterIssueStatus;
 import kr.devport.api.domain.newsletter.repository.NewsletterIssueRepository;
 import kr.devport.api.domain.newsletter.repository.NewsletterSubscriptionRepository;
+import kr.devport.api.support.InMemoryRedis;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
@@ -22,6 +23,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.http.HttpHeaders;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.http.MediaType;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.test.context.ActiveProfiles;
@@ -36,7 +38,6 @@ import java.util.regex.Pattern;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.containsString;
-import static org.hamcrest.Matchers.nullValue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -51,7 +52,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 /**
  * 실제 SecurityFilterChain + JPA(H2) 위에서 아이디 가입 → 뉴스레터 double opt-in → 관리자 발송 → one-click 해지 흐름을 검증한다.
- * 외부 연동(Turnstile, SMTP, Redis rate limit)만 mock 한다.
+ * 외부 연동(Turnstile, SMTP, Redis)만 mock 한다. Redis 값 저장은 메모리 Map으로 흉내 낸다.
  */
 @SpringBootTest(properties = {
     "app.jwt.secret=integration-test-secret-key-that-is-long-enough-for-hmac-sha512-0123456789abcdef",
@@ -64,6 +65,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 class SignupAndNewsletterFlowIntegrationTest {
 
     private static final Pattern TOKEN_IN_LINK = Pattern.compile("token=([A-Za-z0-9_-]+)");
+    private static final Pattern SIGNUP_CODE = Pattern.compile("인증번호: (\\d{6})");
 
     @Autowired
     private MockMvc mockMvc;
@@ -89,18 +91,47 @@ class SignupAndNewsletterFlowIntegrationTest {
     @MockitoBean
     private RedisRateLimiter rateLimiter;
 
+    @MockitoBean
+    private RedisTemplate<String, Object> redisTemplate;
+
     @BeforeEach
     void setUp() {
         when(turnstileService.validateToken(anyString(), any())).thenReturn(true);
         when(rateLimiter.tryAcquire(anyString(), anyInt(), any())).thenReturn(true);
         when(rateLimiter.acquire(anyString(), anyInt(), any())).thenReturn(RedisRateLimiter.Result.ALLOWED);
         when(mailSender.createMimeMessage()).thenAnswer(invocation -> new MimeMessage(Session.getInstance(new Properties())));
+        InMemoryRedis.backing(redisTemplate);
     }
 
-    private static String signupJson(String username) {
+    private static String signupJson(String username, String email, String emailVerificationToken) {
         return """
-            {"username":"%s","password":"Password@123","agreedTermsVersion":"2026-03-24","turnstileToken":"turnstile"}
-            """.formatted(username);
+            {"username":"%s","password":"Password@123","email":"%s","emailVerificationToken":"%s","agreedTermsVersion":"2026-03-24"}
+            """.formatted(username, email, emailVerificationToken);
+    }
+
+    /** 인증번호 메일을 받아 번호를 입력하고, 회원가입용 인증 토큰을 돌려받는다. */
+    private String verifyEmailForSignup(String email) throws Exception {
+        mockMvc.perform(post("/api/auth/signup/email-code")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"email\":\"" + email + "\",\"turnstileToken\":\"t\"}"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.expiresIn").value(600))
+            .andExpect(jsonPath("$.resendAvailableIn").value(60));
+
+        ArgumentCaptor<MimeMessage> mailCaptor = ArgumentCaptor.forClass(MimeMessage.class);
+        verify(mailSender, atLeastOnce()).send(mailCaptor.capture());
+        MimeMessage codeMail = mailCaptor.getValue();
+        assertThat(codeMail.getSubject()).isEqualTo("[devport] 회원가입 인증번호");
+        Matcher codeMatcher = SIGNUP_CODE.matcher(MailTestSupport.text(codeMail));
+        assertThat(codeMatcher.find()).isTrue();
+
+        MvcResult verified = mockMvc.perform(post("/api/auth/signup/email-code/verify")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"email\":\"" + email + "\",\"code\":\"" + codeMatcher.group(1) + "\"}"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.expiresIn").value(1800))
+            .andReturn();
+        return JsonPath.read(verified.getResponse().getContentAsString(), "$.verificationToken");
     }
 
     private static String bearer(String token) {
@@ -109,10 +140,18 @@ class SignupAndNewsletterFlowIntegrationTest {
 
     @Test
     void localSignupNewsletterOptInAdminSendAndOneClickUnsubscribe() throws Exception {
-        // 1. 아이디/비밀번호만으로 가입 → 즉시 로그인 (access token + refresh cookie)
+        // 1. 이메일 인증번호 확인 → 아이디/비밀번호 가입 → 즉시 로그인 (access token + refresh cookie)
+        String emailVerificationToken = verifyEmailForSignup("FlowUser@Example.com");
+
+        mockMvc.perform(post("/api/auth/signup")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(signupJson("flowuser", "flowuser@example.com", "forged-token")))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.message").value(containsString("이메일 인증")));
+
         MvcResult signup = mockMvc.perform(post("/api/auth/signup")
                 .contentType(MediaType.APPLICATION_JSON)
-                .content(signupJson("flowuser")))
+                .content(signupJson("flowuser", "FlowUser@Example.com", emailVerificationToken)))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.accessToken").isNotEmpty())
             .andExpect(jsonPath("$.refreshToken").doesNotExist())
@@ -120,14 +159,24 @@ class SignupAndNewsletterFlowIntegrationTest {
             .andReturn();
         String accessToken = JsonPath.read(signup.getResponse().getContentAsString(), "$.accessToken");
 
-        mockMvc.perform(post("/api/auth/signup").contentType(MediaType.APPLICATION_JSON).content(signupJson("FlowUser")))
+        mockMvc.perform(post("/api/auth/signup").contentType(MediaType.APPLICATION_JSON)
+                .content(signupJson("FlowUser", "other@example.com", "any-token")))
+            .andExpect(status().isConflict());
+
+        // 가입된 이메일로는 다시 가입하거나 인증번호를 받을 수 없다
+        mockMvc.perform(post("/api/auth/signup").contentType(MediaType.APPLICATION_JSON)
+                .content(signupJson("flowuser2", "flowuser@example.com", emailVerificationToken)))
+            .andExpect(status().isConflict());
+        mockMvc.perform(post("/api/auth/signup/email-code")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"email\":\"flowuser@example.com\",\"turnstileToken\":\"t\"}"))
             .andExpect(status().isConflict());
 
         mockMvc.perform(get("/api/auth/check-username").param("username", "flowuser"))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.available").value(false));
 
-        // 2. 이메일 인증 없이 로그인 가능
+        // 2. 아이디/비밀번호로 로그인
         mockMvc.perform(post("/api/auth/login")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"username\":\"flowuser\",\"password\":\"Password@123\"}"))
@@ -137,7 +186,8 @@ class SignupAndNewsletterFlowIntegrationTest {
         mockMvc.perform(get("/api/auth/me").header(HttpHeaders.AUTHORIZATION, bearer(accessToken)))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.username").value("flowuser"))
-            .andExpect(jsonPath("$.email").value(nullValue()));
+            .andExpect(jsonPath("$.email").value("flowuser@example.com"))
+            .andExpect(jsonPath("$.emailVerified").value(true));
 
         // 3. 뉴스레터 구독 신청 → PENDING + 인증 메일
         mockMvc.perform(get("/api/newsletter/me").header(HttpHeaders.AUTHORIZATION, bearer(accessToken)))
@@ -251,23 +301,43 @@ class SignupAndNewsletterFlowIntegrationTest {
     }
 
     @Test
-    void signupValidatesTermsAndBotTokenAndNewsletterRequiresLogin() throws Exception {
+    void signupValidatesTermsEmailVerificationAndBotTokenAndNewsletterRequiresLogin() throws Exception {
         mockMvc.perform(post("/api/auth/signup")
                 .contentType(MediaType.APPLICATION_JSON)
-                .content("{\"username\":\"staleterms\",\"password\":\"Password@123\",\"agreedTermsVersion\":\"2020-01-01\",\"turnstileToken\":\"t\"}"))
+                .content("{\"username\":\"staleterms\",\"password\":\"Password@123\",\"email\":\"a@example.com\",\"emailVerificationToken\":\"t\",\"agreedTermsVersion\":\"2020-01-01\"}"))
             .andExpect(status().isBadRequest());
 
         mockMvc.perform(post("/api/auth/signup")
                 .contentType(MediaType.APPLICATION_JSON)
-                .content("{\"username\":\"nobot\",\"password\":\"Password@123\",\"agreedTermsVersion\":\"2026-03-24\"}"))
+                .content("{\"username\":\"noemail\",\"password\":\"Password@123\",\"agreedTermsVersion\":\"2026-03-24\"}"))
             .andExpect(status().isBadRequest())
-            .andExpect(jsonPath("$.validationErrors.turnstileToken").exists());
+            .andExpect(jsonPath("$.validationErrors.email").exists())
+            .andExpect(jsonPath("$.validationErrors.emailVerificationToken").exists());
 
         mockMvc.perform(post("/api/auth/signup")
                 .contentType(MediaType.APPLICATION_JSON)
-                .content("{\"username\":\"weakpw\",\"password\":\"password123\",\"agreedTermsVersion\":\"2026-03-24\",\"turnstileToken\":\"t\"}"))
+                .content("{\"username\":\"weakpw\",\"password\":\"password123\",\"email\":\"a@example.com\",\"emailVerificationToken\":\"t\",\"agreedTermsVersion\":\"2026-03-24\"}"))
             .andExpect(status().isBadRequest())
             .andExpect(jsonPath("$.validationErrors.password").exists());
+
+        mockMvc.perform(post("/api/auth/signup/email-code")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"email\":\"not-an-email\"}"))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.validationErrors.email").exists())
+            .andExpect(jsonPath("$.validationErrors.turnstileToken").exists());
+
+        mockMvc.perform(post("/api/auth/signup/email-code/verify")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"email\":\"a@example.com\",\"code\":\"12ab\"}"))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.validationErrors.code").exists());
+
+        mockMvc.perform(post("/api/auth/signup/email-code/verify")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"email\":\"a@example.com\",\"code\":\"123456\"}"))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.message").value(containsString("만료")));
 
         mockMvc.perform(get("/api/newsletter/me")).andExpect(status().isUnauthorized());
     }

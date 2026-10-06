@@ -67,6 +67,8 @@ public class SecurityConfig {
                     "/api/benchmarks",
                     "/api/auth/refresh",
                     "/api/auth/signup",
+                    "/api/auth/signup/email-code",
+                    "/api/auth/signup/email-code/verify",
                     "/api/auth/check-username",
                     "/api/auth/login",
                     "/api/auth/oauth2/exchange",

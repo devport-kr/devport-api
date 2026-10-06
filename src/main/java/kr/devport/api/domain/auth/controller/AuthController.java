@@ -12,8 +12,12 @@ import kr.devport.api.domain.auth.dto.request.LoginRequest;
 import kr.devport.api.domain.auth.dto.request.OAuth2ExchangeRequest;
 import kr.devport.api.domain.auth.dto.request.ResetPasswordRequest;
 import kr.devport.api.domain.auth.dto.request.ResendVerificationRequest;
+import kr.devport.api.domain.auth.dto.request.SignupEmailCodeRequest;
+import kr.devport.api.domain.auth.dto.request.SignupEmailCodeVerifyRequest;
 import kr.devport.api.domain.auth.dto.request.SignupRequest;
 import kr.devport.api.domain.auth.dto.response.AuthResponse;
+import kr.devport.api.domain.auth.dto.response.SignupEmailCodeResponse;
+import kr.devport.api.domain.auth.dto.response.SignupEmailVerificationResponse;
 import kr.devport.api.domain.auth.dto.response.TokenResponse;
 import kr.devport.api.domain.auth.dto.response.UserResponse;
 import kr.devport.api.domain.common.security.CustomUserDetails;
@@ -22,6 +26,7 @@ import kr.devport.api.domain.auth.service.EmailVerificationService;
 import kr.devport.api.domain.auth.service.LoginService;
 import kr.devport.api.domain.auth.service.PasswordResetService;
 import kr.devport.api.domain.auth.service.RefreshTokenCookieService;
+import kr.devport.api.domain.auth.service.SignupEmailVerificationService;
 import kr.devport.api.domain.auth.service.SignupService;
 import kr.devport.api.domain.common.exception.InvalidTokenException;
 import kr.devport.api.domain.common.web.ClientIpResolver;
@@ -45,6 +50,7 @@ public class AuthController {
 
     private final AuthService authService;
     private final SignupService signupService;
+    private final SignupEmailVerificationService signupEmailVerificationService;
     private final LoginService loginService;
     private final EmailVerificationService emailVerificationService;
     private final PasswordResetService passwordResetService;
@@ -128,8 +134,9 @@ public class AuthController {
 
     @Operation(
         summary = "Sign up with username and password",
-        description = "Create a new LOCAL account with username and password only (no email). "
-            + "Requires agreement to the current terms version and a Cloudflare Turnstile token. "
+        description = "Create a new LOCAL account. The email must be verified first: "
+            + "POST /api/auth/signup/email-code → POST /api/auth/signup/email-code/verify → send the returned "
+            + "verificationToken as emailVerificationToken. Requires agreement to the current terms version. "
             + "The user is logged in immediately: returns an access token and sets the refresh-token cookie."
     )
     @ApiResponses(value = {
@@ -138,8 +145,8 @@ public class AuthController {
             description = "Successfully created account and logged in",
             content = @Content(schema = @Schema(implementation = AuthResponse.class))
         ),
-        @ApiResponse(responseCode = "400", description = "Validation, terms or bot verification failed", content = @Content),
-        @ApiResponse(responseCode = "409", description = "Username is not available", content = @Content),
+        @ApiResponse(responseCode = "400", description = "Validation, terms or email verification failed", content = @Content),
+        @ApiResponse(responseCode = "409", description = "Username or email is not available", content = @Content),
         @ApiResponse(responseCode = "429", description = "Too many signup attempts", content = @Content)
     })
     @PostMapping("/signup")
@@ -151,6 +158,52 @@ public class AuthController {
         AuthResponse authResponse = signupService.signup(request, ClientIpResolver.resolve(httpRequest));
         refreshTokenCookieService.addRefreshTokenCookie(servletResponse, authResponse.getRefreshToken());
         return ResponseEntity.ok(stripRefreshToken(authResponse));
+    }
+
+    @Operation(
+        summary = "Send signup email verification code",
+        description = "Email a 6-digit code for LOCAL signup. Valid for 10 minutes; can be resent after 60 seconds. "
+            + "Requires a Cloudflare Turnstile token."
+    )
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Code sent",
+            content = @Content(schema = @Schema(implementation = SignupEmailCodeResponse.class))),
+        @ApiResponse(responseCode = "400", description = "Validation or bot verification failed", content = @Content),
+        @ApiResponse(responseCode = "409", description = "Email is already registered", content = @Content),
+        @ApiResponse(responseCode = "429", description = "Resend cooldown or rate limit", content = @Content),
+        @ApiResponse(responseCode = "503", description = "Email could not be sent", content = @Content)
+    })
+    @PostMapping("/signup/email-code")
+    public ResponseEntity<SignupEmailCodeResponse> sendSignupEmailCode(
+        @Valid @RequestBody SignupEmailCodeRequest request,
+        HttpServletRequest httpRequest
+    ) {
+        signupEmailVerificationService.sendCode(request.getEmail(), request.getTurnstileToken(), ClientIpResolver.resolve(httpRequest));
+        return ResponseEntity.ok(SignupEmailCodeResponse.builder()
+            .expiresIn(SignupEmailVerificationService.CODE_TTL.toSeconds())
+            .resendAvailableIn(SignupEmailVerificationService.RESEND_COOLDOWN.toSeconds())
+            .build());
+    }
+
+    @Operation(
+        summary = "Verify signup email code",
+        description = "Check the 6-digit code (5 attempts per code). Returns a verificationToken, valid for 30 minutes, "
+            + "to send as emailVerificationToken in POST /api/auth/signup."
+    )
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Email verified",
+            content = @Content(schema = @Schema(implementation = SignupEmailVerificationResponse.class))),
+        @ApiResponse(responseCode = "400", description = "Wrong, expired or exhausted code", content = @Content)
+    })
+    @PostMapping("/signup/email-code/verify")
+    public ResponseEntity<SignupEmailVerificationResponse> verifySignupEmailCode(
+        @Valid @RequestBody SignupEmailCodeVerifyRequest request
+    ) {
+        String verificationToken = signupEmailVerificationService.verifyCode(request.getEmail(), request.getCode());
+        return ResponseEntity.ok(SignupEmailVerificationResponse.builder()
+            .verificationToken(verificationToken)
+            .expiresIn(SignupEmailVerificationService.VERIFICATION_TOKEN_TTL.toSeconds())
+            .build());
     }
 
     @Operation(

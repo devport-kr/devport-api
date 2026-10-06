@@ -6,7 +6,7 @@ import kr.devport.api.domain.auth.entity.User;
 import kr.devport.api.domain.auth.enums.AuthProvider;
 import kr.devport.api.domain.auth.enums.UserRole;
 import kr.devport.api.domain.auth.repository.UserRepository;
-import kr.devport.api.domain.common.exception.BotVerificationException;
+import kr.devport.api.domain.common.exception.DuplicateEmailException;
 import kr.devport.api.domain.common.exception.DuplicateUsernameException;
 import kr.devport.api.domain.common.exception.TooManyRequestsException;
 import kr.devport.api.domain.common.logging.LogSanitizer;
@@ -27,8 +27,9 @@ import java.util.Set;
 import java.util.regex.Pattern;
 
 /**
- * 아이디/비밀번호만으로 LOCAL 계정을 만든다. 이메일은 받지 않으며 가입 즉시 로그인된다.
- * 이메일 인증이 없으므로 Turnstile 서버 검증과 IP 단위 rate limit으로 봇 가입을 막는다.
+ * 아이디/비밀번호로 LOCAL 계정을 만든다. 가입 즉시 로그인된다.
+ * 이메일 인증은 필수다: {@link SignupEmailVerificationService}에서 인증번호를 확인하고 받은 토큰이 있어야 가입된다.
+ * 봇 방지(Turnstile)는 인증번호 발송 단계에서 하고, 여기서는 IP 단위 rate limit을 건다.
  */
 @Slf4j
 @Service
@@ -45,7 +46,7 @@ public class SignupService {
 
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
-    private final TurnstileService turnstileService;
+    private final SignupEmailVerificationService signupEmailVerificationService;
     private final TermsVersionPolicy termsVersionPolicy;
     private final JwtTokenProvider jwtTokenProvider;
     private final RefreshTokenService refreshTokenService;
@@ -60,6 +61,11 @@ public class SignupService {
             throw new DuplicateUsernameException("Username is not available: " + username);
         }
 
+        String email = SignupEmailVerificationService.normalizeEmail(request.getEmail());
+        if (userRepository.existsByEmailIgnoreCase(email)) {
+            throw new DuplicateEmailException("이미 가입된 이메일입니다.");
+        }
+
         // 사설 IP(프록시 주소)로 보이면 모든 사용자가 한 한도를 나눠 쓰게 되므로 IP 한도를 건너뛴다.
         if (ClientIpResolver.isPublicAddress(clientIp)
             && !rateLimiter.tryAcquire("signup:ip:" + clientIp, SIGNUP_LIMIT_PER_IP, SIGNUP_WINDOW)) {
@@ -67,19 +73,18 @@ public class SignupService {
             throw new TooManyRequestsException("회원가입 시도가 너무 많습니다. 잠시 후 다시 시도해주세요.");
         }
 
-        if (!turnstileService.validateToken(request.getTurnstileToken(), clientIp)) {
-            log.warn("Turnstile validation failed for local signup, clientIp={}", LogSanitizer.maskIp(clientIp));
-            throw new BotVerificationException("Bot verification failed");
-        }
+        signupEmailVerificationService.requireVerified(email, request.getEmailVerificationToken());
 
         LocalDateTime now = LocalDateTime.now();
         User user = User.builder()
             .username(username)
             .password(passwordEncoder.encode(request.getPassword()))
             .name(username)
+            .email(email)
+            .emailVerified(true)
+            .emailAddedAt(now)
             .authProvider(AuthProvider.local)
             .role(UserRole.USER)
-            .emailVerified(false)
             .createdAt(now)
             .updatedAt(now)
             .lastLoginAt(now)
@@ -90,9 +95,10 @@ public class SignupService {
         try {
             user = userRepository.saveAndFlush(user);
         } catch (DataIntegrityViolationException ex) {
-            // 동시 가입 경합으로 unique 제약에 걸린 경우
+            // 동시 가입 경합으로 unique 제약(아이디/이메일)에 걸린 경우
             throw new DuplicateUsernameException("Username is not available: " + username);
         }
+        signupEmailVerificationService.consume(request.getEmailVerificationToken());
         log.info("User signup completed for userId={}", user.getId());
 
         String accessToken = jwtTokenProvider.createAccessToken(user.getId());

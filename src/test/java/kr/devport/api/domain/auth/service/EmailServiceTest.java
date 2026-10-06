@@ -3,6 +3,7 @@ package kr.devport.api.domain.auth.service;
 import jakarta.mail.Session;
 import jakarta.mail.internet.MimeMessage;
 import kr.devport.api.domain.auth.entity.User;
+import kr.devport.api.domain.common.exception.EmailDeliveryException;
 import kr.devport.api.domain.common.mail.MailTestSupport;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -69,6 +70,28 @@ class EmailServiceTest {
             .contains("href=\"https://devport.kr/reset-password?token=xyz\"")
             .contains("src=\"cid:devport-logo\"")
             .doesNotContain("{{");
+    }
+
+    @Test
+    void signupCodeEmailShowsCodeAndExpiry() throws Exception {
+        emailService.sendSignupCode("kim@example.com", "042917", 10);
+
+        MimeMessage message = sentMessage();
+        assertThat(message.getAllRecipients()[0].toString()).isEqualTo("kim@example.com");
+        assertThat(message.getSubject()).isEqualTo("[devport] 회원가입 인증번호");
+        assertThat(MailTestSupport.text(message)).contains("인증번호: 042917").contains("10분 후에 만료");
+        assertThat(MailTestSupport.html(message))
+            .contains(">042917</span>")
+            .contains("src=\"cid:devport-logo\"")
+            .doesNotContain("{{");
+    }
+
+    @Test
+    void signupCodeEmailFailureSurfacesAsEmailDeliveryException() {
+        doThrow(new MailSendException("smtp down")).when(mailSender).send(any(MimeMessage.class));
+
+        assertThatThrownBy(() -> emailService.sendSignupCode("kim@example.com", "042917", 10))
+            .isInstanceOf(EmailDeliveryException.class);
     }
 
     @Test
