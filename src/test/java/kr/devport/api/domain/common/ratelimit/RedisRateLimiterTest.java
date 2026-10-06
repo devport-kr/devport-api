@@ -69,6 +69,24 @@ class RedisRateLimiterTest {
     }
 
     @Test
+    void releaseDecrementsAndDeletesKeyThatReachesZero() {
+        when(valueOperations.decrement(KEY)).thenReturn(2L, 0L);
+
+        rateLimiter.release("test");
+        verify(redisTemplate, never()).delete(KEY);
+
+        rateLimiter.release("test");
+        verify(redisTemplate).delete(KEY);
+    }
+
+    @Test
+    void releaseSwallowsRedisErrors() {
+        when(valueOperations.decrement(KEY)).thenThrow(new RedisConnectionFailureException("down"));
+
+        rateLimiter.release("test");
+    }
+
+    @Test
     void redisErrorIsUnavailableForAcquireButAllowedForTryAcquire() {
         when(valueOperations.increment(KEY)).thenThrow(new RedisConnectionFailureException("down"));
 

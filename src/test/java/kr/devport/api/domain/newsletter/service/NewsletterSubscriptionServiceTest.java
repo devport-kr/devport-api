@@ -249,13 +249,57 @@ class NewsletterSubscriptionServiceTest {
     }
 
     @Test
-    void subscribePropagatesMailFailure() {
+    void subscribePropagatesMailFailureAndGivesBackEveryCounter() {
         when(subscriptionRepository.findByUserId(USER_ID)).thenReturn(Optional.empty());
         doThrow(new EmailDeliveryException("fail", new RuntimeException()))
             .when(mailService).sendVerificationEmail(anyString(), anyString());
 
         assertThatThrownBy(() -> service.subscribe(USER_ID, subscribeRequest("tester@example.com"), CLIENT_IP))
             .isInstanceOf(EmailDeliveryException.class);
+
+        // 메일이 나가지 않았으므로 어떤 한도도 소모되면 안 된다 (재시도하다 하루 동안 막히던 버그)
+        verify(rateLimiter).release("newsletter:verify:user:" + USER_ID);
+        verify(rateLimiter).release("newsletter:verify:ip:" + CLIENT_IP);
+        verify(rateLimiter).release("newsletter:verify:email:" + NewsletterTokens.sha256("tester@example.com"));
+        verify(rateLimiter).release("newsletter:verify:global");
+    }
+
+    @Test
+    void successfulSendKeepsCounters() {
+        when(subscriptionRepository.findByUserId(USER_ID)).thenReturn(Optional.empty());
+
+        service.subscribe(USER_ID, subscribeRequest("tester@example.com"), CLIENT_IP);
+
+        verify(rateLimiter, never()).release(anyString());
+    }
+
+    @Test
+    void refusedLimitGivesBackEarlierCountersAndItsOwnAttempt() {
+        when(subscriptionRepository.findByUserId(USER_ID)).thenReturn(Optional.empty());
+        String recipientKey = "newsletter:verify:email:" + NewsletterTokens.sha256("tester@example.com");
+        when(rateLimiter.acquire(eq(recipientKey), anyInt(), any())).thenReturn(RedisRateLimiter.Result.DENIED);
+
+        assertThatThrownBy(() -> service.subscribe(USER_ID, subscribeRequest("tester@example.com"), CLIENT_IP))
+            .isInstanceOf(TooManyRequestsException.class);
+
+        verify(rateLimiter).release("newsletter:verify:user:" + USER_ID);
+        verify(rateLimiter).release("newsletter:verify:ip:" + CLIENT_IP);
+        verify(rateLimiter).release(recipientKey);
+        verify(rateLimiter, never()).acquire(eq("newsletter:verify:global"), anyInt(), any());
+        verify(rateLimiter, never()).release("newsletter:verify:global");
+    }
+
+    @Test
+    void privateProxyIpDoesNotShareOneIpLimitAcrossAllUsers() {
+        when(subscriptionRepository.findByUserId(USER_ID)).thenReturn(Optional.empty());
+        when(turnstileService.validateToken("turnstile", "10.0.1.179")).thenReturn(true);
+
+        service.subscribe(USER_ID, subscribeRequest("tester@example.com"), "10.0.1.179");
+
+        verify(rateLimiter, never()).acquire(eq("newsletter:verify:ip:10.0.1.179"), anyInt(), any());
+        verify(rateLimiter).acquire(eq("newsletter:verify:user:" + USER_ID), anyInt(), any());
+        verify(rateLimiter).acquire(eq("newsletter:verify:global"), anyInt(), any());
+        verify(mailService).sendVerificationEmail(eq("tester@example.com"), anyString());
     }
 
     @Test

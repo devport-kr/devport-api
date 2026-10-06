@@ -159,6 +159,17 @@ class SignupServiceTest {
     }
 
     @Test
+    void signupSkipsIpLimitWhenOnlyAPrivateProxyIpIsVisible() {
+        when(turnstileService.validateToken("turnstile-token", "10.0.1.179")).thenReturn(true);
+        when(rateLimiter.tryAcquire(anyString(), anyInt(), any())).thenReturn(false);
+
+        AuthResponse response = signupService.signup(request("tester", "2026-03-24"), "10.0.1.179");
+
+        assertThat(response.getAccessToken()).isEqualTo("access-token");
+        verify(rateLimiter, never()).tryAcquire(anyString(), anyInt(), any());
+    }
+
+    @Test
     void signupMapsUniqueConstraintRaceToDuplicateUsername() {
         when(userRepository.saveAndFlush(any(User.class))).thenThrow(new DataIntegrityViolationException("dup"));
 

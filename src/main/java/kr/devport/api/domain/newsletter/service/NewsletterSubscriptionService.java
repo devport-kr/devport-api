@@ -10,6 +10,7 @@ import kr.devport.api.domain.common.exception.TokenNotFoundException;
 import kr.devport.api.domain.common.exception.TooManyRequestsException;
 import kr.devport.api.domain.common.logging.LogSanitizer;
 import kr.devport.api.domain.common.ratelimit.RedisRateLimiter;
+import kr.devport.api.domain.common.web.ClientIpResolver;
 import kr.devport.api.domain.newsletter.dto.request.NewsletterSubscribeRequest;
 import kr.devport.api.domain.newsletter.dto.response.NewsletterActionResponse;
 import kr.devport.api.domain.newsletter.dto.response.NewsletterSubscriptionResponse;
@@ -24,6 +25,8 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Duration;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
 
@@ -98,40 +101,53 @@ public class NewsletterSubscriptionService {
             throw new BotVerificationException("Bot verification failed");
         }
 
-        // 좁은 범위부터 검사해서, 앞에서 거부된 요청이 전체 한도를 소모하지 않게 한다.
-        requirePermit("newsletter:verify:user:" + userId, VERIFICATION_LIMIT_PER_USER_PER_HOUR, HOURLY, TOO_MANY_MESSAGE);
-        requirePermit("newsletter:verify:ip:" + clientIp, VERIFICATION_LIMIT_PER_IP_PER_HOUR, HOURLY, TOO_MANY_MESSAGE);
-        requirePermit("newsletter:verify:email:" + NewsletterTokens.sha256(email), VERIFICATION_LIMIT_PER_EMAIL_PER_DAY, DAILY,
-            "이 이메일로 인증 메일을 너무 많이 보냈습니다. 내일 다시 시도해주세요.");
+        // 한도는 실제로 인증 메일이 나간 요청만 소모해야 한다.
+        // 획득한 permit을 기록해 두고, 이후 단계(다른 한도 거부, 저장, 메일 발송)가 실패하면 모두 되돌린다.
+        List<String> acquiredPermits = new ArrayList<>(4);
         try {
-            requirePermit("newsletter:verify:global", globalVerificationLimitPerHour, HOURLY,
-                "지금은 인증 메일 요청이 많아 처리할 수 없습니다. 잠시 후 다시 시도해주세요.");
-        } catch (TooManyRequestsException e) {
-            log.warn("Newsletter verification global limit ({}/h) reached — possible abuse", globalVerificationLimitPerHour);
+            // 좁은 범위부터 검사해서, 앞에서 거부된 요청이 전체 한도를 소모하지 않게 한다.
+            acquirePermit(acquiredPermits, "newsletter:verify:user:" + userId,
+                VERIFICATION_LIMIT_PER_USER_PER_HOUR, HOURLY, TOO_MANY_MESSAGE);
+            if (ClientIpResolver.isPublicAddress(clientIp)) {
+                // 사설 IP(프록시 주소)로 보이면 모든 사용자가 한 한도를 나눠 쓰게 되므로 건너뛴다.
+                acquirePermit(acquiredPermits, "newsletter:verify:ip:" + clientIp,
+                    VERIFICATION_LIMIT_PER_IP_PER_HOUR, HOURLY, TOO_MANY_MESSAGE);
+            }
+            acquirePermit(acquiredPermits, "newsletter:verify:email:" + NewsletterTokens.sha256(email),
+                VERIFICATION_LIMIT_PER_EMAIL_PER_DAY, DAILY, "이 이메일로 인증 메일을 너무 많이 보냈습니다. 내일 다시 시도해주세요.");
+            try {
+                acquirePermit(acquiredPermits, "newsletter:verify:global", globalVerificationLimitPerHour, HOURLY,
+                    "지금은 인증 메일 요청이 많아 처리할 수 없습니다. 잠시 후 다시 시도해주세요.");
+            } catch (TooManyRequestsException e) {
+                log.warn("Newsletter verification global limit ({}/h) reached — possible abuse", globalVerificationLimitPerHour);
+                throw e;
+            }
+
+            if (subscription == null) {
+                subscription = NewsletterSubscription.builder()
+                    .user(userRepository.getReferenceById(userId))
+                    .unsubscribeToken(NewsletterTokens.generate())
+                    .createdAt(now)
+                    .build();
+            }
+
+            String rawToken = NewsletterTokens.generate();
+            subscription.setEmail(email);
+            subscription.setStatus(NewsletterSubscriptionStatus.PENDING);
+            subscription.setVerificationTokenHash(NewsletterTokens.sha256(rawToken));
+            subscription.setVerificationExpiresAt(now.plus(VERIFICATION_TTL));
+            subscription.setVerificationSentAt(now);
+            subscription.setConsentedAt(now);
+            subscription.setVerifiedAt(null);
+            subscription.setUpdatedAt(now);
+            subscription = subscriptionRepository.save(subscription);
+
+            // 발송 실패 시 EmailDeliveryException → 트랜잭션 롤백 + permit 반환
+            mailService.sendVerificationEmail(email, rawToken);
+        } catch (RuntimeException e) {
+            acquiredPermits.forEach(rateLimiter::release);
             throw e;
         }
-
-        if (subscription == null) {
-            subscription = NewsletterSubscription.builder()
-                .user(userRepository.getReferenceById(userId))
-                .unsubscribeToken(NewsletterTokens.generate())
-                .createdAt(now)
-                .build();
-        }
-
-        String rawToken = NewsletterTokens.generate();
-        subscription.setEmail(email);
-        subscription.setStatus(NewsletterSubscriptionStatus.PENDING);
-        subscription.setVerificationTokenHash(NewsletterTokens.sha256(rawToken));
-        subscription.setVerificationExpiresAt(now.plus(VERIFICATION_TTL));
-        subscription.setVerificationSentAt(now);
-        subscription.setConsentedAt(now);
-        subscription.setVerifiedAt(null);
-        subscription.setUpdatedAt(now);
-        subscription = subscriptionRepository.save(subscription);
-
-        // 발송 실패 시 EmailDeliveryException → 트랜잭션 롤백
-        mailService.sendVerificationEmail(email, rawToken);
         log.info("Newsletter verification requested for userId={}, email={}", userId, LogSanitizer.maskEmail(email));
 
         return NewsletterSubscriptionResponse.from(subscription);
@@ -212,12 +228,16 @@ public class NewsletterSubscriptionService {
         }
     }
 
-    /** Redis 장애로 한도를 확인할 수 없으면 발송하지 않는다(fail-closed). */
-    private void requirePermit(String key, int limit, Duration window, String deniedMessage) {
+    /** 한도 1회분을 획득해 목록에 기록한다. Redis 장애로 한도를 확인할 수 없으면 발송하지 않는다(fail-closed). */
+    private void acquirePermit(List<String> acquiredPermits, String key, int limit, Duration window, String deniedMessage) {
         switch (rateLimiter.acquire(key, limit, window)) {
-            case ALLOWED -> {
+            case ALLOWED -> acquiredPermits.add(key);
+            case DENIED -> {
+                // 거부된 시도의 INCR도 되돌려 카운터가 실제 발송 수를 나타내게 한다.
+                rateLimiter.release(key);
+                log.info("Newsletter verification rate-limited by key={}", key);
+                throw new TooManyRequestsException(deniedMessage);
             }
-            case DENIED -> throw new TooManyRequestsException(deniedMessage);
             case UNAVAILABLE -> throw new ServiceUnavailableException("일시적으로 인증 메일을 보낼 수 없습니다. 잠시 후 다시 시도해주세요.");
         }
     }

@@ -12,6 +12,7 @@ import kr.devport.api.domain.common.exception.TooManyRequestsException;
 import kr.devport.api.domain.common.logging.LogSanitizer;
 import kr.devport.api.domain.common.ratelimit.RedisRateLimiter;
 import kr.devport.api.domain.common.security.JwtTokenProvider;
+import kr.devport.api.domain.common.web.ClientIpResolver;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -59,7 +60,9 @@ public class SignupService {
             throw new DuplicateUsernameException("Username is not available: " + username);
         }
 
-        if (!rateLimiter.tryAcquire("signup:ip:" + clientIp, SIGNUP_LIMIT_PER_IP, SIGNUP_WINDOW)) {
+        // 사설 IP(프록시 주소)로 보이면 모든 사용자가 한 한도를 나눠 쓰게 되므로 IP 한도를 건너뛴다.
+        if (ClientIpResolver.isPublicAddress(clientIp)
+            && !rateLimiter.tryAcquire("signup:ip:" + clientIp, SIGNUP_LIMIT_PER_IP, SIGNUP_WINDOW)) {
             log.warn("Signup rate limit exceeded, clientIp={}", LogSanitizer.maskIp(clientIp));
             throw new TooManyRequestsException("회원가입 시도가 너무 많습니다. 잠시 후 다시 시도해주세요.");
         }
