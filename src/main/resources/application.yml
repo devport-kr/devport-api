@@ -185,6 +185,8 @@ app:
     api-url: ${API_PUBLIC_URL:http://localhost:8080}
     send-batch-size: 50
     send-batch-interval-ms: 1000
+    # 사이트 전체 인증 메일 시간당 상한 (악용 시 SES bounce/complaint 평판 보호)
+    verification-global-limit-per-hour: ${NEWSLETTER_VERIFICATION_GLOBAL_LIMIT_PER_HOUR:200}
 
   openai:
     api-key: ${OPENAI_API_KEY:}

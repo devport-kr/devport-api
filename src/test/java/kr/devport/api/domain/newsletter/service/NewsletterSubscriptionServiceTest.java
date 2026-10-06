@@ -2,9 +2,12 @@ package kr.devport.api.domain.newsletter.service;
 
 import kr.devport.api.domain.auth.entity.User;
 import kr.devport.api.domain.auth.repository.UserRepository;
+import kr.devport.api.domain.auth.service.TurnstileService;
+import kr.devport.api.domain.common.exception.BotVerificationException;
 import kr.devport.api.domain.common.exception.DuplicateEmailException;
 import kr.devport.api.domain.common.exception.EmailDeliveryException;
 import kr.devport.api.domain.common.exception.TokenExpiredException;
+import kr.devport.api.domain.common.exception.ServiceUnavailableException;
 import kr.devport.api.domain.common.exception.TokenNotFoundException;
 import kr.devport.api.domain.common.exception.TooManyRequestsException;
 import kr.devport.api.domain.common.ratelimit.RedisRateLimiter;
@@ -22,6 +25,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
+import org.springframework.test.util.ReflectionTestUtils;
 
 import java.time.LocalDateTime;
 import java.util.Optional;
@@ -42,6 +46,7 @@ import static org.mockito.Mockito.when;
 class NewsletterSubscriptionServiceTest {
 
     private static final Long USER_ID = 7L;
+    private static final String CLIENT_IP = "198.51.100.4";
 
     @Mock
     private NewsletterSubscriptionRepository subscriptionRepository;
@@ -55,20 +60,26 @@ class NewsletterSubscriptionServiceTest {
     @Mock
     private RedisRateLimiter rateLimiter;
 
+    @Mock
+    private TurnstileService turnstileService;
+
     private NewsletterSubscriptionService service;
     private User user;
 
     @BeforeEach
     void setUp() {
-        service = new NewsletterSubscriptionService(subscriptionRepository, userRepository, mailService, rateLimiter);
+        service = new NewsletterSubscriptionService(
+            subscriptionRepository, userRepository, mailService, rateLimiter, turnstileService);
+        ReflectionTestUtils.setField(service, "globalVerificationLimitPerHour", 200);
         user = User.builder().id(USER_ID).username("tester").build();
         when(userRepository.getReferenceById(USER_ID)).thenReturn(user);
-        when(rateLimiter.tryAcquire(anyString(), anyInt(), any())).thenReturn(true);
+        when(rateLimiter.acquire(anyString(), anyInt(), any())).thenReturn(RedisRateLimiter.Result.ALLOWED);
+        when(turnstileService.validateToken("turnstile", CLIENT_IP)).thenReturn(true);
         when(subscriptionRepository.save(any(NewsletterSubscription.class))).thenAnswer(invocation -> invocation.getArgument(0));
     }
 
     private NewsletterSubscribeRequest subscribeRequest(String email) {
-        return NewsletterSubscribeRequest.builder().email(email).agreed(true).build();
+        return NewsletterSubscribeRequest.builder().email(email).agreed(true).turnstileToken("turnstile").build();
     }
 
     private NewsletterSubscription subscription(NewsletterSubscriptionStatus status, String email) {
@@ -89,7 +100,7 @@ class NewsletterSubscriptionServiceTest {
     void subscribeCreatesPendingSubscriptionAndSendsHashedTokenLink() {
         when(subscriptionRepository.findByUserId(USER_ID)).thenReturn(Optional.empty());
 
-        NewsletterSubscriptionResponse response = service.subscribe(USER_ID, subscribeRequest("  Tester@Example.COM "));
+        NewsletterSubscriptionResponse response = service.subscribe(USER_ID, subscribeRequest("  Tester@Example.COM "), CLIENT_IP);
 
         ArgumentCaptor<NewsletterSubscription> saved = ArgumentCaptor.forClass(NewsletterSubscription.class);
         verify(subscriptionRepository).save(saved.capture());
@@ -116,7 +127,7 @@ class NewsletterSubscriptionServiceTest {
         when(subscriptionRepository.findByUserId(USER_ID))
             .thenReturn(Optional.of(subscription(NewsletterSubscriptionStatus.ACTIVE, "tester@example.com")));
 
-        NewsletterSubscriptionResponse response = service.subscribe(USER_ID, subscribeRequest("TESTER@example.com"));
+        NewsletterSubscriptionResponse response = service.subscribe(USER_ID, subscribeRequest("TESTER@example.com"), CLIENT_IP);
 
         assertThat(response.getStatus()).isEqualTo("ACTIVE");
         verify(mailService, never()).sendVerificationEmail(anyString(), anyString());
@@ -129,7 +140,7 @@ class NewsletterSubscriptionServiceTest {
         when(subscriptionRepository.existsByEmailAndStatusAndUserIdNot(
             "taken@example.com", NewsletterSubscriptionStatus.ACTIVE, USER_ID)).thenReturn(true);
 
-        assertThatThrownBy(() -> service.subscribe(USER_ID, subscribeRequest("taken@example.com")))
+        assertThatThrownBy(() -> service.subscribe(USER_ID, subscribeRequest("taken@example.com"), CLIENT_IP))
             .isInstanceOf(DuplicateEmailException.class);
         verify(mailService, never()).sendVerificationEmail(anyString(), anyString());
     }
@@ -140,18 +151,86 @@ class NewsletterSubscriptionServiceTest {
         pending.setVerificationSentAt(LocalDateTime.now().minusSeconds(10));
         when(subscriptionRepository.findByUserId(USER_ID)).thenReturn(Optional.of(pending));
 
-        assertThatThrownBy(() -> service.subscribe(USER_ID, subscribeRequest("tester@example.com")))
+        assertThatThrownBy(() -> service.subscribe(USER_ID, subscribeRequest("tester@example.com"), CLIENT_IP))
             .isInstanceOf(TooManyRequestsException.class);
         verify(mailService, never()).sendVerificationEmail(anyString(), anyString());
     }
 
     @Test
-    void subscribeEnforcesHourlyLimit() {
+    void subscribeEnforcesPerUserHourlyLimit() {
         when(subscriptionRepository.findByUserId(USER_ID)).thenReturn(Optional.empty());
-        when(rateLimiter.tryAcquire(eq("newsletter:verify:user:" + USER_ID), anyInt(), any())).thenReturn(false);
+        when(rateLimiter.acquire(eq("newsletter:verify:user:" + USER_ID), anyInt(), any()))
+            .thenReturn(RedisRateLimiter.Result.DENIED);
 
-        assertThatThrownBy(() -> service.subscribe(USER_ID, subscribeRequest("tester@example.com")))
+        assertThatThrownBy(() -> service.subscribe(USER_ID, subscribeRequest("tester@example.com"), CLIENT_IP))
             .isInstanceOf(TooManyRequestsException.class);
+        verify(rateLimiter, never()).acquire(eq("newsletter:verify:global"), anyInt(), any());
+        verify(mailService, never()).sendVerificationEmail(anyString(), anyString());
+    }
+
+    @Test
+    void subscribeEnforcesPerIpLimit() {
+        when(subscriptionRepository.findByUserId(USER_ID)).thenReturn(Optional.empty());
+        when(rateLimiter.acquire(eq("newsletter:verify:ip:" + CLIENT_IP), anyInt(), any()))
+            .thenReturn(RedisRateLimiter.Result.DENIED);
+
+        assertThatThrownBy(() -> service.subscribe(USER_ID, subscribeRequest("tester@example.com"), CLIENT_IP))
+            .isInstanceOf(TooManyRequestsException.class);
+        verify(mailService, never()).sendVerificationEmail(anyString(), anyString());
+    }
+
+    @Test
+    void subscribeLimitsVerificationMailsPerRecipientAcrossAccounts() {
+        when(subscriptionRepository.findByUserId(USER_ID)).thenReturn(Optional.empty());
+        String recipientKey = "newsletter:verify:email:" + NewsletterTokens.sha256("victim@example.com");
+        when(rateLimiter.acquire(eq(recipientKey), eq(3), any())).thenReturn(RedisRateLimiter.Result.DENIED);
+
+        assertThatThrownBy(() -> service.subscribe(USER_ID, subscribeRequest("Victim@Example.com"), CLIENT_IP))
+            .isInstanceOf(TooManyRequestsException.class)
+            .hasMessageContaining("이 이메일");
+        verify(mailService, never()).sendVerificationEmail(anyString(), anyString());
+    }
+
+    @Test
+    void subscribeEnforcesSiteWideHourlyCap() {
+        when(subscriptionRepository.findByUserId(USER_ID)).thenReturn(Optional.empty());
+        when(rateLimiter.acquire(eq("newsletter:verify:global"), eq(200), any())).thenReturn(RedisRateLimiter.Result.DENIED);
+
+        assertThatThrownBy(() -> service.subscribe(USER_ID, subscribeRequest("tester@example.com"), CLIENT_IP))
+            .isInstanceOf(TooManyRequestsException.class);
+        verify(mailService, never()).sendVerificationEmail(anyString(), anyString());
+    }
+
+    @Test
+    void subscribeFailsClosedWhenRateLimiterIsUnavailable() {
+        when(subscriptionRepository.findByUserId(USER_ID)).thenReturn(Optional.empty());
+        when(rateLimiter.acquire(anyString(), anyInt(), any())).thenReturn(RedisRateLimiter.Result.UNAVAILABLE);
+
+        assertThatThrownBy(() -> service.subscribe(USER_ID, subscribeRequest("tester@example.com"), CLIENT_IP))
+            .isInstanceOf(ServiceUnavailableException.class);
+        verify(subscriptionRepository, never()).save(any());
+        verify(mailService, never()).sendVerificationEmail(anyString(), anyString());
+    }
+
+    @Test
+    void subscribeFailsClosedWhenOnlyGlobalCounterIsUnavailable() {
+        when(subscriptionRepository.findByUserId(USER_ID)).thenReturn(Optional.empty());
+        when(rateLimiter.acquire(eq("newsletter:verify:global"), anyInt(), any())).thenReturn(RedisRateLimiter.Result.UNAVAILABLE);
+
+        assertThatThrownBy(() -> service.subscribe(USER_ID, subscribeRequest("tester@example.com"), CLIENT_IP))
+            .isInstanceOf(ServiceUnavailableException.class);
+        verify(mailService, never()).sendVerificationEmail(anyString(), anyString());
+    }
+
+    @Test
+    void subscribeRequiresBotVerificationBeforeConsumingAnyLimit() {
+        when(subscriptionRepository.findByUserId(USER_ID)).thenReturn(Optional.empty());
+        when(turnstileService.validateToken("turnstile", CLIENT_IP)).thenReturn(false);
+
+        assertThatThrownBy(() -> service.subscribe(USER_ID, subscribeRequest("tester@example.com"), CLIENT_IP))
+            .isInstanceOf(BotVerificationException.class);
+        verify(rateLimiter, never()).acquire(anyString(), anyInt(), any());
+        verify(mailService, never()).sendVerificationEmail(anyString(), anyString());
     }
 
     @Test
@@ -160,7 +239,7 @@ class NewsletterSubscriptionServiceTest {
         active.setVerifiedAt(LocalDateTime.now().minusDays(1));
         when(subscriptionRepository.findByUserId(USER_ID)).thenReturn(Optional.of(active));
 
-        service.subscribe(USER_ID, subscribeRequest("new@example.com"));
+        service.subscribe(USER_ID, subscribeRequest("new@example.com"), CLIENT_IP);
 
         assertThat(active.getStatus()).isEqualTo(NewsletterSubscriptionStatus.PENDING);
         assertThat(active.getEmail()).isEqualTo("new@example.com");
@@ -175,7 +254,7 @@ class NewsletterSubscriptionServiceTest {
         doThrow(new EmailDeliveryException("fail", new RuntimeException()))
             .when(mailService).sendVerificationEmail(anyString(), anyString());
 
-        assertThatThrownBy(() -> service.subscribe(USER_ID, subscribeRequest("tester@example.com")))
+        assertThatThrownBy(() -> service.subscribe(USER_ID, subscribeRequest("tester@example.com"), CLIENT_IP))
             .isInstanceOf(EmailDeliveryException.class);
     }
 

@@ -6,8 +6,10 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import kr.devport.api.domain.common.security.CustomUserDetails;
+import kr.devport.api.domain.common.web.ClientIpResolver;
 import kr.devport.api.domain.newsletter.dto.request.NewsletterSubscribeRequest;
 import kr.devport.api.domain.newsletter.dto.request.NewsletterTokenRequest;
 import kr.devport.api.domain.newsletter.dto.response.NewsletterActionResponse;
@@ -52,22 +54,26 @@ public class NewsletterController {
 
     @Operation(
         summary = "Subscribe (or resend verification / change email)",
-        description = "Requires consent (agreed=true). Sends a verification link; the subscription becomes ACTIVE only after it is confirmed."
+        description = "Requires consent (agreed=true) and a fresh Turnstile token. Sends a verification link; "
+            + "the subscription becomes ACTIVE only after it is confirmed. "
+            + "Limits: 1/min and 5/h per user, 10/h per IP, 3/day per recipient email, plus a site-wide hourly cap."
     )
     @ApiResponses(value = {
         @ApiResponse(responseCode = "200", description = "Verification email sent (or already ACTIVE with this email)"),
-        @ApiResponse(responseCode = "400", description = "Invalid email or consent missing", content = @Content),
+        @ApiResponse(responseCode = "400", description = "Invalid email, consent missing or bot verification failed", content = @Content),
         @ApiResponse(responseCode = "409", description = "Email already subscribed by another account", content = @Content),
         @ApiResponse(responseCode = "429", description = "Verification email requested too often", content = @Content),
-        @ApiResponse(responseCode = "503", description = "Email delivery failed", content = @Content)
+        @ApiResponse(responseCode = "503", description = "Email delivery failed or rate limiter unavailable", content = @Content)
     })
     @SecurityRequirement(name = "bearerAuth")
     @PostMapping("/me")
     public ResponseEntity<NewsletterSubscriptionResponse> subscribe(
         @AuthenticationPrincipal CustomUserDetails userDetails,
-        @Valid @RequestBody NewsletterSubscribeRequest request
+        @Valid @RequestBody NewsletterSubscribeRequest request,
+        HttpServletRequest httpRequest
     ) {
-        return ResponseEntity.ok(subscriptionService.subscribe(userDetails.getId(), request));
+        return ResponseEntity.ok(subscriptionService.subscribe(
+            userDetails.getId(), request, ClientIpResolver.resolve(httpRequest)));
     }
 
     @Operation(summary = "Unsubscribe", description = "Deletes the subscription (and the stored email).")

@@ -92,6 +92,7 @@ class SignupAndNewsletterFlowIntegrationTest {
     void setUp() {
         when(turnstileService.validateToken(anyString(), any())).thenReturn(true);
         when(rateLimiter.tryAcquire(anyString(), anyInt(), any())).thenReturn(true);
+        when(rateLimiter.acquire(anyString(), anyInt(), any())).thenReturn(RedisRateLimiter.Result.ALLOWED);
         when(mailSender.createMimeMessage()).thenAnswer(invocation -> new MimeMessage(Session.getInstance(new Properties())));
     }
 
@@ -145,13 +146,21 @@ class SignupAndNewsletterFlowIntegrationTest {
         mockMvc.perform(post("/api/newsletter/me")
                 .header(HttpHeaders.AUTHORIZATION, bearer(accessToken))
                 .contentType(MediaType.APPLICATION_JSON)
-                .content("{\"email\":\"x@example.com\",\"agreed\":false}"))
-            .andExpect(status().isBadRequest());
+                .content("{\"email\":\"x@example.com\",\"agreed\":false,\"turnstileToken\":\"t\"}"))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.validationErrors.agreed").exists());
 
         mockMvc.perform(post("/api/newsletter/me")
                 .header(HttpHeaders.AUTHORIZATION, bearer(accessToken))
                 .contentType(MediaType.APPLICATION_JSON)
-                .content("{\"email\":\"Flow@Example.com\",\"agreed\":true}"))
+                .content("{\"email\":\"x@example.com\",\"agreed\":true}"))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.validationErrors.turnstileToken").exists());
+
+        mockMvc.perform(post("/api/newsletter/me")
+                .header(HttpHeaders.AUTHORIZATION, bearer(accessToken))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"email\":\"Flow@Example.com\",\"agreed\":true,\"turnstileToken\":\"t\"}"))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.status").value("PENDING"))
             .andExpect(jsonPath("$.email").value("flow@example.com"));

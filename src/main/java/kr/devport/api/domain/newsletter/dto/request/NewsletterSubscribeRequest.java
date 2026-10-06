@@ -30,4 +30,8 @@ public class NewsletterSubscribeRequest {
     @NotNull(message = "Consent is required")
     @AssertTrue(message = "You must agree to receive the newsletter")
     private Boolean agreed;
+
+    @Schema(description = "Cloudflare Turnstile token (required for every verification email)")
+    @NotBlank(message = "Bot verification is required")
+    private String turnstileToken;
 }
