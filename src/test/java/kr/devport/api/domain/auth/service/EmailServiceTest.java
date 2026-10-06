@@ -79,7 +79,7 @@ class EmailServiceTest {
         MimeMessage message = sentMessage();
         assertThat(message.getAllRecipients()[0].toString()).isEqualTo("kim@example.com");
         assertThat(message.getSubject()).isEqualTo("[devport] 회원가입 인증번호");
-        assertThat(MailTestSupport.text(message)).contains("인증번호: 042917").contains("10분 후에 만료");
+        assertThat(MailTestSupport.text(message)).contains("인증번호: 042917").contains("10분 후에 만료").endsWith("감사합니다,\ndevport.kr\n");
         assertThat(MailTestSupport.html(message))
             .contains(">042917</span>")
             .contains("src=\"cid:devport-logo\"")
