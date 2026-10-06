@@ -11,4 +11,6 @@ import java.time.LocalDateTime;
 public interface NewsletterIssueRepository extends JpaRepository<NewsletterIssue, Long> {
 
     boolean existsByStatusAndCreatedAtAfter(NewsletterIssueStatus status, LocalDateTime createdAt);
+
+    boolean existsByDigestWeek(String digestWeek);
 }

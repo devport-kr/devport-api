@@ -74,7 +74,7 @@ class NewsletterMailServiceTest {
 
     @Test
     void issueMessageCarriesOneClickUnsubscribeHeadersAndFooterLink() throws Exception {
-        MimeMessage message = mailService.buildIssueMessage("reader@example.com", "tok123", "제목", "본문 https://devport.kr");
+        MimeMessage message = mailService.buildIssueMessage("reader@example.com", "tok123", "제목", "본문 https://devport.kr", null);
 
         assertThat(message.getHeader("List-Unsubscribe"))
             .containsExactly("<https://api.devport.kr/api/newsletter/unsubscribe/one-click?token=tok123>");
@@ -98,12 +98,23 @@ class NewsletterMailServiceTest {
         ReflectionTestUtils.setField(messageFactory, "senderName", "<dev & port>");
 
         String html = MailTestSupport.html(
-            mailService.buildIssueMessage("reader@example.com", "tok123", "제목", "<b>본문</b>\nhttps://devport.kr"));
+            mailService.buildIssueMessage("reader@example.com", "tok123", "제목", "<b>본문</b>\nhttps://devport.kr", null));
 
         assertThat(html)
             .contains("발신: &lt;dev &amp; port&gt;")
             .contains("&lt;b&gt;본문&lt;/b&gt;<br><a href=\"https://devport.kr\"")
             .doesNotContain("{{");
+    }
+
+    @Test
+    void issueUsesPrerenderedHtmlWhenGiven() throws Exception {
+        MimeMessage message = mailService.buildIssueMessage(
+            "reader@example.com", "tok123", "제목", "텍스트 본문", "<table><tr><td>카드</td></tr></table>");
+
+        assertThat(MailTestSupport.html(message))
+            .contains("<table><tr><td>카드</td></tr></table>")
+            .doesNotContain("텍스트 본문");
+        assertThat(MailTestSupport.text(message)).startsWith("텍스트 본문\n");
     }
 
     @Test
@@ -137,7 +148,7 @@ class NewsletterMailServiceTest {
         doThrow(new MailSendException(Map.of(new Object(), new RuntimeException("bounced"))))
             .when(mailSender).send(any(MimeMessage[].class));
 
-        int failed = mailService.sendIssueBatch("제목", "본문", List.of(
+        int failed = mailService.sendIssueBatch("제목", "본문", null, List.of(
             recipient(1, "a@example.com"), recipient(2, "b@example.com"), recipient(3, "c@example.com")));
 
         assertThat(failed).isEqualTo(1);
@@ -147,7 +158,7 @@ class NewsletterMailServiceTest {
     void sendIssueBatchCountsWholeBatchOnConnectionFailure() {
         doThrow(new MailAuthenticationException("bad credentials")).when(mailSender).send(any(MimeMessage[].class));
 
-        int failed = mailService.sendIssueBatch("제목", "본문", List.of(recipient(1, "a@example.com"), recipient(2, "b@example.com")));
+        int failed = mailService.sendIssueBatch("제목", "본문", null, List.of(recipient(1, "a@example.com"), recipient(2, "b@example.com")));
 
         assertThat(failed).isEqualTo(2);
     }

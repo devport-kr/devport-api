@@ -161,3 +161,5 @@ app:
 
   newsletter:
     api-url: ${API_PUBLIC_URL:https://api.devport.kr}
+    weekly-digest:
+      enabled: ${NEWSLETTER_WEEKLY_DIGEST_ENABLED:true}

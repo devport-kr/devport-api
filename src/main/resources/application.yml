@@ -191,6 +191,9 @@ app:
     send-batch-interval-ms: 1000
     # 사이트 전체 인증 메일 시간당 상한 (악용 시 SES bounce/complaint 평판 보호)
     verification-global-limit-per-hour: ${NEWSLETTER_VERIFICATION_GLOBAL_LIMIT_PER_HOUR:200}
+    # 매주 월 08:00(KST) 지난주 트렌딩 TOP 3 자동 발송. 로컬에서 실제 구독자에게 나가지 않도록 기본은 꺼둔다.
+    weekly-digest:
+      enabled: ${NEWSLETTER_WEEKLY_DIGEST_ENABLED:false}
 
   openai:
     api-key: ${OPENAI_API_KEY:}
