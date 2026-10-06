@@ -30,6 +30,7 @@ src/main/java/kr/devport/api/domain/
 ├── llm/         # LLM 벤치마크 순위, 미디어 모델 순위
 ├── mypage/      # 북마크, 읽기 기록
 ├── port/        # 프로젝트 상세, 릴리즈 타임라인, 댓글/투표
+├── newsletter/  # 뉴스레터 구독(이메일 double opt-in), 관리자 발송
 └── common/      # 설정, 보안, 예외처리, 로깅, 캐시, 웹훅
 ```
 
@@ -64,7 +65,8 @@ src/main/java/kr/devport/api/domain/
 
 | Method | Path                 | 설명                     |
 | ------ | -------------------- | ------------------------ |
-| POST   | `/signup`          | 로컬 계정 가입           |
+| POST   | `/signup`          | 로컬 계정 가입 (아이디/비밀번호, 가입 즉시 로그인) |
+| GET    | `/check-username`  | 아이디 사용 가능 여부    |
 | POST   | `/login`           | 로컬 계정 로그인         |
 | GET    | `/me`              | 현재 사용자 정보         |
 | POST   | `/refresh`         | Access Token 갱신 (쿠키) |
@@ -146,9 +148,20 @@ src/main/java/kr/devport/api/domain/
 | POST   | `/{projectId}/comments`                  | 댓글 작성          |
 | POST   | `/{projectId}/comments/{commentId}/vote` | 투표 (+1, -1, 0)   |
 
+### Newsletter (`/api/newsletter`)
+
+| Method | Path                     | 설명                                                  |
+| ------ | ------------------------ | ----------------------------------------------------- |
+| GET    | `/me`                  | 내 구독 상태 (`NONE`/`PENDING`/`ACTIVE`) — 인증 필요 |
+| POST   | `/me`                  | 구독 신청·인증 메일 재발송·이메일 변경 — 인증 필요   |
+| DELETE | `/me`                  | 구독 해지 — 인증 필요                                 |
+| POST   | `/confirm`             | 인증 메일 링크 토큰으로 구독 확정                     |
+| POST   | `/unsubscribe`         | 수신거부 링크 토큰으로 해지                           |
+| POST   | `/unsubscribe/one-click` | RFC 8058 one-click 수신거부 (메일 클라이언트용)     |
+
 ### Admin (`/api/admin`) — 관리자 전용
 
-게시글, 저장소, LLM 모델/벤치마크, 프로젝트, 사용자, 캐시, 위키 관리 엔드포인트.
+게시글, 저장소, LLM 모델/벤치마크, 프로젝트, 사용자, 캐시, 위키, 뉴스레터(`/api/admin/newsletter`: 통계·발송 이력·테스트 발송·전체 발송) 관리 엔드포인트.
 
 ### Webhook (`/api/webhooks/crawler`)
 
@@ -158,7 +171,8 @@ src/main/java/kr/devport/api/domain/
 
 - **JWT 이중 토큰**: Access Token (1시간, Authorization 헤더) + Refresh Token (30일, HttpOnly 쿠키)
 - **OAuth2**: GitHub, Google, Naver
-- **로컬 계정**: 이메일 가입 + 이메일 인증
+- **로컬 계정**: 아이디/비밀번호 + 약관 동의만으로 가입 (이메일 없음, 서버 측 Turnstile 검증 + IP당 시간당 10회 제한)
+- **뉴스레터**: 회원이 이메일 입력 → 인증 메일 링크 확인 후에만 발송 대상 (double opt-in), 모든 메일에 수신거부 링크
 - **Turnstile**: Cloudflare 봇 방지
 - **위키 채팅**: 비인증 사용자 IP당 1일 1회 제한 (Redis)
 
@@ -177,5 +191,6 @@ PostgreSQL 16 + pgvector 확장.
 | LLM     | `llm_models`, `llm_benchmarks`, `llm_benchmark_scores`, `model_creators`, 미디어 모델 테이블 5개     |
 | MyPage  | `user_saved_articles`, `user_read_history`                                                               |
 | Port    | `projects`, `project_comments`, `project_comment_votes`, `project_events`, `project_metrics_daily` |
+| Newsletter | `newsletter_subscriptions`, `newsletter_issues`                                                    |
 
 마이그레이션 파일은 `docs/migrations/`에 있습니다.

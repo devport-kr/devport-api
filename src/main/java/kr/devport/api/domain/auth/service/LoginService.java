@@ -4,7 +4,6 @@ import kr.devport.api.domain.auth.entity.User;
 import kr.devport.api.domain.auth.enums.AuthProvider;
 import kr.devport.api.domain.auth.dto.request.LoginRequest;
 import kr.devport.api.domain.auth.dto.response.AuthResponse;
-import kr.devport.api.domain.common.exception.EmailVerificationRequiredException;
 import kr.devport.api.domain.common.exception.InvalidCredentialsException;
 import kr.devport.api.domain.auth.repository.UserRepository;
 import kr.devport.api.domain.common.security.JwtTokenProvider;
@@ -40,10 +39,6 @@ public class LoginService {
         // Verify password
         if (!passwordEncoder.matches(request.getPassword(), user.getPassword())) {
             throw new InvalidCredentialsException("Invalid username or password");
-        }
-
-        if (!Boolean.TRUE.equals(user.getEmailVerified())) {
-            throw new EmailVerificationRequiredException("Email verification is required before login");
         }
 
         // Update last login
