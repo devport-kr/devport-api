@@ -1,23 +1,28 @@
 package kr.devport.api.domain.auth.service;
 
+import jakarta.mail.MessagingException;
 import kr.devport.api.domain.auth.entity.User;
+import kr.devport.api.domain.common.exception.EmailDeliveryException;
 import kr.devport.api.domain.common.logging.LogSanitizer;
+import kr.devport.api.domain.common.mail.MailMessageFactory;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.mail.SimpleMailMessage;
+import org.springframework.mail.MailException;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.stereotype.Service;
 
+import java.io.UnsupportedEncodingException;
+import java.util.Map;
+
+/** 계정 메일 발송. 본문은 classpath:templates/mail/auth/ 의 템플릿을 쓴다 ({@link MailMessageFactory}). */
 @Slf4j
 @Service
 @RequiredArgsConstructor
 public class EmailService {
 
     private final JavaMailSender mailSender;
-
-    @Value("${app.email.from}")
-    private String fromEmail;
+    private final MailMessageFactory messages;
 
     @Value("${app.email.verification-url}")
     private String verificationUrlTemplate;
@@ -27,24 +32,9 @@ public class EmailService {
 
     public void sendVerificationEmail(User user, String token) {
         try {
-            String verificationUrl = verificationUrlTemplate.replace("{token}", token);
-
-            SimpleMailMessage message = new SimpleMailMessage();
-            message.setFrom(fromEmail);
-            message.setTo(user.getEmail());
-            message.setSubject("DevPort - 이메일 인증");
-            message.setText(
-                "안녕하세요 " + (user.getName() != null ? user.getName() : user.getUsername()) + "님,\n\n" +
-                "devport에 가입해주셔서 감사합니다!\n\n" +
-                "아래 링크를 클릭하여 이메일 주소를 인증해주세요:\n" +
-                verificationUrl + "\n\n" +
-                "이 링크는 24시간 후에 만료됩니다.\n\n" +
-                "본인이 가입하지 않았다면 이 이메일을 무시하셔도 됩니다.\n\n" +
-                "감사합니다,\n" +
-                "devport"
-            );
-
-            mailSender.send(message);
+            mailSender.send(messages.create(user.getEmail(), "[devport] 이메일 인증", "auth/verify-email", Map.of(
+                "name", displayName(user),
+                "verificationUrl", verificationUrlTemplate.replace("{token}", token))));
             log.debug("Verification email sent to {}", LogSanitizer.maskEmail(user.getEmail()));
         } catch (Exception e) {
             log.error("Failed to send verification email to {}", LogSanitizer.maskEmail(user.getEmail()), e);
@@ -54,27 +44,29 @@ public class EmailService {
 
     public void sendPasswordResetEmail(User user, String token) {
         try {
-            String resetUrl = resetPasswordUrlTemplate.replace("{token}", token);
-
-            SimpleMailMessage message = new SimpleMailMessage();
-            message.setFrom(fromEmail);
-            message.setTo(user.getEmail());
-            message.setSubject("DevPort - 비밀번호 재설정");
-            message.setText(
-                "안녕하세요 " + (user.getName() != null ? user.getName() : user.getUsername()) + "님,\n\n" +
-                "아래 링크를 클릭하여 비밀번호를 재설정해주세요:\n" +
-                resetUrl + "\n\n" +
-                "이 링크는 1시간 후에 만료됩니다.\n\n" +
-                "본인이 요청하지 않았다면 이 이메일을 무시하셔도 됩니다.\n\n" +
-                "감사합니다,\n" +
-                "devport"
-            );
-
-            mailSender.send(message);
+            mailSender.send(messages.create(user.getEmail(), "[devport] 비밀번호 재설정", "auth/reset-password", Map.of(
+                "name", displayName(user),
+                "resetUrl", resetPasswordUrlTemplate.replace("{token}", token))));
             log.debug("Password reset email sent to {}", LogSanitizer.maskEmail(user.getEmail()));
         } catch (Exception e) {
             log.error("Failed to send password reset email to {}", LogSanitizer.maskEmail(user.getEmail()), e);
             throw new RuntimeException("Failed to send password reset email", e);
         }
+    }
+
+    /** 회원가입 이메일 인증번호. 실패하면 {@link EmailDeliveryException}(503)으로 알려 사용자가 다시 시도하게 한다. */
+    public void sendSignupCode(String email, String code, long expiresInMinutes) {
+        try {
+            mailSender.send(messages.create(email, "[devport] 회원가입 인증번호", "auth/signup-code", Map.of(
+                "code", code,
+                "expiresInMinutes", String.valueOf(expiresInMinutes))));
+            log.debug("Signup code email sent to {}", LogSanitizer.maskEmail(email));
+        } catch (MailException | MessagingException | UnsupportedEncodingException e) {
+            throw new EmailDeliveryException("인증 메일 발송에 실패했습니다. 잠시 후 다시 시도해주세요.", e);
+        }
+    }
+
+    private static String displayName(User user) {
+        return user.getName() != null ? user.getName() : user.getUsername();
     }
 }

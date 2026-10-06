@@ -174,11 +174,13 @@ app:
 
   email:
     from: ${EMAIL_FROM:noreply@devport.kr}
+    sender-name: devport
+    # 메일 로고/footer가 가리키는 사이트 주소
+    site-url: ${FRONTEND_URL:http://localhost:5173}
     verification-url: ${FRONTEND_URL:http://localhost:5173}/verify-email?token={token}
     reset-password-url: ${FRONTEND_URL:http://localhost:5173}/reset-password?token={token}
 
   newsletter:
-    sender-name: devport
     # 인증/수신거부 링크가 가리키는 프론트 주소 (/newsletter/confirm, /newsletter/unsubscribe)
     site-url: ${FRONTEND_URL:http://localhost:5173}
     # List-Unsubscribe one-click 헤더가 가리키는 API 주소
