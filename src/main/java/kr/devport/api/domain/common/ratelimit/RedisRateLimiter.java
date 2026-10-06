@@ -51,6 +51,22 @@ public class RedisRateLimiter {
     }
 
     /**
+     * {@link #acquire}로 얻은 1회분을 되돌린다. 실제 작업(메일 발송 등)이 실패해 한도를 소모하면 안 될 때 쓴다.
+     * 0 이하가 되면 키를 지워, 윈도우가 이미 만료된 키를 DECR해 TTL 없는 음수 키가 남지 않게 한다.
+     */
+    public void release(String key) {
+        String redisKey = KEY_PREFIX + key;
+        try {
+            Long count = redisTemplate.opsForValue().decrement(redisKey);
+            if (count != null && count <= 0) {
+                redisTemplate.delete(redisKey);
+            }
+        } catch (Exception e) {
+            log.warn("rate-limit: failed to release key={}: {}", redisKey, e.getMessage());
+        }
+    }
+
+    /**
      * Redis 장애 시 요청을 막지 않는다(fail-open).
      *
      * @return 윈도우 내 호출 횟수가 limit 이하이거나 Redis를 쓸 수 없으면 true
