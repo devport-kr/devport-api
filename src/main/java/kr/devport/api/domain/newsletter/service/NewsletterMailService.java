@@ -4,6 +4,7 @@ import jakarta.mail.MessagingException;
 import jakarta.mail.internet.MimeMessage;
 import kr.devport.api.domain.common.exception.EmailDeliveryException;
 import kr.devport.api.domain.common.logging.LogSanitizer;
+import kr.devport.api.domain.common.mail.MailTemplateRenderer;
 import kr.devport.api.domain.newsletter.entity.NewsletterSubscription;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -21,11 +22,12 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**
- * 뉴스레터 관련 메일 발송.
+ * 뉴스레터 관련 메일 발송. 본문은 classpath:templates/mail/newsletter/ 의 템플릿을 쓴다.
  * 수신 동의/거부 처리 결과 안내 메일은 「정보통신망법」 제50조에 따른 통지이며, 실패해도 요청을 막지 않는다.
  */
 @Slf4j
@@ -36,7 +38,14 @@ public class NewsletterMailService {
     private static final DateTimeFormatter DATE_TIME_FORMAT = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
     private static final Pattern URL_PATTERN = Pattern.compile("https?://[^\\s<>\"']*[^\\s<>\"'.,;:!?)\\]]");
 
+    private static final String VERIFICATION_TEMPLATE = "newsletter/verification.txt";
+    private static final String SUBSCRIBED_TEMPLATE = "newsletter/subscribed.txt";
+    private static final String UNSUBSCRIBED_TEMPLATE = "newsletter/unsubscribed.txt";
+    private static final String ISSUE_TEXT_TEMPLATE = "newsletter/issue.txt";
+    private static final String ISSUE_HTML_TEMPLATE = "newsletter/issue.html";
+
     private final JavaMailSender mailSender;
+    private final MailTemplateRenderer templates;
 
     @Value("${app.email.from}")
     private String fromEmail;
@@ -51,15 +60,9 @@ public class NewsletterMailService {
     private String apiUrl;
 
     public void sendVerificationEmail(String email, String rawToken) {
-        String confirmUrl = siteUrl + "/newsletter/confirm?token=" + rawToken;
-        String text = "안녕하세요,\n\n"
-            + "devport 뉴스레터 구독 신청이 접수되었습니다.\n"
-            + "아래 링크에서 '구독 확인'을 누르면 이메일 인증과 함께 구독이 완료됩니다:\n"
-            + confirmUrl + "\n\n"
-            + "이 링크는 24시간 후에 만료됩니다.\n"
-            + "본인이 신청하지 않았다면 이 메일을 무시하세요. 인증하지 않으면 뉴스레터는 발송되지 않습니다.\n\n"
-            + "감사합니다,\n"
-            + senderName;
+        String text = templates.render(VERIFICATION_TEMPLATE, Map.of(
+            "confirmUrl", siteUrl + "/newsletter/confirm?token=" + rawToken,
+            "senderName", senderName));
 
         try {
             mailSender.send(buildPlainMessage(email, "[devport] 뉴스레터 구독 이메일 인증", text));
@@ -70,28 +73,18 @@ public class NewsletterMailService {
     }
 
     public void sendSubscribedNotice(NewsletterSubscription subscription) {
-        String text = "안녕하세요,\n\n"
-            + "devport 뉴스레터 수신 동의가 처리되었습니다.\n\n"
-            + "- 전송자: " + senderName + " (" + siteUrl + ")\n"
-            + "- 수신 동의 일시: " + DATE_TIME_FORMAT.format(subscription.getConsentedAt()) + "\n"
-            + "- 처리 결과: 구독 완료\n\n"
-            + "더 이상 받고 싶지 않으시면 언제든 아래 링크에서 수신을 거부할 수 있습니다:\n"
-            + unsubscribePageUrl(subscription.getUnsubscribeToken()) + "\n\n"
-            + "감사합니다,\n"
-            + senderName;
-        sendNoticeQuietly(subscription.getEmail(), "[devport] 뉴스레터 구독이 완료되었습니다", text);
+        sendNoticeQuietly(subscription.getEmail(), "[devport] 뉴스레터 구독이 완료되었습니다", SUBSCRIBED_TEMPLATE, Map.of(
+            "senderName", senderName,
+            "siteUrl", siteUrl,
+            "consentedAt", DATE_TIME_FORMAT.format(subscription.getConsentedAt()),
+            "unsubscribeUrl", unsubscribePageUrl(subscription.getUnsubscribeToken())));
     }
 
     public void sendUnsubscribedNotice(String email, LocalDateTime unsubscribedAt) {
-        String text = "안녕하세요,\n\n"
-            + "devport 뉴스레터 수신 거부가 처리되었습니다.\n\n"
-            + "- 전송자: " + senderName + " (" + siteUrl + ")\n"
-            + "- 수신 거부 일시: " + DATE_TIME_FORMAT.format(unsubscribedAt) + "\n"
-            + "- 처리 결과: 수신 거부 완료 (구독 정보 삭제)\n\n"
-            + "앞으로 뉴스레터가 발송되지 않습니다. 다시 받아보시려면 마이페이지에서 구독을 신청해주세요.\n\n"
-            + "감사합니다,\n"
-            + senderName;
-        sendNoticeQuietly(email, "[devport] 뉴스레터 수신 거부가 처리되었습니다", text);
+        sendNoticeQuietly(email, "[devport] 뉴스레터 수신 거부가 처리되었습니다", UNSUBSCRIBED_TEMPLATE, Map.of(
+            "senderName", senderName,
+            "siteUrl", siteUrl,
+            "unsubscribedAt", DATE_TIME_FORMAT.format(unsubscribedAt)));
     }
 
     /** 관리자 미리보기 발송. 수신거부 링크는 동작하지 않는 더미 토큰을 쓴다. */
@@ -145,10 +138,11 @@ public class NewsletterMailService {
         return apiUrl + "/api/newsletter/unsubscribe/one-click?token=" + unsubscribeToken;
     }
 
-    private void sendNoticeQuietly(String email, String subject, String text) {
+    /** 템플릿 오류(IllegalStateException)도 삼켜서 구독 처리 트랜잭션을 롤백시키지 않는다. */
+    private void sendNoticeQuietly(String email, String subject, String template, Map<String, String> variables) {
         try {
-            mailSender.send(buildPlainMessage(email, subject, text));
-        } catch (MailException | MessagingException | UnsupportedEncodingException e) {
+            mailSender.send(buildPlainMessage(email, subject, templates.render(template, variables)));
+        } catch (MailException | IllegalStateException | MessagingException | UnsupportedEncodingException e) {
             log.warn("Failed to send newsletter notice to {}", LogSanitizer.maskEmail(email), e);
         }
     }
@@ -182,32 +176,19 @@ public class NewsletterMailService {
     }
 
     private String renderText(String content, String unsubscribeUrl) {
-        return content.strip() + "\n\n"
-            + "--\n"
-            + "본 메일은 devport 뉴스레터 수신에 동의하신 분께 발송되었습니다.\n"
-            + "수신을 원하지 않으시면 아래 링크에서 수신을 거부할 수 있습니다:\n"
-            + unsubscribeUrl + "\n"
-            + "발신: " + senderName + " (" + siteUrl + ")";
+        return templates.render(ISSUE_TEXT_TEMPLATE, Map.of(
+            "content", content.strip(),
+            "unsubscribeUrl", unsubscribeUrl,
+            "senderName", senderName,
+            "siteUrl", siteUrl));
     }
 
     String renderHtml(String content, String unsubscribeUrl) {
-        String escapedUnsubscribeUrl = HtmlUtils.htmlEscape(unsubscribeUrl);
-        String escapedSiteUrl = HtmlUtils.htmlEscape(siteUrl);
-        return "<!DOCTYPE html><html lang=\"ko\"><head><meta charset=\"UTF-8\">"
-            + "<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\"></head>"
-            + "<body style=\"margin:0;padding:0;background:#f4f5f7;\">"
-            + "<div style=\"max-width:600px;margin:0 auto;padding:32px 16px;"
-            + "font-family:-apple-system,BlinkMacSystemFont,'Apple SD Gothic Neo','Malgun Gothic',sans-serif;color:#1f2328;\">"
-            + "<div style=\"font-size:20px;font-weight:700;margin-bottom:24px;\">devport<span style=\"color:#6366f1;\">.</span></div>"
-            + "<div style=\"background:#ffffff;border-radius:12px;padding:28px;font-size:15px;line-height:1.7;word-break:break-word;\">"
-            + contentToHtml(content)
-            + "</div>"
-            + "<div style=\"margin-top:24px;font-size:12px;line-height:1.6;color:#6b7280;\">"
-            + "본 메일은 devport 뉴스레터 수신에 동의하신 분께 발송되었습니다.<br>"
-            + "수신을 원하지 않으시면 <a href=\"" + escapedUnsubscribeUrl + "\" style=\"color:#6b7280;\">수신거부</a>를 눌러주세요.<br>"
-            + "발신: " + HtmlUtils.htmlEscape(senderName)
-            + " · <a href=\"" + escapedSiteUrl + "\" style=\"color:#6b7280;\">" + escapedSiteUrl + "</a>"
-            + "</div></div></body></html>";
+        return templates.render(ISSUE_HTML_TEMPLATE, Map.of(
+            "contentHtml", contentToHtml(content),
+            "unsubscribeUrl", unsubscribeUrl,
+            "senderName", senderName,
+            "siteUrl", siteUrl));
     }
 
     /** 일반 텍스트 본문을 이스케이프하고 URL은 링크로, 줄바꿈은 &lt;br&gt;로 바꾼다. */

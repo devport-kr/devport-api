@@ -1,0 +1,7 @@
+{{content}}
+
+--
+본 메일은 devport 뉴스레터 수신에 동의하신 분께 발송되었습니다.
+수신을 원하지 않으시면 아래 링크에서 수신을 거부할 수 있습니다:
+{{unsubscribeUrl}}
+발신: {{senderName}} ({{siteUrl}})
