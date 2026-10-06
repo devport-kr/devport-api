@@ -1,7 +1,5 @@
 package kr.devport.api.domain.newsletter.service;
 
-import kr.devport.api.domain.auth.entity.User;
-import kr.devport.api.domain.auth.repository.UserRepository;
 import kr.devport.api.domain.auth.service.TurnstileService;
 import kr.devport.api.domain.common.exception.BotVerificationException;
 import kr.devport.api.domain.common.exception.DuplicateEmailException;
@@ -52,9 +50,6 @@ class NewsletterSubscriptionServiceTest {
     private NewsletterSubscriptionRepository subscriptionRepository;
 
     @Mock
-    private UserRepository userRepository;
-
-    @Mock
     private NewsletterMailService mailService;
 
     @Mock
@@ -64,15 +59,12 @@ class NewsletterSubscriptionServiceTest {
     private TurnstileService turnstileService;
 
     private NewsletterSubscriptionService service;
-    private User user;
 
     @BeforeEach
     void setUp() {
         service = new NewsletterSubscriptionService(
-            subscriptionRepository, userRepository, mailService, rateLimiter, turnstileService);
+            subscriptionRepository, mailService, rateLimiter, turnstileService);
         ReflectionTestUtils.setField(service, "globalVerificationLimitPerHour", 200);
-        user = User.builder().id(USER_ID).username("tester").build();
-        when(userRepository.getReferenceById(USER_ID)).thenReturn(user);
         when(rateLimiter.acquire(anyString(), anyInt(), any())).thenReturn(RedisRateLimiter.Result.ALLOWED);
         when(turnstileService.validateToken("turnstile", CLIENT_IP)).thenReturn(true);
         when(subscriptionRepository.save(any(NewsletterSubscription.class))).thenAnswer(invocation -> invocation.getArgument(0));
@@ -86,7 +78,7 @@ class NewsletterSubscriptionServiceTest {
         LocalDateTime now = LocalDateTime.now();
         return NewsletterSubscription.builder()
             .id(11L)
-            .user(user)
+            .userId(USER_ID)
             .email(email)
             .status(status)
             .unsubscribeToken("unsubscribe-token")
@@ -110,7 +102,7 @@ class NewsletterSubscriptionServiceTest {
         NewsletterSubscription subscription = saved.getValue();
         assertThat(subscription.getStatus()).isEqualTo(NewsletterSubscriptionStatus.PENDING);
         assertThat(subscription.getEmail()).isEqualTo("tester@example.com");
-        assertThat(subscription.getUser()).isSameAs(user);
+        assertThat(subscription.getUserId()).isEqualTo(USER_ID);
         assertThat(subscription.getConsentedAt()).isNotNull();
         assertThat(subscription.getUnsubscribeToken()).hasSize(43);
         assertThat(subscription.getVerificationTokenHash())
