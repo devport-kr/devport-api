@@ -8,6 +8,7 @@ import kr.devport.api.domain.auth.enums.AuthProvider;
 import kr.devport.api.domain.auth.enums.UserRole;
 import kr.devport.api.domain.auth.repository.UserRepository;
 import kr.devport.api.domain.auth.service.TurnstileService;
+import kr.devport.api.domain.common.mail.MailTestSupport;
 import kr.devport.api.domain.common.ratelimit.RedisRateLimiter;
 import kr.devport.api.domain.common.security.JwtTokenProvider;
 import kr.devport.api.domain.newsletter.entity.NewsletterIssue;
@@ -169,7 +170,7 @@ class SignupAndNewsletterFlowIntegrationTest {
         verify(mailSender, atLeastOnce()).send(mailCaptor.capture());
         MimeMessage verificationMail = mailCaptor.getValue();
         assertThat(verificationMail.getAllRecipients()[0].toString()).isEqualTo("flow@example.com");
-        Matcher tokenMatcher = TOKEN_IN_LINK.matcher((String) verificationMail.getContent());
+        Matcher tokenMatcher = TOKEN_IN_LINK.matcher(MailTestSupport.text(verificationMail));
         assertThat(tokenMatcher.find()).isTrue();
         String verificationToken = tokenMatcher.group(1);
 

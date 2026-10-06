@@ -4,7 +4,8 @@ import jakarta.mail.Session;
 import jakarta.mail.internet.InternetAddress;
 import jakarta.mail.internet.MimeMessage;
 import kr.devport.api.domain.common.exception.EmailDeliveryException;
-import kr.devport.api.domain.common.mail.MailTemplateRenderer;
+import kr.devport.api.domain.common.mail.MailMessageFactory;
+import kr.devport.api.domain.common.mail.MailTestSupport;
 import kr.devport.api.domain.newsletter.entity.NewsletterSubscription;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -42,13 +43,13 @@ class NewsletterMailServiceTest {
     @Mock
     private JavaMailSender mailSender;
 
+    private MailMessageFactory messageFactory;
     private NewsletterMailService mailService;
 
     @BeforeEach
     void setUp() {
-        mailService = new NewsletterMailService(mailSender, new MailTemplateRenderer());
-        ReflectionTestUtils.setField(mailService, "fromEmail", "noreply@devport.kr");
-        ReflectionTestUtils.setField(mailService, "senderName", "devport");
+        messageFactory = MailTestSupport.messageFactory(mailSender);
+        mailService = new NewsletterMailService(mailSender, messageFactory);
         ReflectionTestUtils.setField(mailService, "siteUrl", "https://devport.kr");
         ReflectionTestUtils.setField(mailService, "apiUrl", "https://api.devport.kr");
         when(mailSender.createMimeMessage()).thenAnswer(invocation -> new MimeMessage(Session.getInstance(new Properties())));
@@ -85,16 +86,19 @@ class NewsletterMailServiceTest {
         message.saveChanges();
         assertThatCode(() -> message.writeTo(new ByteArrayOutputStream())).doesNotThrowAnyException();
 
-        assertThat(mailService.renderHtml("본문", mailService.unsubscribePageUrl("tok123")))
+        assertThat(MailTestSupport.html(message))
             .contains("https://devport.kr/newsletter/unsubscribe?token=tok123")
-            .contains("수신거부");
+            .contains("수신거부")
+            .contains("src=\"cid:devport-logo\"");
+        assertThat(MailTestSupport.text(message)).contains("https://devport.kr/newsletter/unsubscribe?token=tok123");
     }
 
     @Test
-    void issueHtmlTemplateEscapesSenderNameButKeepsRenderedContent() {
-        ReflectionTestUtils.setField(mailService, "senderName", "<dev & port>");
+    void issueHtmlTemplateEscapesSenderNameButKeepsRenderedContent() throws Exception {
+        ReflectionTestUtils.setField(messageFactory, "senderName", "<dev & port>");
 
-        String html = mailService.renderHtml("<b>본문</b>\nhttps://devport.kr", mailService.unsubscribePageUrl("tok123"));
+        String html = MailTestSupport.html(
+            mailService.buildIssueMessage("reader@example.com", "tok123", "제목", "<b>본문</b>\nhttps://devport.kr"));
 
         assertThat(html)
             .contains("발신: &lt;dev &amp; port&gt;")
@@ -103,7 +107,7 @@ class NewsletterMailServiceTest {
     }
 
     @Test
-    void plainMailsAreRenderedFromTemplates() throws Exception {
+    void noticeMailsAreRenderedFromTemplatesWithLogo() throws Exception {
         NewsletterSubscription subscription = recipient(1, "reader@example.com");
         subscription.setConsentedAt(LocalDateTime.of(2026, 10, 6, 9, 30));
 
@@ -115,7 +119,8 @@ class NewsletterMailServiceTest {
         verify(mailSender, times(3)).send(captor.capture());
         List<String> bodies = new ArrayList<>();
         for (MimeMessage message : captor.getAllValues()) {
-            bodies.add((String) message.getContent());
+            bodies.add(MailTestSupport.text(message));
+            assertThat(MailTestSupport.html(message)).contains("src=\"cid:devport-logo\"").doesNotContain("{{");
         }
 
         assertThat(bodies).allSatisfy(body -> assertThat(body).doesNotContain("{{").endsWith("devport\n"));
