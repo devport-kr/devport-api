@@ -23,7 +23,7 @@ import java.util.Map;
  * 모든 메일을 같은 모양으로 만든다.
  * {template}.txt는 text 파트, {template}.html은 공통 레이아웃(로고 헤더 + 본문 카드 + footer)에 넣어 html 파트가 된다.
  * 로고는 원격 이미지 차단과 무관하게 보이도록 inline(cid) 첨부로 넣는다.
- * 모든 템플릿에서 {@code {{senderName}}}, {@code {{siteUrl}}}을 쓸 수 있다.
+ * 모든 템플릿에서 {@code {{senderName}}}, {@code {{siteUrl}}}(링크용), {@code {{siteHost}}}(표시용, 예: devport.kr)을 쓸 수 있다.
  */
 @Component
 @RequiredArgsConstructor
@@ -61,6 +61,7 @@ public class MailMessageFactory {
         Map<String, String> vars = new HashMap<>(variables);
         vars.putIfAbsent("senderName", senderName);
         vars.putIfAbsent("siteUrl", siteUrl);
+        vars.putIfAbsent("siteHost", siteHost(siteUrl));
 
         String html = templates.render(LAYOUT, Map.of(
             "body", templates.render(template + ".html", vars),
@@ -76,6 +77,11 @@ public class MailMessageFactory {
         // setText 이후에 추가해야 메일 클라이언트가 cid 참조를 찾는다
         helper.addInline(LOGO_CONTENT_ID, logo, "image/png");
         return message;
+    }
+
+    /** 화면에 보여줄 주소: https://devport.kr/ → devport.kr */
+    static String siteHost(String siteUrl) {
+        return siteUrl.replaceFirst("^https?://", "").replaceFirst("/+$", "");
     }
 
     private static Resource loadLogo() {

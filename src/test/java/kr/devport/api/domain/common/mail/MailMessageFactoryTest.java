@@ -41,6 +41,7 @@ class MailMessageFactoryTest {
             .contains("src=\"cid:" + MailMessageFactory.LOGO_CONTENT_ID + "\"")
             .contains("href=\"https://devport.kr/newsletter/confirm?token=t\"")
             .contains("본 메일은 발신 전용입니다.")
+            .contains("<a href=\"https://devport.kr\" style=\"color:#6b7280;\">devport.kr</a>")
             .doesNotContain("{{");
         assertThat(MailTestSupport.text(message))
             .contains("https://devport.kr/newsletter/confirm?token=t")
@@ -62,6 +63,13 @@ class MailMessageFactoryTest {
     }
 
     @Test
+    void siteHostDropsSchemeAndTrailingSlash() {
+        assertThat(MailMessageFactory.siteHost("https://devport.kr")).isEqualTo("devport.kr");
+        assertThat(MailMessageFactory.siteHost("https://devport.kr/")).isEqualTo("devport.kr");
+        assertThat(MailMessageFactory.siteHost("http://localhost:5173")).isEqualTo("localhost:5173");
+    }
+
+    @Test
     void customFooterReplacesDefault() throws Exception {
         MimeMessage message = factory.create("reader@example.com", "제목", "newsletter/issue", "newsletter/issue-footer.html", Map.of(
             "content", "본문",
@@ -70,6 +78,7 @@ class MailMessageFactoryTest {
 
         assertThat(MailTestSupport.html(message))
             .contains("<a href=\"https://devport.kr/newsletter/unsubscribe?token=t\" style=\"color:#6b7280;\">수신거부</a>")
+            .contains(">devport.kr</a>")
             .doesNotContain("발신 전용");
     }
 }
