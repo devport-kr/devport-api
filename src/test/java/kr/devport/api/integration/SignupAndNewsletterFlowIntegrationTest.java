@@ -105,7 +105,7 @@ class SignupAndNewsletterFlowIntegrationTest {
 
     private static String signupJson(String username, String email, String emailVerificationToken) {
         return """
-            {"username":"%s","password":"Password@123","email":"%s","emailVerificationToken":"%s","agreedTermsVersion":"2026-03-24"}
+            {"username":"%s","password":"Password@123","email":"%s","emailVerificationToken":"%s","agreedTermsVersion":"2026-10-06"}
             """.formatted(username, email, emailVerificationToken);
     }
 
@@ -309,14 +309,14 @@ class SignupAndNewsletterFlowIntegrationTest {
 
         mockMvc.perform(post("/api/auth/signup")
                 .contentType(MediaType.APPLICATION_JSON)
-                .content("{\"username\":\"noemail\",\"password\":\"Password@123\",\"agreedTermsVersion\":\"2026-03-24\"}"))
+                .content("{\"username\":\"noemail\",\"password\":\"Password@123\",\"agreedTermsVersion\":\"2026-10-06\"}"))
             .andExpect(status().isBadRequest())
             .andExpect(jsonPath("$.validationErrors.email").exists())
             .andExpect(jsonPath("$.validationErrors.emailVerificationToken").exists());
 
         mockMvc.perform(post("/api/auth/signup")
                 .contentType(MediaType.APPLICATION_JSON)
-                .content("{\"username\":\"weakpw\",\"password\":\"password123\",\"email\":\"a@example.com\",\"emailVerificationToken\":\"t\",\"agreedTermsVersion\":\"2026-03-24\"}"))
+                .content("{\"username\":\"weakpw\",\"password\":\"password123\",\"email\":\"a@example.com\",\"emailVerificationToken\":\"t\",\"agreedTermsVersion\":\"2026-10-06\"}"))
             .andExpect(status().isBadRequest())
             .andExpect(jsonPath("$.validationErrors.password").exists());
 
