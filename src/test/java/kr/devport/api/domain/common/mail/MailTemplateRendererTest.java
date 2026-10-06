@@ -31,9 +31,9 @@ class MailTemplateRendererTest {
 
     @Test
     void missingVariableFails() {
-        assertThatThrownBy(() -> renderer.render("newsletter/verification.txt", Map.of("confirmUrl", "https://x")))
+        assertThatThrownBy(() -> renderer.render("newsletter/verification.txt", Map.of()))
             .isInstanceOf(IllegalStateException.class)
-            .hasMessageContaining("senderName");
+            .hasMessageContaining("confirmUrl");
     }
 
     @Test
