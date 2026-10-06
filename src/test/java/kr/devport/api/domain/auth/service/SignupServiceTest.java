@@ -5,8 +5,9 @@ import kr.devport.api.domain.auth.dto.response.AuthResponse;
 import kr.devport.api.domain.auth.entity.User;
 import kr.devport.api.domain.auth.enums.AuthProvider;
 import kr.devport.api.domain.auth.repository.UserRepository;
-import kr.devport.api.domain.common.exception.BotVerificationException;
+import kr.devport.api.domain.common.exception.DuplicateEmailException;
 import kr.devport.api.domain.common.exception.DuplicateUsernameException;
+import kr.devport.api.domain.common.exception.EmailVerificationCodeException;
 import kr.devport.api.domain.common.exception.InvalidTermsAgreementException;
 import kr.devport.api.domain.common.exception.TooManyRequestsException;
 import kr.devport.api.domain.common.ratelimit.RedisRateLimiter;
@@ -31,6 +32,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -48,7 +50,7 @@ class SignupServiceTest {
     private PasswordEncoder passwordEncoder;
 
     @Mock
-    private TurnstileService turnstileService;
+    private SignupEmailVerificationService signupEmailVerificationService;
 
     @Mock
     private JwtTokenProvider jwtTokenProvider;
@@ -66,14 +68,13 @@ class SignupServiceTest {
         signupService = new SignupService(
             userRepository,
             passwordEncoder,
-            turnstileService,
+            signupEmailVerificationService,
             new TermsVersionPolicy("2026-03-24", List.of()),
             jwtTokenProvider,
             refreshTokenService,
             rateLimiter
         );
         when(rateLimiter.tryAcquire(anyString(), anyInt(), any())).thenReturn(true);
-        when(turnstileService.validateToken("turnstile-token", CLIENT_IP)).thenReturn(true);
         when(passwordEncoder.encode("Password@123")).thenReturn("encoded-password");
         when(userRepository.saveAndFlush(any(User.class))).thenAnswer(invocation -> {
             User user = invocation.getArgument(0);
@@ -89,13 +90,14 @@ class SignupServiceTest {
         return SignupRequest.builder()
             .username(username)
             .password("Password@123")
+            .email(" Tester@Example.com ")
+            .emailVerificationToken("verification-token")
             .agreedTermsVersion(termsVersion)
-            .turnstileToken("turnstile-token")
             .build();
     }
 
     @Test
-    void signupCreatesLocalAccountWithoutEmailAndLogsIn() {
+    void signupCreatesLocalAccountWithVerifiedEmailAndLogsIn() {
         AuthResponse response = signupService.signup(request("tester", "2026-03-24"), CLIENT_IP);
 
         ArgumentCaptor<User> userCaptor = ArgumentCaptor.forClass(User.class);
@@ -105,7 +107,9 @@ class SignupServiceTest {
         assertThat(savedUser.getUsername()).isEqualTo("tester");
         assertThat(savedUser.getName()).isEqualTo("tester");
         assertThat(savedUser.getPassword()).isEqualTo("encoded-password");
-        assertThat(savedUser.getEmail()).isNull();
+        assertThat(savedUser.getEmail()).isEqualTo("tester@example.com");
+        assertThat(savedUser.getEmailVerified()).isTrue();
+        assertThat(savedUser.getEmailAddedAt()).isNotNull();
         assertThat(savedUser.getAuthProvider()).isEqualTo(AuthProvider.local);
         assertThat(savedUser.getAgreedTermsVersion()).isEqualTo("2026-03-24");
         assertThat(savedUser.getAgreedAt()).isNotNull().isBeforeOrEqualTo(LocalDateTime.now());
@@ -113,7 +117,8 @@ class SignupServiceTest {
         assertThat(response.getAccessToken()).isEqualTo("access-token");
         assertThat(response.getRefreshToken()).isEqualTo("refresh-token");
         assertThat(response.getExpiresIn()).isEqualTo(3600L);
-        verify(turnstileService).validateToken("turnstile-token", CLIENT_IP);
+        verify(signupEmailVerificationService).requireVerified("tester@example.com", "verification-token");
+        verify(signupEmailVerificationService).consume("verification-token");
     }
 
     @Test
@@ -130,7 +135,7 @@ class SignupServiceTest {
 
         assertThatThrownBy(() -> signupService.signup(request("Tester", "2026-03-24"), CLIENT_IP))
             .isInstanceOf(DuplicateUsernameException.class);
-        verify(turnstileService, never()).validateToken(anyString(), anyString());
+        verify(signupEmailVerificationService, never()).requireVerified(anyString(), anyString());
     }
 
     @Test
@@ -141,11 +146,22 @@ class SignupServiceTest {
     }
 
     @Test
-    void signupRejectsFailedBotVerification() {
-        when(turnstileService.validateToken("turnstile-token", CLIENT_IP)).thenReturn(false);
+    void signupRejectsUnverifiedEmail() {
+        doThrow(new EmailVerificationCodeException("이메일 인증이 만료되었거나 올바르지 않습니다."))
+            .when(signupEmailVerificationService).requireVerified("tester@example.com", "verification-token");
 
         assertThatThrownBy(() -> signupService.signup(request("tester", "2026-03-24"), CLIENT_IP))
-            .isInstanceOf(BotVerificationException.class);
+            .isInstanceOf(EmailVerificationCodeException.class);
+        verify(userRepository, never()).saveAndFlush(any());
+        verify(signupEmailVerificationService, never()).consume(anyString());
+    }
+
+    @Test
+    void signupRejectsAlreadyRegisteredEmail() {
+        when(userRepository.existsByEmailIgnoreCase("tester@example.com")).thenReturn(true);
+
+        assertThatThrownBy(() -> signupService.signup(request("tester", "2026-03-24"), CLIENT_IP))
+            .isInstanceOf(DuplicateEmailException.class);
         verify(userRepository, never()).saveAndFlush(any());
     }
 
@@ -155,12 +171,11 @@ class SignupServiceTest {
 
         assertThatThrownBy(() -> signupService.signup(request("tester", "2026-03-24"), CLIENT_IP))
             .isInstanceOf(TooManyRequestsException.class);
-        verify(turnstileService, never()).validateToken(anyString(), anyString());
+        verify(signupEmailVerificationService, never()).requireVerified(anyString(), anyString());
     }
 
     @Test
     void signupSkipsIpLimitWhenOnlyAPrivateProxyIpIsVisible() {
-        when(turnstileService.validateToken("turnstile-token", "10.0.1.179")).thenReturn(true);
         when(rateLimiter.tryAcquire(anyString(), anyInt(), any())).thenReturn(false);
 
         AuthResponse response = signupService.signup(request("tester", "2026-03-24"), "10.0.1.179");
@@ -175,6 +190,7 @@ class SignupServiceTest {
 
         assertThatThrownBy(() -> signupService.signup(request("tester", "2026-03-24"), CLIENT_IP))
             .isInstanceOf(DuplicateUsernameException.class);
+        verify(signupEmailVerificationService, never()).consume(anyString());
     }
 
     @Test
