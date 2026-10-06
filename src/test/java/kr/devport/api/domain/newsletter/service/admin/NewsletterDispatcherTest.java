@@ -80,8 +80,8 @@ class NewsletterDispatcherTest {
             NewsletterSubscriptionStatus.ACTIVE, 0L, Limit.of(2))).thenReturn(first);
         when(subscriptionRepository.findByStatusAndIdGreaterThanOrderByIdAsc(
             NewsletterSubscriptionStatus.ACTIVE, 2L, Limit.of(2))).thenReturn(second);
-        when(mailService.sendIssueBatch("제목", "본문", first)).thenReturn(0);
-        when(mailService.sendIssueBatch("제목", "본문", second)).thenReturn(1);
+        when(mailService.sendIssueBatch("제목", "본문", null, first)).thenReturn(0);
+        when(mailService.sendIssueBatch("제목", "본문", null, second)).thenReturn(1);
 
         dispatcher.dispatch(1L);
 
@@ -100,7 +100,7 @@ class NewsletterDispatcherTest {
 
         assertThat(issue.getStatus()).isEqualTo(NewsletterIssueStatus.SENT);
         assertThat(issue.getRecipientCount()).isZero();
-        verify(mailService, never()).sendIssueBatch(any(), any(), anyList());
+        verify(mailService, never()).sendIssueBatch(any(), any(), any(), anyList());
     }
 
     @Test

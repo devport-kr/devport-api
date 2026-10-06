@@ -1,0 +1,5 @@
+{{heading}} ({{period}})
+지난주 devport에 올라온 글 중 가장 많은 관심을 받은 글을 골랐습니다.
+
+{{items}}
+devport에서 더 보기: {{siteUrl}}

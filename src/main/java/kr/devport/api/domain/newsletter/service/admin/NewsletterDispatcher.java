@@ -65,7 +65,8 @@ public class NewsletterDispatcher {
                 }
                 lastId = batch.getLast().getId();
 
-                int batchFailed = mailService.sendIssueBatch(issue.getSubject(), issue.getContent(), batch);
+                int batchFailed = mailService.sendIssueBatch(
+                    issue.getSubject(), issue.getContent(), issue.getContentHtml(), batch);
                 failed += batchFailed;
                 sent += batch.size() - batchFailed;
 
