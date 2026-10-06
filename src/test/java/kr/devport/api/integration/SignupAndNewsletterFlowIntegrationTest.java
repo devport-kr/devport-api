@@ -11,6 +11,9 @@ import kr.devport.api.domain.auth.service.TurnstileService;
 import kr.devport.api.domain.common.ratelimit.RedisRateLimiter;
 import kr.devport.api.domain.common.security.JwtTokenProvider;
 import kr.devport.api.domain.newsletter.entity.NewsletterIssue;
+import kr.devport.api.domain.newsletter.entity.NewsletterSubscription;
+import kr.devport.api.domain.newsletter.enums.NewsletterSubscriptionStatus;
+import kr.devport.api.domain.newsletter.service.NewsletterSubscriptionService;
 import kr.devport.api.domain.newsletter.enums.NewsletterIssueStatus;
 import kr.devport.api.domain.newsletter.repository.NewsletterIssueRepository;
 import kr.devport.api.domain.newsletter.repository.NewsletterSubscriptionRepository;
@@ -78,6 +81,9 @@ class SignupAndNewsletterFlowIntegrationTest {
 
     @Autowired
     private JwtTokenProvider jwtTokenProvider;
+
+    @Autowired
+    private NewsletterSubscriptionService subscriptionService;
 
     @MockitoBean
     private TurnstileService turnstileService;
@@ -269,6 +275,44 @@ class SignupAndNewsletterFlowIntegrationTest {
             .andExpect(jsonPath("$.validationErrors.password").exists());
 
         mockMvc.perform(get("/api/newsletter/me")).andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void nightlyCleanupDeletesOnlyExpiredPendingSubscriptions() {
+        LocalDateTime now = LocalDateTime.now();
+        Long expiredUser = saveUser("cleanup_expired").getId();
+        Long pendingUser = saveUser("cleanup_pending").getId();
+        Long activeUser = saveUser("cleanup_active").getId();
+        subscriptionRepository.save(subscription(expiredUser, "expired@example.com", NewsletterSubscriptionStatus.PENDING, now.minusMinutes(1)));
+        subscriptionRepository.save(subscription(pendingUser, "pending@example.com", NewsletterSubscriptionStatus.PENDING, now.plusHours(1)));
+        subscriptionRepository.save(subscription(activeUser, "active@example.com", NewsletterSubscriptionStatus.ACTIVE, null));
+
+        int deleted = subscriptionService.deleteExpiredPendingSubscriptions();
+
+        assertThat(deleted).isEqualTo(1);
+        assertThat(subscriptionRepository.findByUserId(expiredUser)).isEmpty();
+        assertThat(subscriptionRepository.findByUserId(pendingUser)).isPresent();
+        assertThat(subscriptionRepository.findByUserId(activeUser)).isPresent();
+    }
+
+    private User saveUser(String username) {
+        LocalDateTime now = LocalDateTime.now();
+        return userRepository.save(User.builder()
+            .username(username).password("unused").name(username)
+            .authProvider(AuthProvider.local).role(UserRole.USER)
+            .createdAt(now).updatedAt(now)
+            .build());
+    }
+
+    private NewsletterSubscription subscription(Long userId, String email, NewsletterSubscriptionStatus status,
+                                                LocalDateTime verificationExpiresAt) {
+        LocalDateTime now = LocalDateTime.now();
+        return NewsletterSubscription.builder()
+            .userId(userId).email(email).status(status)
+            .verificationExpiresAt(verificationExpiresAt)
+            .unsubscribeToken("unsub-" + email)
+            .consentedAt(now).createdAt(now).updatedAt(now)
+            .build();
     }
 
     private NewsletterIssue awaitDispatch(long issueId) throws InterruptedException {
