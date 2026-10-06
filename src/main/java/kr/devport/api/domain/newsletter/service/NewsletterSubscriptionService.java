@@ -1,6 +1,5 @@
 package kr.devport.api.domain.newsletter.service;
 
-import kr.devport.api.domain.auth.repository.UserRepository;
 import kr.devport.api.domain.auth.service.TurnstileService;
 import kr.devport.api.domain.common.exception.BotVerificationException;
 import kr.devport.api.domain.common.exception.DuplicateEmailException;
@@ -53,7 +52,6 @@ public class NewsletterSubscriptionService {
     private static final String TOO_MANY_MESSAGE = "인증 메일 요청이 너무 많습니다. 1시간 후 다시 시도해주세요.";
 
     private final NewsletterSubscriptionRepository subscriptionRepository;
-    private final UserRepository userRepository;
     private final NewsletterMailService mailService;
     private final RedisRateLimiter rateLimiter;
     private final TurnstileService turnstileService;
@@ -125,7 +123,7 @@ public class NewsletterSubscriptionService {
 
             if (subscription == null) {
                 subscription = NewsletterSubscription.builder()
-                    .user(userRepository.getReferenceById(userId))
+                    .userId(userId)
                     .unsubscribeToken(NewsletterTokens.generate())
                     .createdAt(now)
                     .build();
@@ -164,7 +162,7 @@ public class NewsletterSubscriptionService {
         }
 
         if (subscriptionRepository.existsByEmailAndStatusAndUserIdNot(
-            subscription.getEmail(), NewsletterSubscriptionStatus.ACTIVE, subscription.getUser().getId())) {
+            subscription.getEmail(), NewsletterSubscriptionStatus.ACTIVE, subscription.getUserId())) {
             throw new DuplicateEmailException("이미 다른 계정에서 구독 중인 이메일입니다.");
         }
 
