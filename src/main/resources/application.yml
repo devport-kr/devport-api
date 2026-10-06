@@ -163,6 +163,8 @@ app:
 
   auth:
     current-terms-version: ${APP_CURRENT_TERMS_VERSION:2026-03-24}
+    # 약관 개정 배포 중 직전 버전으로 가입하는 요청도 한시 허용 (쉼표 구분, 기본 없음)
+    accepted-previous-terms-versions: ${APP_ACCEPTED_PREVIOUS_TERMS_VERSIONS:}
     refresh-cookie-name: devport_refresh_token
     refresh-cookie-path: /api/auth
     refresh-cookie-domain:
@@ -174,6 +176,15 @@ app:
     from: ${EMAIL_FROM:noreply@devport.kr}
     verification-url: ${FRONTEND_URL:http://localhost:5173}/verify-email?token={token}
     reset-password-url: ${FRONTEND_URL:http://localhost:5173}/reset-password?token={token}
+
+  newsletter:
+    sender-name: devport
+    # 인증/수신거부 링크가 가리키는 프론트 주소 (/newsletter/confirm, /newsletter/unsubscribe)
+    site-url: ${FRONTEND_URL:http://localhost:5173}
+    # List-Unsubscribe one-click 헤더가 가리키는 API 주소
+    api-url: ${API_PUBLIC_URL:http://localhost:8080}
+    send-batch-size: 50
+    send-batch-interval-ms: 1000
 
   openai:
     api-key: ${OPENAI_API_KEY:}

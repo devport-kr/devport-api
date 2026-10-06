@@ -14,7 +14,6 @@ import kr.devport.api.domain.auth.dto.request.ResetPasswordRequest;
 import kr.devport.api.domain.auth.dto.request.ResendVerificationRequest;
 import kr.devport.api.domain.auth.dto.request.SignupRequest;
 import kr.devport.api.domain.auth.dto.response.AuthResponse;
-import kr.devport.api.domain.auth.dto.response.SignupResponse;
 import kr.devport.api.domain.auth.dto.response.TokenResponse;
 import kr.devport.api.domain.auth.dto.response.UserResponse;
 import kr.devport.api.domain.common.security.CustomUserDetails;
@@ -25,6 +24,7 @@ import kr.devport.api.domain.auth.service.PasswordResetService;
 import kr.devport.api.domain.auth.service.RefreshTokenCookieService;
 import kr.devport.api.domain.auth.service.SignupService;
 import kr.devport.api.domain.common.exception.InvalidTokenException;
+import kr.devport.api.domain.common.web.ClientIpResolver;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -128,24 +128,38 @@ public class AuthController {
 
     @Operation(
         summary = "Sign up with username and password",
-        description = "Create a new LOCAL account with username, password, and email. Sends verification email."
+        description = "Create a new LOCAL account with username and password only (no email). "
+            + "Requires agreement to the current terms version and a Cloudflare Turnstile token. "
+            + "The user is logged in immediately: returns an access token and sets the refresh-token cookie."
     )
     @ApiResponses(value = {
         @ApiResponse(
             responseCode = "200",
-            description = "Successfully created account",
-            content = @Content(schema = @Schema(implementation = SignupResponse.class))
+            description = "Successfully created account and logged in",
+            content = @Content(schema = @Schema(implementation = AuthResponse.class))
         ),
-        @ApiResponse(
-            responseCode = "409",
-            description = "Username or email already exists",
-            content = @Content
-        )
+        @ApiResponse(responseCode = "400", description = "Validation, terms or bot verification failed", content = @Content),
+        @ApiResponse(responseCode = "409", description = "Username is not available", content = @Content),
+        @ApiResponse(responseCode = "429", description = "Too many signup attempts", content = @Content)
     })
     @PostMapping("/signup")
-    public ResponseEntity<SignupResponse> signup(@Valid @RequestBody SignupRequest request) {
-        SignupResponse response = signupService.signup(request);
-        return ResponseEntity.ok(response);
+    public ResponseEntity<AuthResponse> signup(
+        @Valid @RequestBody SignupRequest request,
+        HttpServletRequest httpRequest,
+        HttpServletResponse servletResponse
+    ) {
+        AuthResponse authResponse = signupService.signup(request, ClientIpResolver.resolve(httpRequest));
+        refreshTokenCookieService.addRefreshTokenCookie(servletResponse, authResponse.getRefreshToken());
+        return ResponseEntity.ok(stripRefreshToken(authResponse));
+    }
+
+    @Operation(
+        summary = "Check username availability",
+        description = "Returns whether the username is valid and not yet taken (case-insensitive, reserved names excluded)."
+    )
+    @GetMapping("/check-username")
+    public ResponseEntity<Map<String, Boolean>> checkUsername(@RequestParam String username) {
+        return ResponseEntity.ok(Map.of("available", signupService.isUsernameAvailable(username)));
     }
 
     @Operation(

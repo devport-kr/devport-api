@@ -67,12 +67,16 @@ public class SecurityConfig {
                     "/api/benchmarks",
                     "/api/auth/refresh",
                     "/api/auth/signup",
+                    "/api/auth/check-username",
                     "/api/auth/login",
                     "/api/auth/oauth2/exchange",
                     "/api/auth/verify-email",
                     "/api/auth/resend-verification",
                     "/api/auth/forgot-password",
-                    "/api/auth/reset-password"
+                    "/api/auth/reset-password",
+                    "/api/newsletter/confirm",
+                    "/api/newsletter/unsubscribe",
+                    "/api/newsletter/unsubscribe/one-click"
                 ).permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/articles/**").permitAll()
                 .requestMatchers(HttpMethod.POST, "/api/articles/*/view").permitAll()

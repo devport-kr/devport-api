@@ -158,3 +158,6 @@ app:
     refresh-cookie-secure: true
     refresh-cookie-same-site: Lax
     oauth2-exchange-ttl-seconds: 60
+
+  newsletter:
+    api-url: ${API_PUBLIC_URL:https://api.devport.kr}

@@ -15,12 +15,15 @@ import kr.devport.api.domain.wiki.dto.response.WikiProjectPageResponse;
 import kr.devport.api.domain.wiki.store.WikiChatSessionStore;
 import org.springframework.aot.hint.annotation.RegisterReflectionForBinding;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.ImportRuntimeHints;
 
 /**
  * Registers all DTO classes that need Jackson reflection for native image serialization.
  * Covers Redis @Cacheable return types and their nested classes.
+ * Also imports Jakarta Mail content-handler hints (see {@link MailRuntimeHints}).
  */
 @Configuration
+@ImportRuntimeHints(MailRuntimeHints.class)
 @RegisterReflectionForBinding({
         // Article cache DTOs
         ArticlePageResponse.class,

@@ -52,15 +52,38 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(error);
     }
 
-    @ExceptionHandler(EmailVerificationRequiredException.class)
-    public ResponseEntity<ErrorResponse> handleEmailVerificationRequired(EmailVerificationRequiredException ex) {
+    @ExceptionHandler(BotVerificationException.class)
+    public ResponseEntity<ErrorResponse> handleBotVerification(BotVerificationException ex) {
         ErrorResponse error = ErrorResponse.builder()
             .timestamp(LocalDateTime.now())
-            .status(HttpStatus.FORBIDDEN.value())
-            .error("Forbidden")
+            .status(HttpStatus.BAD_REQUEST.value())
+            .error("Bad Request")
             .message(ex.getMessage())
             .build();
-        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(error);
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(error);
+    }
+
+    @ExceptionHandler(TooManyRequestsException.class)
+    public ResponseEntity<ErrorResponse> handleTooManyRequests(TooManyRequestsException ex) {
+        ErrorResponse error = ErrorResponse.builder()
+            .timestamp(LocalDateTime.now())
+            .status(HttpStatus.TOO_MANY_REQUESTS.value())
+            .error("Too Many Requests")
+            .message(ex.getMessage())
+            .build();
+        return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS).body(error);
+    }
+
+    @ExceptionHandler(EmailDeliveryException.class)
+    public ResponseEntity<ErrorResponse> handleEmailDelivery(EmailDeliveryException ex) {
+        log.error("Email delivery failed", ex);
+        ErrorResponse error = ErrorResponse.builder()
+            .timestamp(LocalDateTime.now())
+            .status(HttpStatus.SERVICE_UNAVAILABLE.value())
+            .error("Service Unavailable")
+            .message(ex.getMessage())
+            .build();
+        return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body(error);
     }
 
     @ExceptionHandler(OAuth2AccountException.class)
