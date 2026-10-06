@@ -33,7 +33,7 @@ public class NewsletterDispatcher {
     private final NewsletterSubscriptionRepository subscriptionRepository;
     private final NewsletterMailService mailService;
 
-    @Value("${app.newsletter.send-batch-size:50}")
+    @Value("${app.newsletter.send-batch-size:10}")
     private int batchSize;
 
     @Value("${app.newsletter.send-batch-interval-ms:1000}")

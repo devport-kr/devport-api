@@ -183,7 +183,9 @@ app:
     site-url: ${FRONTEND_URL:http://localhost:5173}
     # List-Unsubscribe one-click 헤더가 가리키는 API 주소
     api-url: ${API_PUBLIC_URL:http://localhost:8080}
-    send-batch-size: 50
+    # SES 초당 발송 한도(production 기본 14/s, sandbox 1/s)를 넘지 않도록 배치 크기/간격으로 조절한다.
+    # 배치 크기 ÷ 간격(초) = 최대 초당 발송 수. sandbox에서는 APP_NEWSLETTER_SEND_BATCH_SIZE=1 로 낮출 것.
+    send-batch-size: 10
     send-batch-interval-ms: 1000
     # 사이트 전체 인증 메일 시간당 상한 (악용 시 SES bounce/complaint 평판 보호)
     verification-global-limit-per-hour: ${NEWSLETTER_VERIFICATION_GLOBAL_LIMIT_PER_HOUR:200}
