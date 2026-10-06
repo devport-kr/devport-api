@@ -4,29 +4,27 @@ import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
-import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Index;
-import jakarta.persistence.JoinColumn;
-import jakarta.persistence.OneToOne;
 import jakarta.persistence.Table;
-import kr.devport.api.domain.auth.entity.User;
 import kr.devport.api.domain.newsletter.enums.NewsletterSubscriptionStatus;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-import org.hibernate.annotations.OnDelete;
-import org.hibernate.annotations.OnDeleteAction;
 
 import java.time.LocalDateTime;
 
 /**
  * 회원 1명당 최대 1개의 뉴스레터 구독.
  * 구독 해지 시 행을 삭제해 이메일을 보관하지 않는다.
+ *
+ * <p>회원은 연관관계가 아닌 user_id 값으로만 참조한다. prod native image는 런타임에 Hibernate 프록시를
+ * 만들 수 없어(BytecodeProvider 'none') LAZY 연관이나 getReferenceById가 실패한다.
+ * users 삭제 시 함께 지워지는 것은 DB의 FK(ON DELETE CASCADE)가 보장한다.
  */
 @Entity
 @Table(name = "newsletter_subscriptions", indexes = {
@@ -44,10 +42,8 @@ public class NewsletterSubscription {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @OneToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "user_id", nullable = false, unique = true)
-    @OnDelete(action = OnDeleteAction.CASCADE)
-    private User user;
+    @Column(name = "user_id", nullable = false, unique = true)
+    private Long userId;
 
     @Column(nullable = false, length = 100)
     private String email;
