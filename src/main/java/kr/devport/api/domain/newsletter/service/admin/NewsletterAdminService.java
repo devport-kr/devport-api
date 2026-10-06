@@ -52,7 +52,7 @@ public class NewsletterAdminService {
     }
 
     public void sendTest(NewsletterTestSendRequest request) {
-        mailService.sendTestIssue(request.getEmail().trim(), request.getSubject(), request.getContent());
+        mailService.sendTestIssue(request.getEmail().trim(), request.getSubject(), request.getContent(), null);
     }
 
     /** 발송 이력을 만들고, 커밋 후 비동기로 ACTIVE 구독자 전체에게 발송한다. */

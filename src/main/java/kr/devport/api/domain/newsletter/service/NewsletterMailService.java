@@ -72,10 +72,14 @@ public class NewsletterMailService {
             "unsubscribedAt", DATE_TIME_FORMAT.format(unsubscribedAt)));
     }
 
-    /** 관리자 미리보기 발송. 수신거부 링크는 동작하지 않는 더미 토큰을 쓴다. */
-    public void sendTestIssue(String email, String subject, String content) {
+    /**
+     * 관리자 미리보기 발송. 수신거부 링크는 동작하지 않는 더미 토큰을 쓴다.
+     *
+     * @param contentHtml 미리 렌더링한 HTML 본문, 없으면 null
+     */
+    public void sendTestIssue(String email, String subject, String content, String contentHtml) {
         try {
-            mailSender.send(buildIssueMessage(email, "preview", "[테스트] " + subject, content));
+            mailSender.send(buildIssueMessage(email, "preview", "[테스트] " + subject, content, contentHtml));
         } catch (MailException | MessagingException | UnsupportedEncodingException e) {
             throw new EmailDeliveryException("테스트 메일 발송에 실패했습니다: " + e.getMessage(), e);
         }
@@ -84,14 +88,15 @@ public class NewsletterMailService {
     /**
      * 한 SMTP 연결로 묶어서 발송한다.
      *
+     * @param contentHtml 미리 렌더링한 HTML 본문, 없으면 null
      * @return 발송에 실패한 수신자 수
      */
-    public int sendIssueBatch(String subject, String content, List<NewsletterSubscription> recipients) {
+    public int sendIssueBatch(String subject, String content, String contentHtml, List<NewsletterSubscription> recipients) {
         List<MimeMessage> messages = new ArrayList<>(recipients.size());
         int failed = 0;
         for (NewsletterSubscription recipient : recipients) {
             try {
-                messages.add(buildIssueMessage(recipient.getEmail(), recipient.getUnsubscribeToken(), subject, content));
+                messages.add(buildIssueMessage(recipient.getEmail(), recipient.getUnsubscribeToken(), subject, content, contentHtml));
             } catch (MessagingException | UnsupportedEncodingException e) {
                 failed++;
                 log.warn("Failed to build newsletter message for subscriptionId={}", recipient.getId(), e);
@@ -132,11 +137,11 @@ public class NewsletterMailService {
         }
     }
 
-    MimeMessage buildIssueMessage(String to, String unsubscribeToken, String subject, String content)
+    MimeMessage buildIssueMessage(String to, String unsubscribeToken, String subject, String content, String contentHtml)
         throws MessagingException, UnsupportedEncodingException {
         MimeMessage message = messages.create(to, subject, ISSUE_TEMPLATE, ISSUE_FOOTER, Map.of(
             "content", content.strip(),
-            "contentHtml", contentToHtml(content),
+            "contentHtml", contentHtml != null ? contentHtml : contentToHtml(content),
             "unsubscribeUrl", unsubscribePageUrl(unsubscribeToken)));
 
         // RFC 8058 one-click unsubscribe (Gmail/Yahoo 등에서 '구독 취소' 버튼 노출)

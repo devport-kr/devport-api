@@ -19,6 +19,8 @@ public class NewsletterIssueResponse {
     private String subject;
     private String content;
     private NewsletterIssueStatus status;
+    /** 주간 다이제스트면 다루는 주 (예: 2026-W40), 관리자 발송이면 null */
+    private String digestWeek;
     private Integer recipientCount;
     private Integer sentCount;
     private Integer failedCount;
@@ -31,6 +33,7 @@ public class NewsletterIssueResponse {
             .subject(issue.getSubject())
             .content(issue.getContent())
             .status(issue.getStatus())
+            .digestWeek(issue.getDigestWeek())
             .recipientCount(issue.getRecipientCount())
             .sentCount(issue.getSentCount())
             .failedCount(issue.getFailedCount())

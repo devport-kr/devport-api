@@ -17,7 +17,7 @@ import lombok.Setter;
 
 import java.time.LocalDateTime;
 
-/** 관리자가 발송한 뉴스레터 1회분과 발송 결과 */
+/** 뉴스레터 1회분(관리자 발송 또는 주간 다이제스트)과 발송 결과 */
 @Entity
 @Table(name = "newsletter_issues")
 @Getter
@@ -36,6 +36,14 @@ public class NewsletterIssue {
 
     @Column(nullable = false, columnDefinition = "TEXT")
     private String content;
+
+    /** 미리 렌더링한 HTML 본문. 없으면 content를 HTML로 변환해 쓴다. */
+    @Column(name = "content_html", columnDefinition = "TEXT")
+    private String contentHtml;
+
+    /** 주간 다이제스트가 다루는 주 (예: 2026-W40). 같은 주를 두 번 발송하지 않도록 unique. */
+    @Column(name = "digest_week", length = 10, unique = true)
+    private String digestWeek;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
