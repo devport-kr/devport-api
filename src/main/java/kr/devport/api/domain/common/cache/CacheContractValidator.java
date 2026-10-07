@@ -59,9 +59,7 @@ public class CacheContractValidator {
             CacheNames.GITHUB_TRENDING,
             CacheNames.LLM_LEADERBOARD,
             CacheNames.LLM_BENCHMARKS,
-            CacheNames.LLM_MODELS,
-            CacheNames.WIKI_PROJECTS,
-            CacheNames.WIKI_PROJECT_PAGE
+            CacheNames.LLM_MODELS
         );
     }
 }

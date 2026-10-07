@@ -90,30 +90,6 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.PUT, "/api/projects/*/comments/*").authenticated()
                 .requestMatchers(HttpMethod.DELETE, "/api/projects/*/comments/*").authenticated()
                 .requestMatchers(HttpMethod.POST, "/api/projects/*/comments/*/vote").authenticated()
-                .requestMatchers(HttpMethod.POST,
-                    "/api/wiki/projects/*/chat",
-                    "/api/wiki/projects/*/chat/stream",
-                    "/api/wiki/projects/chat",
-                    "/api/wiki/projects/chat/stream",
-                    "/api/wiki/chat",
-                    "/api/wiki/chat/stream"
-                ).permitAll()
-                .requestMatchers("/api/wiki/sessions/**").authenticated()
-                .requestMatchers(HttpMethod.GET,
-                    "/api/wiki/admin/projects/*/drafts",
-                    "/api/wiki/admin/projects/*/drafts/*"
-                ).hasAnyRole("ADMIN", "EDITOR")
-                .requestMatchers(HttpMethod.POST,
-                    "/api/wiki/admin/projects/*/drafts",
-                    "/api/wiki/admin/projects/*/drafts/*/regenerate",
-                    "/api/wiki/admin/projects/*/publish",
-                    "/api/wiki/admin/projects/*/rollback"
-                ).hasRole("ADMIN")
-                .requestMatchers(HttpMethod.PUT,
-                    "/api/wiki/admin/projects/*/drafts/*"
-                ).hasRole("ADMIN")
-                .requestMatchers("/api/wiki/admin/**").hasRole("ADMIN")
-                .requestMatchers(HttpMethod.GET, "/api/wiki/**").permitAll()
                 .requestMatchers("/swagger-ui/**", "/v3/api-docs/**", "/swagger-ui.html").permitAll()
                 .requestMatchers("/oauth2/**", "/login/**").permitAll()
                 .requestMatchers("/api/me/**").authenticated()

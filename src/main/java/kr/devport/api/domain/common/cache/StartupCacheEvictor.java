@@ -12,7 +12,7 @@ import java.util.List;
 
 /**
  * Clears Spring-managed cache regions on startup without touching application state
- * stored directly in Redis (for example OAuth exchange codes or wiki sessions).
+ * stored directly in Redis (for example OAuth exchange codes).
  */
 @Component
 @RequiredArgsConstructor
@@ -33,9 +33,7 @@ public class StartupCacheEvictor implements ApplicationRunner {
             CacheNames.GITHUB_TRENDING,
             CacheNames.LLM_LEADERBOARD,
             CacheNames.LLM_BENCHMARKS,
-            CacheNames.LLM_MODELS,
-            CacheNames.WIKI_PROJECTS,
-            CacheNames.WIKI_PROJECT_PAGE
+            CacheNames.LLM_MODELS
         );
 
         int cleared = 0;
