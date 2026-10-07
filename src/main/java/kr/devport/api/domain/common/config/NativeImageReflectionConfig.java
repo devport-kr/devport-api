@@ -8,11 +8,6 @@ import kr.devport.api.domain.gitrepo.dto.response.GitRepoPageResponse;
 import kr.devport.api.domain.gitrepo.dto.response.GitRepoResponse;
 import kr.devport.api.domain.llm.dto.response.LLMBenchmarkResponse;
 import kr.devport.api.domain.llm.dto.response.LLMLeaderboardEntryResponse;
-import kr.devport.api.domain.wiki.dto.response.WikiChatResponse;
-import kr.devport.api.domain.wiki.dto.response.WikiGlobalChatResponse;
-import kr.devport.api.domain.wiki.dto.response.WikiProjectListResponse;
-import kr.devport.api.domain.wiki.dto.response.WikiProjectPageResponse;
-import kr.devport.api.domain.wiki.store.WikiChatSessionStore;
 import org.springframework.aot.hint.annotation.RegisterReflectionForBinding;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.ImportRuntimeHints;
@@ -36,20 +31,6 @@ import org.springframework.context.annotation.ImportRuntimeHints;
         // LLM cache DTOs
         LLMLeaderboardEntryResponse.class,
         LLMBenchmarkResponse.class,
-        // Wiki cache DTOs
-        WikiChatResponse.class,
-        WikiGlobalChatResponse.class,
-        WikiProjectListResponse.class,
-        WikiProjectListResponse.ProjectSummary.class,
-        WikiProjectPageResponse.class,
-        WikiProjectPageResponse.WikiSection.class,
-        WikiProjectPageResponse.AnchorItem.class,
-        WikiProjectPageResponse.DiagramMetadata.class,
-        WikiProjectPageResponse.CurrentCounters.class,
-        WikiProjectPageResponse.RightRailOrdering.class,
-        // Redis session types
-        WikiChatSessionStore.ChatSession.class,
-        WikiChatSessionStore.ChatTurn.class,
 })
 public class NativeImageReflectionConfig {
 }
